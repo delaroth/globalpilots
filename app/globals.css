@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy: #0A1F44;
+  --navy-dark: #071630;
+  --navy-light: #0D2B5C;
+  --skyblue: #87CEEB;
+  --skyblue-light: #B0E0F6;
+  --skyblue-dark: #5FB3D9;
+}
+
+body {
+  color: var(--navy);
+  background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
+  min-height: 100vh;
+}
