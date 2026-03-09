@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import AirportAutocomplete from '@/components/AirportAutocomplete'
 import { savePriceAlert, getPriceAlerts, deletePriceAlert, updateAlertStatus, PriceAlert } from '@/lib/storage'
 
 export default function AlertsPage() {
@@ -130,36 +131,20 @@ export default function AlertsPage() {
 
                 {/* Route */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label htmlFor="origin" className="block text-sm font-medium text-navy mb-2">
-                      From
-                    </label>
-                    <input
-                      type="text"
-                      id="origin"
-                      value={origin}
-                      onChange={(e) => setOrigin(e.target.value.toUpperCase())}
-                      placeholder="JFK"
-                      maxLength={3}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy uppercase"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="destination" className="block text-sm font-medium text-navy mb-2">
-                      To
-                    </label>
-                    <input
-                      type="text"
-                      id="destination"
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value.toUpperCase())}
-                      placeholder="LAX"
-                      maxLength={3}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy uppercase"
-                      required
-                    />
-                  </div>
+                  <AirportAutocomplete
+                    id="origin"
+                    label="From"
+                    value={origin}
+                    onChange={setOrigin}
+                    placeholder="Search departure city..."
+                  />
+                  <AirportAutocomplete
+                    id="destination"
+                    label="To"
+                    value={destination}
+                    onChange={setDestination}
+                    placeholder="Search arrival city..."
+                  />
                 </div>
 
                 {/* Target Price */}

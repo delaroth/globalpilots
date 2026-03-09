@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import RouteComparison from '@/components/RouteComparison'
+import AirportAutocomplete from '@/components/AirportAutocomplete'
 import { majorHubs, LayoverRoute } from '@/lib/hubs'
 
 export default function LayoverPage() {
@@ -140,38 +141,22 @@ export default function LayoverPage() {
           <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               {/* Origin */}
-              <div className="space-y-2">
-                <label htmlFor="origin" className="block text-sm font-medium text-navy">
-                  From (Airport Code)
-                </label>
-                <input
-                  type="text"
-                  id="origin"
-                  value={origin}
-                  onChange={(e) => setOrigin(e.target.value.toUpperCase())}
-                  placeholder="e.g. NYC"
-                  maxLength={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy uppercase"
-                  required
-                />
-              </div>
+              <AirportAutocomplete
+                id="origin"
+                label="From"
+                value={origin}
+                onChange={setOrigin}
+                placeholder="Search departure city..."
+              />
 
               {/* Destination */}
-              <div className="space-y-2">
-                <label htmlFor="destination" className="block text-sm font-medium text-navy">
-                  To (Airport Code)
-                </label>
-                <input
-                  type="text"
-                  id="destination"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value.toUpperCase())}
-                  placeholder="e.g. TYO"
-                  maxLength={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy uppercase"
-                  required
-                />
-              </div>
+              <AirportAutocomplete
+                id="destination"
+                label="To"
+                value={destination}
+                onChange={setDestination}
+                placeholder="Search arrival city..."
+              />
 
               {/* Travel Date */}
               <div className="space-y-2">

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import AirportAutocomplete from '@/components/AirportAutocomplete'
 import MysteryLoading from '@/components/MysteryLoading'
 import MysteryReveal from '@/components/MysteryReveal'
 
@@ -150,14 +151,12 @@ export default function MysteryPage() {
                 <label htmlFor="origin" className="block text-lg font-semibold text-navy mb-2">
                   Where are you flying from? ✈️
                 </label>
-                <input
-                  type="text"
+                <AirportAutocomplete
                   id="origin"
+                  label=""
                   value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
-                  placeholder="e.g., New York, London, Tokyo"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
-                  required
+                  onChange={setOrigin}
+                  placeholder="Search your departure city..."
                 />
               </div>
 
