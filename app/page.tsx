@@ -1,4 +1,5 @@
 import FlightSearch from '@/components/FlightSearch'
+import Link from 'next/link'
 
 export default function Home() {
   return (
@@ -13,9 +14,9 @@ export default function Home() {
             <span className="text-white text-xl font-bold">GlobePilot</span>
           </div>
           <div className="hidden md:flex items-center space-x-6 text-white">
-            <a href="#" className="hover:text-skyblue transition">Flights</a>
-            <a href="#" className="hover:text-skyblue transition">Hotels</a>
-            <a href="#" className="hover:text-skyblue transition">About</a>
+            <Link href="/calendar" className="hover:text-skyblue transition">Calendar</Link>
+            <Link href="/weekend" className="hover:text-skyblue transition">Weekend Deals</Link>
+            <Link href="/mystery" className="hover:text-skyblue transition">Mystery Trip</Link>
           </div>
         </div>
       </nav>
