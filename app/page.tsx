@@ -1,25 +1,12 @@
-import FlightSearch from '@/components/FlightSearch'
+import NaturalLanguageSearch from '@/components/NaturalLanguageSearch'
+import Navigation from '@/components/Navigation'
+import Footer from '@/components/Footer'
 import Link from 'next/link'
 
 export default function Home() {
   return (
     <main className="min-h-screen flex flex-col">
-      {/* Navigation */}
-      <nav className="w-full px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-skyblue rounded-full flex items-center justify-center">
-              <span className="text-navy text-xl font-bold">G</span>
-            </div>
-            <span className="text-white text-xl font-bold">GlobePilot</span>
-          </div>
-          <div className="hidden md:flex items-center space-x-6 text-white">
-            <Link href="/calendar" className="hover:text-skyblue transition">Calendar</Link>
-            <Link href="/weekend" className="hover:text-skyblue transition">Weekend Deals</Link>
-            <Link href="/mystery" className="hover:text-skyblue transition">Mystery Trip</Link>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Hero Section */}
       <section className="flex-1 flex items-center justify-center px-6 py-12">
@@ -37,9 +24,9 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Flight Search Component */}
+          {/* Natural Language Search */}
           <div className="mt-12">
-            <FlightSearch />
+            <NaturalLanguageSearch />
           </div>
 
           {/* Features */}
@@ -75,12 +62,47 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="w-full px-6 py-8 border-t border-skyblue/20">
-        <div className="max-w-7xl mx-auto text-center text-skyblue-light text-sm">
-          <p>&copy; 2024 GlobePilot. Budget travel made simple.</p>
+      {/* Features Showcase */}
+      <section className="px-6 py-16 bg-navy-dark/50">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12">
+            Explore All Features
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Link href="/calendar" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">
+              <div className="text-4xl mb-4">📅</div>
+              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-skyblue transition">Cheapest Days</h3>
+              <p className="text-skyblue-light text-sm">See the cheapest day to fly each month with our interactive calendar</p>
+            </Link>
+
+            <Link href="/weekend" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">
+              <div className="text-4xl mb-4">🎉</div>
+              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-skyblue transition">Weekend Deals</h3>
+              <p className="text-skyblue-light text-sm">Find cheap weekend getaways from your city starting this week</p>
+            </Link>
+
+            <Link href="/mystery" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">
+              <div className="text-4xl mb-4">✨</div>
+              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-skyblue transition">Mystery Vacation</h3>
+              <p className="text-skyblue-light text-sm">Let AI surprise you with the perfect destination for your budget</p>
+            </Link>
+
+            <Link href="/layover" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">
+              <div className="text-4xl mb-4">🔄</div>
+              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-skyblue transition">Layover Arbitrage</h3>
+              <p className="text-skyblue-light text-sm">Save money by turning layovers into bonus destinations</p>
+            </Link>
+
+            <Link href="/alerts" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">
+              <div className="text-4xl mb-4">🔔</div>
+              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-skyblue transition">Price Alerts</h3>
+              <p className="text-skyblue-light text-sm">Get notified when flight prices drop below your target</p>
+            </Link>
+          </div>
         </div>
-      </footer>
+      </section>
+
+      <Footer />
     </main>
   )
 }

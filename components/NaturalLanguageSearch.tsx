@@ -1,0 +1,124 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+export default function NaturalLanguageSearch() {
+  const [query, setQuery] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!query.trim() || loading) return
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/ai-parse', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: query.trim() }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to parse query')
+      }
+
+      const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.error)
+      }
+
+      // Route based on parsed data
+      if (data.origin && data.destination) {
+        // Has both origin and destination - go to calendar
+        router.push(`/calendar?origin=${data.origin}&destination=${data.destination}`)
+      } else if (data.origin) {
+        // Has only origin - go to weekend deals
+        router.push(`/weekend?origin=${data.origin}`)
+      } else if (data.vibe && data.vibe.length > 0) {
+        // Has vibes - go to mystery
+        router.push(`/mystery`)
+      } else {
+        // Generic search - show results page or default to calendar
+        router.push('/calendar')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const quickQueries = [
+    'Beach vacation under $1500',
+    'Cheap weekend from NYC',
+    'JFK to Tokyo in summer',
+    'Adventure trip in Asia',
+  ]
+
+  return (
+    <div className="w-full">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
+        <div className="mb-4">
+          <label htmlFor="nlsearch" className="block text-sm font-medium text-navy mb-2">
+            🔍 Search naturally - just type what you want
+          </label>
+          <input
+            type="text"
+            id="nlsearch"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="e.g., 'Beach vacation under $1500' or 'NYC to Paris this summer'"
+            disabled={loading}
+            className="w-full px-4 py-4 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-lg disabled:bg-gray-100"
+          />
+        </div>
+
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-red-700 text-sm">❌ {error}</p>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || !query.trim()}
+          className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+        >
+          {loading ? 'Understanding...' : 'Search'}
+        </button>
+
+        {/* Quick queries */}
+        <div className="mt-4">
+          <p className="text-xs text-gray-600 mb-2">Try these:</p>
+          <div className="flex flex-wrap gap-2">
+            {quickQueries.map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => setQuery(q)}
+                className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full transition"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      </form>
+
+      {/* Info */}
+      <div className="mt-4 text-center">
+        <p className="text-skyblue-light text-sm">
+          Powered by AI - our system understands natural language and finds the best tool for your search
+        </p>
+      </div>
+    </div>
+  )
+}

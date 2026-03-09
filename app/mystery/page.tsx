@@ -46,17 +46,16 @@ export default function MysteryPage() {
     setStep('loading')
 
     try {
-      const response = await fetch('/api/deepseek', {
+      const response = await fetch('/api/ai-mystery', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          budget,
           origin,
-          dates: `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`,
+          budget: parseFloat(budget),
           vibes: selectedVibes,
-          travellerType,
+          dates: `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`,
         }),
       })
 
