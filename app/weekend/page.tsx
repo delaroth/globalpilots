@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import DestinationCard from '@/components/DestinationCard'
-import { majorAirports } from '@/lib/geolocation'
+import { majorAirports, getAllRegions, getAirportsByRegion, searchAirports } from '@/lib/geolocation'
 
 interface WeekendDeal {
   value: number
@@ -22,21 +22,43 @@ interface WeekendDeal {
 
 export default function WeekendPage() {
   const [origin, setOrigin] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [selectedRegion, setSelectedRegion] = useState('all')
   const [loading, setLoading] = useState(false)
   const [deals, setDeals] = useState<WeekendDeal[]>([])
   const [error, setError] = useState('')
   const [autoDetectedCity, setAutoDetectedCity] = useState('')
 
+  const regions = useMemo(() => getAllRegions(), [])
+
+  // Filter airports based on search and region
+  const filteredAirports = useMemo(() => {
+    let filtered = majorAirports
+
+    // Filter by region
+    if (selectedRegion !== 'all') {
+      filtered = getAirportsByRegion(selectedRegion)
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      filtered = searchAirports(searchQuery)
+    }
+
+    return filtered
+  }, [searchQuery, selectedRegion])
+
   // Auto-detect location on mount
   useEffect(() => {
-    // For simplicity, set a default city
-    // In production, you'd use actual geolocation
-    setAutoDetectedCity('New York')
-    setOrigin('NYC')
+    setAutoDetectedCity('New York JFK')
+    setOrigin('JFK')
   }, [])
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!origin) return
+
     setLoading(true)
     setError('')
     setDeals([])
@@ -71,6 +93,13 @@ export default function WeekendPage() {
     }
   }
 
+  const handleAirportSelect = (code: string, city: string) => {
+    setOrigin(code)
+    setSearchQuery('')
+    setShowDropdown(false)
+    setAutoDetectedCity(city)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
       {/* Navigation */}
@@ -95,7 +124,7 @@ export default function WeekendPage() {
             Fly Cheap This Weekend 🎉
           </h1>
           <p className="text-xl text-skyblue-light">
-            Discover affordable weekend getaways from your city
+            Discover affordable weekend getaways from {majorAirports.length}+ cities worldwide
           </p>
         </div>
 
@@ -107,36 +136,92 @@ export default function WeekendPage() {
               {autoDetectedCity && (
                 <div className="bg-skyblue/10 border border-skyblue/30 rounded-lg p-3 text-center">
                   <p className="text-sm text-navy">
-                    📍 <strong>Leaving from:</strong> {autoDetectedCity}
+                    📍 <strong>Selected:</strong> {autoDetectedCity}
                   </p>
                 </div>
               )}
 
-              {/* City selector */}
+              {/* Region Filter */}
               <div className="space-y-2">
-                <label htmlFor="origin" className="block text-sm font-medium text-navy">
-                  Departure City
+                <label htmlFor="region" className="block text-sm font-medium text-navy">
+                  Filter by Region
                 </label>
                 <select
-                  id="origin"
-                  value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
+                  id="region"
+                  value={selectedRegion}
+                  onChange={(e) => setSelectedRegion(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
-                  required
                 >
-                  <option value="">Select your city</option>
-                  {majorAirports.map(airport => (
-                    <option key={airport.code} value={airport.code}>
-                      {airport.city} ({airport.code})
-                    </option>
-                  ))}
+                  <option value="all">All Regions ({majorAirports.length} cities)</option>
+                  {regions.map(region => {
+                    const count = getAirportsByRegion(region).length
+                    return (
+                      <option key={region} value={region}>
+                        {region} ({count} cities)
+                      </option>
+                    )
+                  })}
                 </select>
+              </div>
+
+              {/* City Search/Select */}
+              <div className="space-y-2 relative">
+                <label htmlFor="city-search" className="block text-sm font-medium text-navy">
+                  Search & Select Departure City
+                </label>
+                <input
+                  type="text"
+                  id="city-search"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setShowDropdown(true)
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  placeholder="Search by city, country, or airport code..."
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                />
+
+                {/* Dropdown */}
+                {showDropdown && filteredAirports.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-lg shadow-2xl max-h-96 overflow-y-auto">
+                    {filteredAirports.slice(0, 50).map((airport) => (
+                      <button
+                        key={airport.code}
+                        type="button"
+                        onClick={() => handleAirportSelect(airport.code, airport.city)}
+                        className="w-full px-4 py-3 text-left hover:bg-skyblue/10 transition border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="font-semibold text-navy">{airport.city}</span>
+                            <span className="text-sm text-gray-600 ml-2">({airport.code})</span>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {airport.country} • {airport.region}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                    {filteredAirports.length > 50 && (
+                      <div className="px-4 py-2 text-sm text-gray-600 bg-gray-50 text-center">
+                        Showing 50 of {filteredAirports.length} results. Keep typing to narrow down...
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {showDropdown && filteredAirports.length === 0 && searchQuery && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-lg shadow-2xl p-4 text-center text-gray-600">
+                    No airports found. Try a different search term.
+                  </div>
+                )}
               </div>
 
               {/* Search Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !origin}
                 className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Finding Deals...' : 'Show Me Cheap Weekends'}
@@ -197,14 +282,14 @@ export default function WeekendPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-navy-light/50 backdrop-blur-sm rounded-lg p-6 border border-skyblue/20 text-center">
                 <div className="text-4xl mb-3">🌍</div>
-                <h3 className="text-white font-semibold mb-2">Pick Your City</h3>
+                <h3 className="text-white font-semibold mb-2">150+ Cities</h3>
                 <p className="text-skyblue-light text-sm">
-                  Select where you're flying from
+                  Search from major airports across all continents
                 </p>
               </div>
               <div className="bg-navy-light/50 backdrop-blur-sm rounded-lg p-6 border border-skyblue/20 text-center">
                 <div className="text-4xl mb-3">💰</div>
-                <h3 className="text-white font-semibold mb-2">See Best Deals</h3>
+                <h3 className="text-white font-semibold mb-2">Best Deals</h3>
                 <p className="text-skyblue-light text-sm">
                   We'll show you the cheapest weekend destinations
                 </p>
@@ -215,6 +300,31 @@ export default function WeekendPage() {
                 <p className="text-skyblue-light text-sm">
                   Book your spontaneous weekend adventure
                 </p>
+              </div>
+            </div>
+
+            {/* Popular Cities Quick Select */}
+            <div className="mt-12 bg-skyblue/10 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20">
+              <h3 className="text-white font-semibold mb-4 text-center">Popular Departure Cities</h3>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {[
+                  { code: 'JFK', city: 'New York' },
+                  { code: 'LAX', city: 'Los Angeles' },
+                  { code: 'LHR', city: 'London' },
+                  { code: 'CDG', city: 'Paris' },
+                  { code: 'NRT', city: 'Tokyo' },
+                  { code: 'SYD', city: 'Sydney' },
+                  { code: 'DXB', city: 'Dubai' },
+                  { code: 'SIN', city: 'Singapore' },
+                ].map((airport) => (
+                  <button
+                    key={airport.code}
+                    onClick={() => handleAirportSelect(airport.code, airport.city)}
+                    className="px-4 py-2 bg-skyblue hover:bg-skyblue-dark text-navy font-medium rounded-lg transition transform hover:scale-105"
+                  >
+                    {airport.city}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
