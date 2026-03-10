@@ -26,21 +26,27 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url = `${API_BASE}/v2/prices/latest?origin=${origin}&period_type=${periodType}&limit=${limit}&currency=usd&token=${TOKEN}`
+    // Use correct TravelPayouts endpoint - v2/prices/latest doesn't need period_type
+    const url = `${API_BASE}/v2/prices/latest?origin=${origin}&limit=${limit}&currency=usd&token=${TOKEN}`
+
+    console.log('[Latest API] Fetching:', url.replace(TOKEN || '', 'TOKEN_HIDDEN'))
 
     const response = await fetch(url, {
       next: { revalidate: 21600 }, // Cache for 6 hours
     })
 
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Latest API] TravelPayouts error:', response.status, errorText)
       throw new Error(`TravelPayouts API error: ${response.status}`)
     }
 
     const data = await response.json()
+    console.log('[Latest API] Success, found', data.data?.length || 0, 'deals')
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Latest prices API error:', error)
+    console.error('[Latest API] Error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch latest prices' },
       { status: 500 }
