@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
 
+export const dynamic = 'force-dynamic'
+
 const API_BASE = 'https://api.travelpayouts.com'
 const TOKEN = process.env.TRAVELPAYOUTS_TOKEN
 

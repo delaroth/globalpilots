@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 
+export const dynamic = 'force-dynamic'
+
 interface ParseResponse {
   origin: string | null
   destination: string | null

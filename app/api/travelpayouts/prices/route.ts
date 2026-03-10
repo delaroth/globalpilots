@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 const API_BASE = 'https://api.travelpayouts.com'
 const TOKEN = process.env.TRAVELPAYOUTS_TOKEN
 
