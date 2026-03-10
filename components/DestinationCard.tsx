@@ -13,10 +13,15 @@ interface DestinationCardProps {
   distance: number
 }
 
-// Helper to get city name from airport code
+// Helper to get city name from airport code with better fallback
 function getCityName(code: string): string {
   const airport = majorAirports.find(a => a.code === code)
-  return airport?.city || code
+  if (airport) {
+    return airport.city
+  }
+  // Fallback: if code not found, just return the code (will show as airport code)
+  console.warn(`Airport code ${code} not found in database`)
+  return code
 }
 
 export default function DestinationCard({
@@ -38,10 +43,15 @@ export default function DestinationCard({
     window.open(affiliateLink, '_blank')
   }
 
-  // Calculate days away
-  const depart = new Date(departDate)
+  // Calculate days away (parse as UTC to avoid timezone issues)
+  const parts = departDate.split('-')
+  const depart = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])))
   const today = new Date()
+  today.setHours(0, 0, 0, 0) // Reset to start of day
   const daysAway = Math.ceil((depart.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  // Show badge only if departing within next 7 days
+  const isThisWeekend = daysAway >= 0 && daysAway <= 7
 
   // Format dates
   const formatDate = (dateStr: string) => {
@@ -56,9 +66,9 @@ export default function DestinationCard({
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-6xl">✈️</span>
         </div>
-        {daysAway <= 7 && (
+        {isThisWeekend && (
           <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
-            This Weekend!
+            This Week!
           </div>
         )}
       </div>

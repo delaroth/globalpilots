@@ -108,8 +108,9 @@ export default function WeekendPage() {
       const today = new Date()
       let limit = 100 // Get more results to filter
 
+      // Pass selected days and timeframe to API
       const response = await fetch(
-        `/api/travelpayouts/latest?origin=${origin}&limit=${limit}`
+        `/api/travelpayouts/latest?origin=${origin}&limit=${limit}&depart_day=${departDay}&return_day=${returnDay}&timeframe=${timeframe}`
       )
 
       if (!response.ok) {
@@ -148,33 +149,9 @@ export default function WeekendPage() {
 
       const timeframeLimit = getTimeframeLimit()
 
-      console.log(`Total deals fetched: ${dealsData.length}`)
-      console.log(`Filtering for ${departDay} to ${returnDay} with ±${flexibleDays} days flexibility`)
-
-      // Filter deals by timeframe and matching days
-      dealsData = dealsData.filter((deal: WeekendDeal) => {
-        const departDate = new Date(deal.depart_date)
-        const returnDate = new Date(deal.return_date)
-
-        // Check if within timeframe
-        if (departDate > timeframeLimit) return false
-
-        // Check if depart/return days match selected days (with flexibility)
-        const departMatches = matchesDayOfWeek(deal.depart_date, departDay)
-        const returnMatches = matchesDayOfWeek(deal.return_date, returnDay)
-
-        const matches = departMatches && returnMatches
-        if (matches) {
-          console.log(`✓ Match: ${deal.destination} - ${deal.depart_date} to ${deal.return_date}`)
-        }
-
-        return matches
-      })
-
-      console.log(`Filtered to ${dealsData.length} matching deals`)
-
-      // Sort by price and limit to top 6
-      dealsData = dealsData.sort((a: WeekendDeal, b: WeekendDeal) => a.value - b.value).slice(0, 6)
+      // API now handles filtering by day and timeframe, just limit to 6 results
+      console.log(`Received ${dealsData.length} filtered deals from API`)
+      dealsData = dealsData.slice(0, 6)
 
       if (dealsData.length === 0) {
         setError(`No ${departDay}-${returnDay} trips found in the selected timeframe. Try different days or timeframe!`)

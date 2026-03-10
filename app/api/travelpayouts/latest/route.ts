@@ -5,11 +5,36 @@ export const dynamic = 'force-dynamic'
 const API_BASE = 'https://api.travelpayouts.com'
 const TOKEN = process.env.TRAVELPAYOUTS_TOKEN
 
+// Helper to convert day name to day number
+function dayNameToNumber(dayName: string): number {
+  const days: { [key: string]: number } = {
+    sunday: 0,
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+  }
+  return days[dayName.toLowerCase()] ?? -1
+}
+
+// Check if a date matches the target day of week
+function matchesDayOfWeek(dateStr: string, targetDay: string): boolean {
+  const parts = dateStr.split('-')
+  const date = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])))
+  const dayNum = date.getUTCDay()
+  const targetNum = dayNameToNumber(targetDay)
+  return dayNum === targetNum
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const origin = searchParams.get('origin')
-  const periodType = searchParams.get('period_type') || 'week'
-  const limit = searchParams.get('limit') || '6'
+  const limit = searchParams.get('limit') || '100'
+  const departDay = searchParams.get('depart_day')
+  const returnDay = searchParams.get('return_day')
+  const timeframe = searchParams.get('timeframe')
 
   if (!origin) {
     return NextResponse.json(
@@ -26,10 +51,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Use correct TravelPayouts endpoint - v2/prices/latest doesn't need period_type
+    // Use correct TravelPayouts endpoint
     const url = `${API_BASE}/v2/prices/latest?origin=${origin}&limit=${limit}&currency=usd&token=${TOKEN}`
 
     console.log('[Latest API] Fetching:', url.replace(TOKEN || '', 'TOKEN_HIDDEN'))
+    console.log('[Latest API] Filters: depart_day=', departDay, 'return_day=', returnDay, 'timeframe=', timeframe)
 
     const response = await fetch(url, {
       next: { revalidate: 21600 }, // Cache for 6 hours
@@ -42,9 +68,59 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    console.log('[Latest API] Success, found', data.data?.length || 0, 'deals')
+    let deals = data.data || []
+    console.log('[Latest API] Fetched', deals.length, 'deals from TravelPayouts')
 
-    return NextResponse.json(data)
+    // Filter by day of week if specified
+    if (departDay && returnDay) {
+      deals = deals.filter((deal: any) => {
+        const departMatches = matchesDayOfWeek(deal.depart_date, departDay)
+        const returnMatches = matchesDayOfWeek(deal.return_date, returnDay)
+        return departMatches && returnMatches
+      })
+      console.log('[Latest API] Filtered to', deals.length, 'deals matching', departDay, 'to', returnDay)
+    }
+
+    // Filter by timeframe if specified
+    if (timeframe) {
+      const now = new Date()
+      let timeframeLimit: Date
+
+      switch (timeframe) {
+        case 'thisweek':
+          timeframeLimit = new Date(now)
+          timeframeLimit.setDate(now.getDate() + (7 - now.getDay()))
+          break
+        case 'thismonth':
+          timeframeLimit = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+          break
+        case '3months':
+          timeframeLimit = new Date(now)
+          timeframeLimit.setMonth(now.getMonth() + 3)
+          break
+        case '6months':
+          timeframeLimit = new Date(now)
+          timeframeLimit.setMonth(now.getMonth() + 6)
+          break
+        case 'thisyear':
+          timeframeLimit = new Date(now.getFullYear(), 11, 31)
+          break
+        default:
+          timeframeLimit = new Date(now)
+          timeframeLimit.setMonth(now.getMonth() + 3)
+      }
+
+      deals = deals.filter((deal: any) => {
+        const departDate = new Date(deal.depart_date)
+        return departDate <= timeframeLimit
+      })
+      console.log('[Latest API] Filtered to', deals.length, 'deals within timeframe')
+    }
+
+    // Sort by price
+    deals.sort((a: any, b: any) => a.value - b.value)
+
+    return NextResponse.json({ ...data, data: deals })
   } catch (error) {
     console.error('[Latest API] Error:', error)
     return NextResponse.json(
