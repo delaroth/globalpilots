@@ -7,9 +7,16 @@ import AirportAutocomplete from '@/components/AirportAutocomplete'
 import { majorHubs, LayoverRoute } from '@/lib/hubs'
 
 export default function LayoverPage() {
+  // Default to 2 weeks from now
+  const getDefaultDate = () => {
+    const date = new Date()
+    date.setDate(date.getDate() + 14)
+    return date.toISOString().split('T')[0]
+  }
+
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
-  const [departDate, setDepartDate] = useState('')
+  const [departDate, setDepartDate] = useState(getDefaultDate())
   const [loading, setLoading] = useState(false)
   const [directPrice, setDirectPrice] = useState<number | null>(null)
   const [bestLayover, setBestLayover] = useState<LayoverRoute | null>(null)
@@ -17,89 +24,77 @@ export default function LayoverPage() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
     setDirectPrice(null)
     setBestLayover(null)
 
+    // Validate required fields
+    if (!origin) {
+      setError('Please select a departure airport')
+      return
+    }
+
+    if (!destination) {
+      setError('Please select a destination airport')
+      return
+    }
+
+    if (!departDate) {
+      setError('Please select a travel date')
+      return
+    }
+
+    if (origin === destination) {
+      setError('Departure and destination must be different')
+      return
+    }
+
+    console.log('[Layover] Searching:', { origin, destination, departDate })
+    setLoading(true)
+
     try {
-      // Fetch direct route price
-      const directResponse = await fetch(
-        `/api/travelpayouts/prices?origin=${origin}&destination=${destination}&depart_date=${departDate}`
+      const response = await fetch(
+        `/api/layover?origin=${origin}&destination=${destination}&depart_date=${departDate}`
       )
 
-      if (!directResponse.ok) {
-        throw new Error('Failed to fetch flight prices')
+      console.log('[Layover] Response status:', response.status)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `API error: ${response.status}`)
       }
 
-      const directData = await directResponse.json()
-      const directFlights = directData.data || []
+      const data = await response.json()
+      console.log('[Layover] Received data:', data)
 
-      if (directFlights.length === 0) {
-        throw new Error('No direct flights found for this route')
+      if (data.error) {
+        throw new Error(data.error)
       }
 
-      const directFlightPrice = directFlights[0].value
+      if (!data.directPrice) {
+        setError('No direct flights found for this route. Try different airports or dates.')
+        return
+      }
 
-      setDirectPrice(directFlightPrice)
+      setDirectPrice(data.directPrice)
 
-      // Fetch prices for routes via major hubs
-      const hubRoutes: LayoverRoute[] = []
-
-      // Check top 5 hubs for performance
-      const hubsToCheck = majorHubs.slice(0, 5)
-
-      for (const hub of hubsToCheck) {
-        try {
-          // Leg 1: Origin to Hub
-          const leg1Response = await fetch(
-            `/api/travelpayouts/prices?origin=${origin}&destination=${hub.code}`
-          )
-          const leg1Data = await leg1Response.json()
-          const leg1Flights = leg1Data.data || []
-
-          if (leg1Flights.length === 0) continue
-
-          const leg1Price = leg1Flights[0].value
-
-          // Leg 2: Hub to Destination
-          const leg2Response = await fetch(
-            `/api/travelpayouts/prices?origin=${hub.code}&destination=${destination}`
-          )
-          const leg2Data = await leg2Response.json()
-          const leg2Flights = leg2Data.data || []
-
-          if (leg2Flights.length === 0) continue
-
-          const leg2Price = leg2Flights[0].value
-
-          const totalPrice = leg1Price + leg2Price
-          const savings = directFlightPrice - totalPrice
-
-          if (savings > 50) {
-            // Only consider if savings > $50
-            hubRoutes.push({
-              hub,
-              leg1Price,
-              leg2Price,
-              totalPrice,
-              savings,
-              savingsPercent: Math.round((savings / directFlightPrice) * 100),
-            })
-          }
-        } catch (err) {
-          // Skip this hub if there's an error
-          continue
+      // Convert the API response format to match LayoverRoute interface
+      if (data.bestLayover) {
+        const hub = majorHubs.find(h => h.code === data.bestLayover.hub)
+        if (hub) {
+          setBestLayover({
+            hub,
+            leg1Price: data.bestLayover.leg1Price,
+            leg2Price: data.bestLayover.leg2Price,
+            totalPrice: data.bestLayover.totalPrice,
+            savings: data.bestLayover.savings,
+            savingsPercent: data.bestLayover.savingsPercent,
+          })
         }
       }
-
-      // Find the best layover option
-      if (hubRoutes.length > 0) {
-        const best = hubRoutes.sort((a, b) => b.savings - a.savings)[0]
-        setBestLayover(best)
-      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      console.error('[Layover] Error:', err)
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -197,8 +192,8 @@ export default function LayoverPage() {
         {/* Error Message */}
         {error && (
           <div className="max-w-3xl mx-auto mb-8">
-            <div className="bg-red-500/20 border border-red-500 rounded-lg p-4">
-              <p className="text-white">❌ {error}</p>
+            <div className="bg-red-500 border-2 border-red-600 rounded-lg p-4 shadow-lg">
+              <p className="text-white font-semibold text-center">❌ {error}</p>
             </div>
           </div>
         )}

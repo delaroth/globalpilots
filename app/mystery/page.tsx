@@ -269,17 +269,18 @@ export default function MysteryPage() {
 
               {/* Error Message */}
               {error && (
-                <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-red-700">❌ {error}</p>
+                <div className="mb-6 bg-red-500 border-2 border-red-600 rounded-lg p-4 shadow-lg">
+                  <p className="text-white font-semibold text-center">❌ {error}</p>
                 </div>
               )}
 
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-bold text-xl py-5 px-6 rounded-lg transition shadow-2xl hover:shadow-3xl transform hover:scale-[1.02] active:scale-[0.98]"
+                disabled={step === 'loading'}
+                className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-bold text-xl py-5 px-6 rounded-lg transition shadow-2xl hover:shadow-3xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                ✨ Surprise Me! ✨
+                {step === 'loading' ? '✨ Creating Magic... ✨' : '✨ Surprise Me! ✨'}
               </button>
             </form>
 

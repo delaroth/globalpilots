@@ -6,44 +6,77 @@ import AirportAutocomplete from '@/components/AirportAutocomplete'
 import Link from 'next/link'
 
 export default function CalendarPage() {
+  // Get current month as default
+  const currentMonth = new Date().toISOString().slice(0, 7)
+
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
-  const [month, setMonth] = useState('')
+  const [month, setMonth] = useState(currentMonth)
   const [loading, setLoading] = useState(false)
   const [calendarData, setCalendarData] = useState(null)
   const [error, setError] = useState('')
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
     setCalendarData(null)
+
+    // Validate required fields
+    if (!origin) {
+      setError('Please select a departure airport')
+      return
+    }
+
+    if (!destination) {
+      setError('Please select a destination airport')
+      return
+    }
+
+    if (!month) {
+      setError('Please select a month')
+      return
+    }
+
+    if (origin === destination) {
+      setError('Departure and destination must be different')
+      return
+    }
+
+    console.log('[Calendar] Searching:', { origin, destination, month })
+    setLoading(true)
 
     try {
       const response = await fetch(
         `/api/travelpayouts/calendar?origin=${origin}&destination=${destination}&depart_date=${month}`
       )
 
+      console.log('[Calendar] Response status:', response.status)
+
       if (!response.ok) {
-        throw new Error('Failed to fetch calendar data')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `API error: ${response.status}`)
       }
 
       const data = await response.json()
+      console.log('[Calendar] Received data:', data)
 
       if (data.error) {
         throw new Error(data.error)
       }
 
+      if (!data.data || Object.keys(data.data).length === 0) {
+        setError('No flights found for this route and month. Try different dates or destinations.')
+        return
+      }
+
       setCalendarData(data.data || data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      console.error('[Calendar] Error:', err)
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
   }
-
-  // Get current month as default
-  const currentMonth = new Date().toISOString().slice(0, 7)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
@@ -134,8 +167,8 @@ export default function CalendarPage() {
         {/* Error Message */}
         {error && (
           <div className="max-w-3xl mx-auto mb-8">
-            <div className="bg-red-500/20 border border-red-500 rounded-lg p-4">
-              <p className="text-white">❌ {error}</p>
+            <div className="bg-red-500 border-2 border-red-600 rounded-lg p-4 shadow-lg">
+              <p className="text-white font-semibold text-center">❌ {error}</p>
             </div>
           </div>
         )}

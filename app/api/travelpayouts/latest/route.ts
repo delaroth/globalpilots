@@ -19,13 +19,24 @@ function dayNameToNumber(dayName: string): number {
   return days[dayName.toLowerCase()] ?? -1
 }
 
-// Check if a date matches the target day of week
-function matchesDayOfWeek(dateStr: string, targetDay: string): boolean {
+// Check if a date matches the target day of week (with optional flexibility)
+function matchesDayOfWeek(dateStr: string, targetDay: string, flexibleDays: number = 0): boolean {
   const parts = dateStr.split('-')
   const date = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])))
   const dayNum = date.getUTCDay()
   const targetNum = dayNameToNumber(targetDay)
-  return dayNum === targetNum
+
+  // Exact match if no flexibility
+  if (flexibleDays === 0) {
+    return dayNum === targetNum
+  }
+
+  // Check if within flexibility range (±flexibleDays)
+  for (let i = -flexibleDays; i <= flexibleDays; i++) {
+    const checkDay = (targetNum + i + 7) % 7
+    if (dayNum === checkDay) return true
+  }
+  return false
 }
 
 export async function GET(request: NextRequest) {
@@ -35,6 +46,7 @@ export async function GET(request: NextRequest) {
   const departDay = searchParams.get('depart_day')
   const returnDay = searchParams.get('return_day')
   const timeframe = searchParams.get('timeframe')
+  const flexibleDays = parseInt(searchParams.get('flexible_days') || '0')
 
   if (!origin) {
     return NextResponse.json(
@@ -55,7 +67,7 @@ export async function GET(request: NextRequest) {
     const url = `${API_BASE}/v2/prices/latest?origin=${origin}&limit=${limit}&currency=usd&token=${TOKEN}`
 
     console.log('[Latest API] Fetching:', url.replace(TOKEN || '', 'TOKEN_HIDDEN'))
-    console.log('[Latest API] Filters: depart_day=', departDay, 'return_day=', returnDay, 'timeframe=', timeframe)
+    console.log('[Latest API] Filters: depart_day=', departDay, 'return_day=', returnDay, 'flexible_days=', flexibleDays, 'timeframe=', timeframe)
 
     const response = await fetch(url, {
       next: { revalidate: 21600 }, // Cache for 6 hours
@@ -74,11 +86,12 @@ export async function GET(request: NextRequest) {
     // Filter by day of week if specified
     if (departDay && returnDay) {
       deals = deals.filter((deal: any) => {
-        const departMatches = matchesDayOfWeek(deal.depart_date, departDay)
-        const returnMatches = matchesDayOfWeek(deal.return_date, returnDay)
+        const departMatches = matchesDayOfWeek(deal.depart_date, departDay, flexibleDays)
+        const returnMatches = matchesDayOfWeek(deal.return_date, returnDay, flexibleDays)
         return departMatches && returnMatches
       })
-      console.log('[Latest API] Filtered to', deals.length, 'deals matching', departDay, 'to', returnDay)
+      const flexText = flexibleDays > 0 ? ` (±${flexibleDays} days)` : ''
+      console.log('[Latest API] Filtered to', deals.length, 'deals matching', departDay, 'to', returnDay + flexText)
     }
 
     // Filter by timeframe if specified

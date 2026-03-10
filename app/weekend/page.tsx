@@ -96,17 +96,22 @@ function WeekendPageContent() {
     const originParam = searchParams.get('origin')
 
     if (originParam) {
-      // Look up city name from the airport code
-      const airport = majorAirports.find(a => a.code === originParam.toUpperCase())
+      // Look up airport by code OR city name
+      const upperParam = originParam.toUpperCase()
+      const airport = majorAirports.find(a =>
+        a.code === upperParam ||
+        a.city.toUpperCase() === upperParam ||
+        a.city.toUpperCase().includes(upperParam)
+      )
       if (airport) {
-        setOrigin(airport.code)
+        setOrigin(airport.code) // Always use IATA code
         setAutoDetectedCity(airport.city)
         console.log('[Weekend] Set origin from URL param:', airport.code, airport.city)
       } else {
-        // If not found in our database, still try to use it
-        setOrigin(originParam.toUpperCase())
-        setAutoDetectedCity(originParam.toUpperCase())
-        console.log('[Weekend] Unknown origin from URL param:', originParam)
+        // If not found, default to JFK instead of using invalid code
+        console.warn('[Weekend] Unknown origin from URL param:', originParam, '- defaulting to JFK')
+        setOrigin('JFK')
+        setAutoDetectedCity('New York JFK')
       }
     } else {
       // Default to New York JFK
@@ -128,9 +133,9 @@ function WeekendPageContent() {
       const today = new Date()
       let limit = 100 // Get more results to filter
 
-      // Pass selected days and timeframe to API
+      // Pass selected days, timeframe, and flexibility to API
       const response = await fetch(
-        `/api/travelpayouts/latest?origin=${origin}&limit=${limit}&depart_day=${departDay}&return_day=${returnDay}&timeframe=${timeframe}`
+        `/api/travelpayouts/latest?origin=${origin}&limit=${limit}&depart_day=${departDay}&return_day=${returnDay}&timeframe=${timeframe}&flexible_days=${flexibleDays}`
       )
 
       if (!response.ok) {

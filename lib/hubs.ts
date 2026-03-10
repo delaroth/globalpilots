@@ -1,13 +1,17 @@
 // Major airline hub cities for layover arbitrage
 
 export const majorHubs = [
+  // Top priority hubs (most common international connections)
+  { code: 'SIN', city: 'Singapore', region: 'Asia' },
   { code: 'DXB', city: 'Dubai', region: 'Middle East' },
   { code: 'IST', city: 'Istanbul', region: 'Europe/Asia' },
+  { code: 'DOH', city: 'Doha', region: 'Middle East' },
+  { code: 'KUL', city: 'Kuala Lumpur', region: 'Asia' },
+  // Other major hubs
   { code: 'LHR', city: 'London', region: 'Europe' },
   { code: 'CDG', city: 'Paris', region: 'Europe' },
   { code: 'AMS', city: 'Amsterdam', region: 'Europe' },
   { code: 'FRA', city: 'Frankfurt', region: 'Europe' },
-  { code: 'SIN', city: 'Singapore', region: 'Asia' },
   { code: 'HKG', city: 'Hong Kong', region: 'Asia' },
   { code: 'ICN', city: 'Seoul', region: 'Asia' },
   { code: 'NRT', city: 'Tokyo', region: 'Asia' },
