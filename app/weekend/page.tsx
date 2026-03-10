@@ -32,8 +32,41 @@ export default function WeekendPage() {
   const [departDay, setDepartDay] = useState('friday')
   const [returnDay, setReturnDay] = useState('sunday')
   const [flexibleDays, setFlexibleDays] = useState(1)
+  const [timeframe, setTimeframe] = useState('3months')
 
   const regions = useMemo(() => getAllRegions(), [])
+
+  // Helper to get day of week (0 = Sunday, 1 = Monday, etc.)
+  const dayNameToNumber = (dayName: string): number => {
+    const days: { [key: string]: number } = {
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6,
+    }
+    return days[dayName.toLowerCase()]
+  }
+
+  // Check if a date matches the selected day of week (with flexibility)
+  const matchesDayOfWeek = (dateStr: string, targetDay: string): boolean => {
+    const date = new Date(dateStr)
+    const dayNum = date.getDay()
+    const targetNum = dayNameToNumber(targetDay)
+
+    if (flexibleDays === 0) {
+      return dayNum === targetNum
+    }
+
+    // Check if within flexibility range
+    for (let i = -flexibleDays; i <= flexibleDays; i++) {
+      const checkDay = (targetNum + i + 7) % 7
+      if (dayNum === checkDay) return true
+    }
+    return false
+  }
 
   // Filter airports based on search and region
   const filteredAirports = useMemo(() => {
@@ -67,8 +100,12 @@ export default function WeekendPage() {
     setDeals([])
 
     try {
+      // Calculate date range based on timeframe
+      const today = new Date()
+      let limit = 100 // Get more results to filter
+
       const response = await fetch(
-        `/api/travelpayouts/latest?origin=${origin}&period_type=week&limit=6`
+        `/api/travelpayouts/latest?origin=${origin}&limit=${limit}`
       )
 
       if (!response.ok) {
@@ -82,12 +119,53 @@ export default function WeekendPage() {
       }
 
       // Extract deals from response
-      const dealsData = data.data || []
+      let dealsData = data.data || []
+
+      // Filter by timeframe
+      const getTimeframeLimit = () => {
+        const now = new Date()
+        switch (timeframe) {
+          case 'thisweek':
+            const endOfWeek = new Date(now)
+            endOfWeek.setDate(now.getDate() + (7 - now.getDay()))
+            return endOfWeek
+          case 'thismonth':
+            return new Date(now.getFullYear(), now.getMonth() + 1, 0)
+          case '3months':
+            return new Date(now.setMonth(now.getMonth() + 3))
+          case '6months':
+            return new Date(now.setMonth(now.getMonth() + 6))
+          case 'thisyear':
+            return new Date(now.getFullYear(), 11, 31)
+          default:
+            return new Date(now.setMonth(now.getMonth() + 3))
+        }
+      }
+
+      const timeframeLimit = getTimeframeLimit()
+
+      // Filter deals by timeframe and matching days
+      dealsData = dealsData.filter((deal: WeekendDeal) => {
+        const departDate = new Date(deal.depart_date)
+        const returnDate = new Date(deal.return_date)
+
+        // Check if within timeframe
+        if (departDate > timeframeLimit) return false
+
+        // Check if depart/return days match selected days (with flexibility)
+        const departMatches = matchesDayOfWeek(deal.depart_date, departDay)
+        const returnMatches = matchesDayOfWeek(deal.return_date, returnDay)
+
+        return departMatches && returnMatches
+      })
+
+      // Sort by price and limit to top 6
+      dealsData = dealsData.sort((a: WeekendDeal, b: WeekendDeal) => a.value - b.value).slice(0, 6)
 
       if (dealsData.length === 0) {
-        setError('No weekend deals found for this city. Try another departure city!')
+        setError(`No ${departDay}-${returnDay} trips found in the selected timeframe. Try different days or timeframe!`)
       } else {
-        setDeals(dealsData.slice(0, 6))
+        setDeals(dealsData)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -124,10 +202,10 @@ export default function WeekendPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Fly Cheap This Weekend 🎉
+            Fly Cheap on Your Schedule 🎉
           </h1>
           <p className="text-xl text-skyblue-light">
-            Find affordable getaways with flexible dates from {majorAirports.length}+ cities
+            Choose your travel days and timeframe • {majorAirports.length}+ cities worldwide
           </p>
         </div>
 
@@ -144,15 +222,34 @@ export default function WeekendPage() {
                 </div>
               )}
 
+              {/* Timeframe Selection */}
+              <div className="space-y-2">
+                <label htmlFor="timeframe" className="block text-sm font-medium text-navy">
+                  Search within ⏰
+                </label>
+                <select
+                  id="timeframe"
+                  value={timeframe}
+                  onChange={(e) => setTimeframe(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                >
+                  <option value="thisweek">This Week</option>
+                  <option value="thismonth">This Month</option>
+                  <option value="3months">Next 3 Months</option>
+                  <option value="6months">Next 6 Months</option>
+                  <option value="thisyear">This Year</option>
+                </select>
+              </div>
+
               {/* Trip Duration Selection */}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-navy">
-                  When do you want to travel? 📅
+                  Travel days 📅
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="departDay" className="block text-xs text-gray-600 mb-1">
-                      Depart
+                      Depart on
                     </label>
                     <select
                       id="departDay"
@@ -163,11 +260,12 @@ export default function WeekendPage() {
                       <option value="thursday">Thursday</option>
                       <option value="friday">Friday</option>
                       <option value="saturday">Saturday</option>
+                      <option value="sunday">Sunday</option>
                     </select>
                   </div>
                   <div>
                     <label htmlFor="returnDay" className="block text-xs text-gray-600 mb-1">
-                      Return
+                      Return on
                     </label>
                     <select
                       id="returnDay"
@@ -178,6 +276,7 @@ export default function WeekendPage() {
                       <option value="saturday">Saturday</option>
                       <option value="sunday">Sunday</option>
                       <option value="monday">Monday</option>
+                      <option value="tuesday">Tuesday</option>
                     </select>
                   </div>
                 </div>
@@ -305,7 +404,8 @@ export default function WeekendPage() {
         {loading && (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-skyblue"></div>
-            <p className="text-white mt-4 text-lg">Scanning weekend deals...</p>
+            <p className="text-white mt-4 text-lg">Finding {departDay.charAt(0).toUpperCase() + departDay.slice(1)}-{returnDay.charAt(0).toUpperCase() + returnDay.slice(1)} trips...</p>
+            <p className="text-skyblue-light text-sm mt-2">Filtering by your selected days and timeframe</p>
           </div>
         )}
 
@@ -318,7 +418,14 @@ export default function WeekendPage() {
               </h2>
               <p className="text-skyblue-light">
                 {departDay.charAt(0).toUpperCase() + departDay.slice(1)} to {returnDay.charAt(0).toUpperCase() + returnDay.slice(1)} trips from {autoDetectedCity || origin}
-                {flexibleDays > 0 && ` (±${flexibleDays} day${flexibleDays > 1 ? 's' : ''} flexible)`}
+              </p>
+              <p className="text-skyblue-light/80 text-sm mt-1">
+                {timeframe === 'thisweek' && 'This week'}
+                {timeframe === 'thismonth' && 'This month'}
+                {timeframe === '3months' && 'Next 3 months'}
+                {timeframe === '6months' && 'Next 6 months'}
+                {timeframe === 'thisyear' && 'This year'}
+                {flexibleDays > 0 && ` • ±${flexibleDays} day${flexibleDays > 1 ? 's' : ''} flexible`}
               </p>
             </div>
 
