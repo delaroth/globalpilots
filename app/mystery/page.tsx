@@ -17,10 +17,17 @@ const vibeOptions = [
 const travellerTypes = ['Solo', 'Couple', 'Group']
 
 export default function MysteryPage() {
+  // Default date to next week
+  const getNextWeekDate = () => {
+    const date = new Date()
+    date.setDate(date.getDate() + 7)
+    return date.toISOString().split('T')[0]
+  }
+
   const [step, setStep] = useState<'form' | 'loading' | 'reveal'>('form')
   const [budget, setBudget] = useState('')
   const [origin, setOrigin] = useState('')
-  const [departDate, setDepartDate] = useState('')
+  const [departDate, setDepartDate] = useState(getNextWeekDate())
   const [flexibleDates, setFlexibleDates] = useState(false)
   const [selectedVibes, setSelectedVibes] = useState<string[]>([])
   const [travellerType, setTravellerType] = useState('Solo')
@@ -39,11 +46,38 @@ export default function MysteryPage() {
     e.preventDefault()
     setError('')
 
+    // Validate required fields
+    if (!origin) {
+      setError('Please select your departure city!')
+      return
+    }
+
+    if (!budget || parseFloat(budget) < 100) {
+      setError('Please enter a budget of at least $100!')
+      return
+    }
+
     if (selectedVibes.length === 0) {
       setError('Please select at least one vibe!')
       return
     }
 
+    if (!departDate) {
+      setError('Please select a departure date!')
+      return
+    }
+
+    // Validate date is not in the past
+    const selectedDate = new Date(departDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    if (selectedDate < today) {
+      setError('Please select a future date! Time travel tickets are unfortunately not available yet. 🕰️')
+      return
+    }
+
+    console.log('[Mystery] Starting search with:', { origin, budget, vibes: selectedVibes, departDate })
     setStep('loading')
 
     try {
