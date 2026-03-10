@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import DestinationCard from '@/components/DestinationCard'
@@ -21,7 +21,7 @@ interface WeekendDeal {
   actual: boolean
 }
 
-export default function WeekendPage() {
+function WeekendPageContent() {
   const searchParams = useSearchParams()
   const [origin, setOrigin] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -513,5 +513,20 @@ export default function WeekendPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function WeekendPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-skyblue mb-4"></div>
+          <p className="text-white text-lg">Loading...</p>
+        </div>
+      </div>
+    }>
+      <WeekendPageContent />
+    </Suspense>
   )
 }
