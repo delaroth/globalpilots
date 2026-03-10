@@ -52,9 +52,13 @@ export default function WeekendPage() {
 
   // Check if a date matches the selected day of week (with flexibility)
   const matchesDayOfWeek = (dateStr: string, targetDay: string): boolean => {
-    const date = new Date(dateStr)
-    const dayNum = date.getDay()
+    // Parse date as UTC to avoid timezone shifts
+    const parts = dateStr.split('-')
+    const date = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])))
+    const dayNum = date.getUTCDay()
     const targetNum = dayNameToNumber(targetDay)
+
+    console.log(`Checking ${dateStr} (day ${dayNum}) against target ${targetDay} (day ${targetNum})`)
 
     if (flexibleDays === 0) {
       return dayNum === targetNum
@@ -144,6 +148,9 @@ export default function WeekendPage() {
 
       const timeframeLimit = getTimeframeLimit()
 
+      console.log(`Total deals fetched: ${dealsData.length}`)
+      console.log(`Filtering for ${departDay} to ${returnDay} with ±${flexibleDays} days flexibility`)
+
       // Filter deals by timeframe and matching days
       dealsData = dealsData.filter((deal: WeekendDeal) => {
         const departDate = new Date(deal.depart_date)
@@ -156,8 +163,15 @@ export default function WeekendPage() {
         const departMatches = matchesDayOfWeek(deal.depart_date, departDay)
         const returnMatches = matchesDayOfWeek(deal.return_date, returnDay)
 
-        return departMatches && returnMatches
+        const matches = departMatches && returnMatches
+        if (matches) {
+          console.log(`✓ Match: ${deal.destination} - ${deal.depart_date} to ${deal.return_date}`)
+        }
+
+        return matches
       })
+
+      console.log(`Filtered to ${dealsData.length} matching deals`)
 
       // Sort by price and limit to top 6
       dealsData = dealsData.sort((a: WeekendDeal, b: WeekendDeal) => a.value - b.value).slice(0, 6)
