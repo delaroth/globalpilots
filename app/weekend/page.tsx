@@ -29,6 +29,9 @@ export default function WeekendPage() {
   const [deals, setDeals] = useState<WeekendDeal[]>([])
   const [error, setError] = useState('')
   const [autoDetectedCity, setAutoDetectedCity] = useState('')
+  const [departDay, setDepartDay] = useState('friday')
+  const [returnDay, setReturnDay] = useState('sunday')
+  const [flexibleDays, setFlexibleDays] = useState(1)
 
   const regions = useMemo(() => getAllRegions(), [])
 
@@ -124,7 +127,7 @@ export default function WeekendPage() {
             Fly Cheap This Weekend 🎉
           </h1>
           <p className="text-xl text-skyblue-light">
-            Discover affordable weekend getaways from {majorAirports.length}+ cities worldwide
+            Find affordable getaways with flexible dates from {majorAirports.length}+ cities
           </p>
         </div>
 
@@ -140,6 +143,65 @@ export default function WeekendPage() {
                   </p>
                 </div>
               )}
+
+              {/* Trip Duration Selection */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-navy">
+                  When do you want to travel? 📅
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="departDay" className="block text-xs text-gray-600 mb-1">
+                      Depart
+                    </label>
+                    <select
+                      id="departDay"
+                      value={departDay}
+                      onChange={(e) => setDepartDay(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                    >
+                      <option value="thursday">Thursday</option>
+                      <option value="friday">Friday</option>
+                      <option value="saturday">Saturday</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="returnDay" className="block text-xs text-gray-600 mb-1">
+                      Return
+                    </label>
+                    <select
+                      id="returnDay"
+                      value={returnDay}
+                      onChange={(e) => setReturnDay(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                    >
+                      <option value="saturday">Saturday</option>
+                      <option value="sunday">Sunday</option>
+                      <option value="monday">Monday</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Flexibility */}
+              <div className="space-y-2">
+                <label htmlFor="flexibility" className="block text-sm font-medium text-navy">
+                  Date Flexibility: ±{flexibleDays} day{flexibleDays > 1 ? 's' : ''}
+                </label>
+                <input
+                  type="range"
+                  id="flexibility"
+                  min="0"
+                  max="3"
+                  value={flexibleDays}
+                  onChange={(e) => setFlexibleDays(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
+                />
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>Exact dates</span>
+                  <span>Very flexible</span>
+                </div>
+              </div>
 
               {/* Region Filter */}
               <div className="space-y-2">
@@ -224,7 +286,7 @@ export default function WeekendPage() {
                 disabled={loading || !origin}
                 className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Finding Deals...' : 'Show Me Cheap Weekends'}
+                {loading ? 'Finding Deals...' : `Find ${departDay.charAt(0).toUpperCase() + departDay.slice(1)}-${returnDay.charAt(0).toUpperCase() + returnDay.slice(1)} Trips`}
               </button>
             </div>
           </form>
@@ -252,10 +314,11 @@ export default function WeekendPage() {
           <div className="max-w-6xl mx-auto">
             <div className="mb-8 text-center">
               <h2 className="text-2xl font-bold text-white mb-2">
-                Top {deals.length} Weekend Destinations
+                Top {deals.length} Destinations
               </h2>
               <p className="text-skyblue-light">
-                These are the cheapest weekend getaways from {origin}
+                {departDay.charAt(0).toUpperCase() + departDay.slice(1)} to {returnDay.charAt(0).toUpperCase() + returnDay.slice(1)} trips from {autoDetectedCity || origin}
+                {flexibleDays > 0 && ` (±${flexibleDays} day${flexibleDays > 1 ? 's' : ''} flexible)`}
               </p>
             </div>
 
@@ -288,17 +351,17 @@ export default function WeekendPage() {
                 </p>
               </div>
               <div className="bg-navy-light/50 backdrop-blur-sm rounded-lg p-6 border border-skyblue/20 text-center">
-                <div className="text-4xl mb-3">💰</div>
-                <h3 className="text-white font-semibold mb-2">Best Deals</h3>
+                <div className="text-4xl mb-3">📅</div>
+                <h3 className="text-white font-semibold mb-2">Flexible Dates</h3>
                 <p className="text-skyblue-light text-sm">
-                  We'll show you the cheapest weekend destinations
+                  Choose your travel days and date flexibility
                 </p>
               </div>
               <div className="bg-navy-light/50 backdrop-blur-sm rounded-lg p-6 border border-skyblue/20 text-center">
                 <div className="text-4xl mb-3">✈️</div>
-                <h3 className="text-white font-semibold mb-2">Book & Go</h3>
+                <h3 className="text-white font-semibold mb-2">Real Prices</h3>
                 <p className="text-skyblue-light text-sm">
-                  Book your spontaneous weekend adventure
+                  Live flight prices via Aviasales
                 </p>
               </div>
             </div>

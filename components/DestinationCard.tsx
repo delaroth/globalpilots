@@ -1,6 +1,7 @@
 'use client'
 
 import { generateAffiliateLink } from '@/lib/affiliate'
+import { majorAirports } from '@/lib/geolocation'
 
 interface DestinationCardProps {
   destination: string
@@ -10,6 +11,12 @@ interface DestinationCardProps {
   departDate: string
   returnDate: string
   distance: number
+}
+
+// Helper to get city name from airport code
+function getCityName(code: string): string {
+  const airport = majorAirports.find(a => a.code === code)
+  return airport?.city || code
 }
 
 export default function DestinationCard({
@@ -58,9 +65,12 @@ export default function DestinationCard({
 
       <div className="p-6">
         {/* Destination */}
-        <h3 className="text-2xl font-bold text-navy mb-2">{destination}</h3>
-        <p className="text-gray-600 text-sm mb-4">
+        <h3 className="text-2xl font-bold text-navy mb-2">{getCityName(destinationCode)}</h3>
+        <p className="text-gray-600 text-sm mb-1">
           {formatDate(departDate)} - {formatDate(returnDate)}
+        </p>
+        <p className="text-gray-500 text-xs mb-4">
+          via Aviasales
         </p>
 
         {/* Stats */}
