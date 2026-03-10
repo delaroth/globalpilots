@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import DestinationCard from '@/components/DestinationCard'
 import { majorAirports, getAllRegions, getAirportsByRegion, searchAirports } from '@/lib/geolocation'
@@ -21,6 +22,7 @@ interface WeekendDeal {
 }
 
 export default function WeekendPage() {
+  const searchParams = useSearchParams()
   const [origin, setOrigin] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -89,11 +91,29 @@ export default function WeekendPage() {
     return filtered
   }, [searchQuery, selectedRegion])
 
-  // Auto-detect location on mount
+  // Read origin from URL param or default to JFK
   useEffect(() => {
-    setAutoDetectedCity('New York JFK')
-    setOrigin('JFK')
-  }, [])
+    const originParam = searchParams.get('origin')
+
+    if (originParam) {
+      // Look up city name from the airport code
+      const airport = majorAirports.find(a => a.code === originParam.toUpperCase())
+      if (airport) {
+        setOrigin(airport.code)
+        setAutoDetectedCity(airport.city)
+        console.log('[Weekend] Set origin from URL param:', airport.code, airport.city)
+      } else {
+        // If not found in our database, still try to use it
+        setOrigin(originParam.toUpperCase())
+        setAutoDetectedCity(originParam.toUpperCase())
+        console.log('[Weekend] Unknown origin from URL param:', originParam)
+      }
+    } else {
+      // Default to New York JFK
+      setAutoDetectedCity('New York JFK')
+      setOrigin('JFK')
+    }
+  }, [searchParams])
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -469,6 +489,7 @@ export default function WeekendPage() {
               <h3 className="text-white font-semibold mb-4 text-center">Popular Departure Cities</h3>
               <div className="flex flex-wrap gap-2 justify-center">
                 {[
+                  { code: 'BKK', city: 'Bangkok' },
                   { code: 'JFK', city: 'New York' },
                   { code: 'LAX', city: 'Los Angeles' },
                   { code: 'LHR', city: 'London' },
