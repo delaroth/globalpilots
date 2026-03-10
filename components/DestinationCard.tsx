@@ -65,12 +65,12 @@ export default function DestinationCard({
 
       <div className="p-6">
         {/* Destination */}
-        <h3 className="text-2xl font-bold text-navy mb-2">{getCityName(destinationCode)}</h3>
-        <p className="text-gray-600 text-sm mb-1">
-          {formatDate(departDate)} - {formatDate(returnDate)}
+        <h3 className="text-2xl font-bold text-navy mb-1">{getCityName(destinationCode)}</h3>
+        <p className="text-gray-500 text-sm mb-2">
+          {destinationCode} • via Aviasales
         </p>
-        <p className="text-gray-500 text-xs mb-4">
-          via Aviasales
+        <p className="text-gray-600 text-sm mb-4">
+          {formatDate(departDate)} - {formatDate(returnDate)}
         </p>
 
         {/* Stats */}
