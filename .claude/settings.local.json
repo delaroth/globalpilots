@@ -21,7 +21,8 @@
       "Bash(vercel link:*)",
       "Bash(vercel logs:*)",
       "Bash(vercel ls:*)",
-      "Bash(vercel:*)"
+      "Bash(vercel:*)",
+      "Bash(npm run dev:*)"
     ]
   }
 }

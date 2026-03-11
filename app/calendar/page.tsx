@@ -179,7 +179,7 @@ export default function CalendarPage() {
           {/* Quick tips */}
           <div className="mt-6 bg-skyblue/10 backdrop-blur-sm rounded-lg p-4 border border-skyblue/20">
             <p className="text-skyblue-light text-sm">
-              <strong className="text-white">💡 Pro tip:</strong> Use 3-letter airport codes (e.g., NYC for New York, LON for London).
+              <strong className="text-white">💡 Pro tip:</strong> Search by typing city names (e.g., Bangkok, New York, London) or 3-letter airport codes.
               Click any green day to book the cheapest flights!
             </p>
           </div>

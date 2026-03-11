@@ -44,26 +44,42 @@ export default function MysteryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('[Mystery] Form submitted - starting validation...')
     setError('')
 
     // Validate required fields
     if (!origin) {
-      setError('Please select your departure city!')
+      const errorMsg = 'Please select your departure city!'
+      console.error('[Mystery] Validation failed:', errorMsg)
+      setError(errorMsg)
       return
     }
 
-    if (!budget || parseFloat(budget) < 100) {
-      setError('Please enter a budget of at least $100!')
+    if (!budget || parseFloat(budget) <= 0) {
+      const errorMsg = 'Please enter a budget greater than $0!'
+      console.error('[Mystery] Validation failed:', errorMsg)
+      setError(errorMsg)
+      return
+    }
+
+    if (parseFloat(budget) < 100) {
+      const errorMsg = 'Please enter a budget of at least $100 for a realistic trip!'
+      console.error('[Mystery] Validation failed:', errorMsg)
+      setError(errorMsg)
       return
     }
 
     if (selectedVibes.length === 0) {
-      setError('Please select at least one vibe!')
+      const errorMsg = 'Please select at least one vibe!'
+      console.error('[Mystery] Validation failed:', errorMsg)
+      setError(errorMsg)
       return
     }
 
     if (!departDate) {
-      setError('Please select a departure date!')
+      const errorMsg = 'Please select a departure date!'
+      console.error('[Mystery] Validation failed:', errorMsg)
+      setError(errorMsg)
       return
     }
 
@@ -73,14 +89,17 @@ export default function MysteryPage() {
     today.setHours(0, 0, 0, 0)
 
     if (selectedDate < today) {
-      setError('Please select a future date! Time travel tickets are unfortunately not available yet. 🕰️')
+      const errorMsg = 'Please select a future date! Time travel tickets are unfortunately not available yet. 🕰️'
+      console.error('[Mystery] Validation failed:', errorMsg)
+      setError(errorMsg)
       return
     }
 
-    console.log('[Mystery] Starting search with:', { origin, budget, vibes: selectedVibes, departDate })
+    console.log('[Mystery] ✅ All validations passed! Starting search with:', { origin, budget, vibes: selectedVibes, departDate })
     setStep('loading')
 
     try {
+      console.log('[Mystery] 🚀 Making API call to /api/ai-mystery...')
       const response = await fetch('/api/ai-mystery', {
         method: 'POST',
         headers: {
@@ -94,20 +113,34 @@ export default function MysteryPage() {
         }),
       })
 
+      console.log('[Mystery] API response status:', response.status)
+
       if (!response.ok) {
-        throw new Error('Failed to generate destination')
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+        const errorMsg = errorData.error || `Failed to generate destination (HTTP ${response.status})`
+        console.error('[Mystery] API error response:', errorData)
+        throw new Error(errorMsg)
       }
 
       const data = await response.json()
+      console.log('[Mystery] ✅ API success! Received destination:', data.destination)
 
       if (data.error) {
+        console.error('[Mystery] API returned error in data:', data.error)
         throw new Error(data.error)
+      }
+
+      if (!data.destination || !data.city_code_IATA) {
+        console.error('[Mystery] API returned invalid data structure:', data)
+        throw new Error('Invalid response from server. Please try again.')
       }
 
       setDestination(data)
       setStep('reveal')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      const errorMsg = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+      console.error('[Mystery] ❌ Error during mystery destination generation:', err)
+      setError(errorMsg)
       setStep('form')
     }
   }

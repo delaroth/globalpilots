@@ -5,6 +5,50 @@ export const dynamic = 'force-dynamic'
 const API_BASE = 'https://api.travelpayouts.com'
 const TOKEN = process.env.TRAVELPAYOUTS_TOKEN
 
+// City name to IATA code lookup map
+const cityToIATA: { [key: string]: string } = {
+  'BANGKOK': 'BKK',
+  'LONDON': 'LHR',
+  'PARIS': 'CDG',
+  'TOKYO': 'NRT',
+  'NEW YORK': 'JFK',
+  'LOS ANGELES': 'LAX',
+  'SYDNEY': 'SYD',
+  'SINGAPORE': 'SIN',
+  'DUBAI': 'DXB',
+  'SEOUL': 'ICN',
+  'KUALA LUMPUR': 'KUL',
+  'HONG KONG': 'HKG',
+  'AMSTERDAM': 'AMS',
+  'BERLIN': 'BER',
+  'ROME': 'FCO',
+  'MADRID': 'MAD',
+  'MUMBAI': 'BOM',
+  'DELHI': 'DEL',
+  'SHANGHAI': 'PVG',
+  'BEIJING': 'PEK',
+}
+
+// Convert city name to IATA code if needed
+function normalizeOrigin(origin: string): string {
+  const upperOrigin = origin.toUpperCase().trim()
+
+  // If it's already a 3-letter IATA code, return as-is
+  if (/^[A-Z]{3}$/.test(upperOrigin)) {
+    return upperOrigin
+  }
+
+  // Check if it's a city name we can convert
+  const iataCode = cityToIATA[upperOrigin]
+  if (iataCode) {
+    console.log(`[Latest API] Converted city name "${origin}" to IATA code "${iataCode}"`)
+    return iataCode
+  }
+
+  // Return as-is and let validation handle it
+  return origin
+}
+
 // Helper to convert day name to day number
 function dayNameToNumber(dayName: string): number {
   const days: { [key: string]: number } = {
@@ -41,25 +85,28 @@ function matchesDayOfWeek(dateStr: string, targetDay: string, flexibleDays: numb
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-  const origin = searchParams.get('origin')
+  const originParam = searchParams.get('origin')
   const limit = searchParams.get('limit') || '100'
   const departDay = searchParams.get('depart_day')
   const returnDay = searchParams.get('return_day')
   const timeframe = searchParams.get('timeframe')
   const flexibleDays = parseInt(searchParams.get('flexible_days') || '0')
 
-  if (!origin) {
+  if (!originParam) {
     return NextResponse.json(
       { error: 'Missing required parameter: origin' },
       { status: 400 }
     )
   }
 
+  // Normalize origin (convert city name to IATA if needed)
+  const origin = normalizeOrigin(originParam)
+
   // Validate origin is a 3-letter IATA code
   if (!/^[A-Z]{3}$/.test(origin)) {
-    console.error('[Latest API] Invalid origin format:', origin)
+    console.error('[Latest API] Invalid origin format:', originParam, '-> normalized to:', origin)
     return NextResponse.json(
-      { error: 'origin must be a 3-letter IATA airport code (e.g., BKK, JFK, LAX)' },
+      { error: 'origin must be a 3-letter IATA airport code (e.g., BKK, JFK, LAX) or a recognized city name (e.g., Bangkok, London, Paris)' },
       { status: 400 }
     )
   }

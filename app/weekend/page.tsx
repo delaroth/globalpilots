@@ -151,6 +151,24 @@ function WeekendPageContent() {
       // Extract deals from response
       let dealsData = data.data || []
 
+      console.log(`Received ${dealsData.length} deals from API, now filtering client-side...`)
+
+      // CLIENT-SIDE FILTER: Ensure depart_date matches selected departure day exactly
+      const selectedDepartDayIndex = dayNameToNumber(departDay)
+      dealsData = dealsData.filter((deal: WeekendDeal) => {
+        const departDate = new Date(deal.depart_date)
+        const actualDepartDayIndex = departDate.getUTCDay()
+        const matches = actualDepartDayIndex === selectedDepartDayIndex
+
+        if (!matches) {
+          console.log(`Filtering out ${deal.destination}: departs on day ${actualDepartDayIndex}, expected ${selectedDepartDayIndex}`)
+        }
+
+        return matches
+      })
+
+      console.log(`After client-side day filtering: ${dealsData.length} deals remaining`)
+
       // Filter by timeframe
       const getTimeframeLimit = () => {
         const now = new Date()
@@ -174,8 +192,8 @@ function WeekendPageContent() {
 
       const timeframeLimit = getTimeframeLimit()
 
-      // API now handles filtering by day and timeframe, just limit to 6 results
-      console.log(`Received ${dealsData.length} filtered deals from API`)
+      // Limit to top 6 results
+      console.log(`Limiting to top 6 results`)
       dealsData = dealsData.slice(0, 6)
 
       if (dealsData.length === 0) {
