@@ -22,6 +22,9 @@ interface CalendarGridProps {
 }
 
 export default function CalendarGrid({ data, origin, destination, month }: CalendarGridProps) {
+  console.log('[CalendarGrid] Received data keys:', Object.keys(data || {}).slice(0, 10))
+  console.log('[CalendarGrid] Data entries:', Object.keys(data || {}).length)
+
   if (!data || Object.keys(data).length === 0) {
     return (
       <div className="text-center py-12 text-white">
@@ -37,16 +40,23 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
   const maxPrice = Math.max(...prices)
   const range = maxPrice - minPrice
 
-  // Color coding: green (cheapest 30%), yellow (mid), red (expensive)
+  // Color coding: green (cheapest 33%), orange (middle 33%), red (expensive 33%)
   const getColorClass = (price: number) => {
-    if (price <= minPrice + range * 0.3) {
+    const sortedPrices = [...prices].sort((a, b) => a - b)
+    const third = Math.floor(sortedPrices.length / 3)
+
+    if (price <= sortedPrices[third]) {
       return 'bg-green-500 hover:bg-green-600'
-    } else if (price <= minPrice + range * 0.7) {
-      return 'bg-yellow-500 hover:bg-yellow-600'
+    } else if (price <= sortedPrices[third * 2]) {
+      return 'bg-orange-500 hover:bg-orange-600'
     } else {
       return 'bg-red-500 hover:bg-red-600'
     }
   }
+
+  // Get today's date for comparison
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
   // Build calendar for the month
   const [year, monthNum] = month.split('-').map(Number)
@@ -98,15 +108,15 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
         <div className="flex justify-center gap-4 mb-6 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-500 rounded"></div>
-            <span className="text-white">Best prices</span>
+            <span className="text-white">Cheapest 33%</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-            <span className="text-white">Good prices</span>
+            <div className="w-4 h-4 bg-orange-500 rounded"></div>
+            <span className="text-white">Middle 33%</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-red-500 rounded"></div>
-            <span className="text-white">Higher prices</span>
+            <span className="text-white">Expensive 33%</span>
           </div>
         </div>
 
@@ -126,8 +136,32 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
             }
 
             const dateStr = `${year}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-            const dayData = data[dateStr]
+            const cellDate = new Date(year, monthNum - 1, day)
+            const isPast = cellDate < today
+
+            // Try different date key formats to handle TravelPayouts response
+            let dayData = data[dateStr]
+            if (!dayData) {
+              // Try with leading zeros removed
+              const altDateStr = `${year}-${monthNum}-${day}`
+              dayData = data[altDateStr]
+            }
+
             const hasPrice = dayData && dayData.value > 0
+
+            // Past dates are greyed out
+            if (isPast) {
+              return (
+                <button
+                  key={day}
+                  disabled
+                  className="aspect-square rounded-lg flex flex-col items-center justify-center bg-gray-800/30 text-gray-600 cursor-not-allowed"
+                >
+                  <span className="text-lg font-semibold">{day}</span>
+                  <span className="text-xs mt-1">Past</span>
+                </button>
+              )
+            }
 
             return (
               <button

@@ -69,18 +69,28 @@ export default function CalendarPage() {
       }
 
       const data = await response.json()
-      console.log('[Calendar] Received data:', data)
+      console.log('[Calendar] Received data keys:', Object.keys(data))
 
       if (data.error) {
         throw new Error(data.error)
       }
 
-      if (!data.data || Object.keys(data.data).length === 0) {
+      // Check if data.data exists and has entries
+      if (!data.data) {
+        console.error('[Calendar] No data.data property in response:', data)
+        setError('Invalid response format from API. Please try again.')
+        return
+      }
+
+      const dataEntries = Object.keys(data.data)
+      console.log('[Calendar] Data entries:', dataEntries.length, 'First few keys:', dataEntries.slice(0, 5))
+
+      if (dataEntries.length === 0) {
         setError('No flights found for this route and month. Try different dates or destinations.')
         return
       }
 
-      setCalendarData(data.data || data)
+      setCalendarData(data.data)
     } catch (err) {
       console.error('[Calendar] Error:', err)
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')

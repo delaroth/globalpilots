@@ -111,6 +111,7 @@ export const majorAirports = [
   { code: 'KKC', city: 'Khon Kaen', country: 'Thailand', region: 'Asia' },
   { code: 'UTH', city: 'Udon Thani', country: 'Thailand', region: 'Asia' },
   { code: 'BFV', city: 'Buriram', country: 'Thailand', region: 'Asia' },
+  { code: 'ROI', city: 'Roi Et', country: 'Thailand', region: 'Asia' },
   { code: 'KUL', city: 'Kuala Lumpur', country: 'Malaysia', region: 'Asia' },
   { code: 'CGK', city: 'Jakarta', country: 'Indonesia', region: 'Asia' },
   { code: 'MNL', city: 'Manila', country: 'Philippines', region: 'Asia' },

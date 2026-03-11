@@ -63,7 +63,19 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    console.log('[Calendar API] Data keys:', Object.keys(data), 'Data items:', data.data ? Object.keys(data.data).length : 0)
+    console.log('[Calendar API] Data keys:', Object.keys(data))
+
+    if (data.data) {
+      console.log('[Calendar API] Data.data items:', Object.keys(data.data).length)
+      // Log first few date keys to see the format
+      const sampleKeys = Object.keys(data.data).slice(0, 5)
+      console.log('[Calendar API] Sample date keys:', sampleKeys)
+      if (sampleKeys.length > 0) {
+        console.log('[Calendar API] Sample entry:', data.data[sampleKeys[0]])
+      }
+    } else {
+      console.log('[Calendar API] No data.data property, full response:', JSON.stringify(data).substring(0, 500))
+    }
 
     return NextResponse.json(data)
   } catch (error) {

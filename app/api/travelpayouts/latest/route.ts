@@ -101,6 +101,30 @@ export async function GET(request: NextRequest) {
       })
       const flexText = flexibleDays > 0 ? ` (±${flexibleDays} days)` : ''
       console.log('[Latest API] Filtered to', deals.length, 'deals matching', departDay, 'to', returnDay + flexText)
+
+      // Filter by trip duration - calculate base trip length from selected days
+      const dayNumbers: { [key: string]: number } = {
+        sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+        thursday: 4, friday: 5, saturday: 6
+      }
+      const departDayNum = dayNumbers[departDay.toLowerCase()]
+      const returnDayNum = dayNumbers[returnDay.toLowerCase()]
+
+      // Calculate base trip length (days between selected departure and return days)
+      let baseTripLength = (returnDayNum - departDayNum + 7) % 7
+      if (baseTripLength === 0) baseTripLength = 7 // Same day = full week
+
+      // Max trip duration = base + (2 * flexibility) to account for shifts in both directions
+      const maxTripDuration = baseTripLength + (2 * flexibleDays)
+
+      deals = deals.filter((deal: any) => {
+        const depart = new Date(deal.depart_date)
+        const returnDate = new Date(deal.return_date)
+        const tripDuration = Math.ceil((returnDate.getTime() - depart.getTime()) / (1000 * 60 * 60 * 24))
+        return tripDuration <= maxTripDuration
+      })
+
+      console.log('[Latest API] Filtered to', deals.length, 'deals with duration ≤', maxTripDuration, 'days (base:', baseTripLength, '+ flex:', 2 * flexibleDays, ')')
     }
 
     // Filter by timeframe if specified
