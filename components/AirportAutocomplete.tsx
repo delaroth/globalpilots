@@ -23,8 +23,37 @@ export default function AirportAutocomplete({
   const [selectedCity, setSelectedCity] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Improved filtering: prioritize exact IATA code matches, then partial matches
   const filteredAirports = searchQuery.trim()
-    ? searchAirports(searchQuery).slice(0, 30)
+    ? (() => {
+        const query = searchQuery.trim().toUpperCase()
+        const allResults = searchAirports(searchQuery)
+
+        // Exact IATA code match
+        const exactMatch = allResults.filter(a => a.code === query)
+
+        // IATA code starts with query
+        const codeStartsWith = allResults.filter(a =>
+          a.code.startsWith(query) && a.code !== query
+        )
+
+        // City name starts with query
+        const cityStartsWith = allResults.filter(a =>
+          a.city.toUpperCase().startsWith(query) &&
+          !exactMatch.includes(a) &&
+          !codeStartsWith.includes(a)
+        )
+
+        // Other matches
+        const otherMatches = allResults.filter(a =>
+          !exactMatch.includes(a) &&
+          !codeStartsWith.includes(a) &&
+          !cityStartsWith.includes(a)
+        )
+
+        // Return prioritized results
+        return [...exactMatch, ...codeStartsWith, ...cityStartsWith, ...otherMatches].slice(0, 10)
+      })()
     : []
 
   // Close dropdown when clicking outside
@@ -54,6 +83,46 @@ export default function AirportAutocomplete({
     setSelectedCity(city)
     setSearchQuery('')
     setShowDropdown(false)
+  }
+
+  // Auto-select when typing a valid IATA code
+  useEffect(() => {
+    const query = searchQuery.trim().toUpperCase()
+
+    // If user typed exactly 3 letters (case-insensitive)
+    if (query.length === 3) {
+      const exactMatch = majorAirports.find(a => a.code === query)
+      if (exactMatch) {
+        // Auto-select the exact IATA code match immediately
+        onChange(exactMatch.code)
+        setSelectedCity(exactMatch.city)
+        setSearchQuery('')
+        setShowDropdown(false)
+      }
+    }
+  }, [searchQuery, onChange])
+
+  // Handle Enter key
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+
+      // If there's exactly one result, select it
+      if (filteredAirports.length === 1) {
+        const airport = filteredAirports[0]
+        handleSelect(airport.code, airport.city)
+      }
+      // If query is exactly 3 letters, try to find exact IATA match
+      else if (/^[A-Z]{3}$/i.test(searchQuery.trim())) {
+        const query = searchQuery.trim().toUpperCase()
+        const exactMatch = majorAirports.find(a => a.code === query)
+        if (exactMatch) {
+          handleSelect(exactMatch.code, exactMatch.city)
+        }
+      }
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false)
+    }
   }
 
   return (
@@ -91,6 +160,7 @@ export default function AirportAutocomplete({
               setSearchQuery(e.target.value)
               setShowDropdown(true)
             }}
+            onKeyDown={handleKeyDown}
             onFocus={() => setShowDropdown(true)}
             placeholder={placeholder}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"

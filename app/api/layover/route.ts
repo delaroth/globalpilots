@@ -32,6 +32,23 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // Validate origin and destination are 3-letter IATA codes
+  if (!/^[A-Z]{3}$/.test(origin)) {
+    console.error('[Layover API] Invalid origin format:', origin)
+    return NextResponse.json(
+      { error: 'origin must be a 3-letter IATA airport code (e.g., BKK, JFK, LAX)' },
+      { status: 400 }
+    )
+  }
+
+  if (!/^[A-Z]{3}$/.test(destination)) {
+    console.error('[Layover API] Invalid destination format:', destination)
+    return NextResponse.json(
+      { error: 'destination must be a 3-letter IATA airport code (e.g., BKK, JFK, LAX)' },
+      { status: 400 }
+    )
+  }
+
   if (origin === destination) {
     return NextResponse.json(
       { error: 'Origin and destination must be different' },
@@ -159,8 +176,9 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[Layover API] Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch layover data. Please try again.'
     return NextResponse.json(
-      { error: 'Failed to fetch layover data. Please try again.' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

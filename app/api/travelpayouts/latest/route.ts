@@ -55,6 +55,15 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // Validate origin is a 3-letter IATA code
+  if (!/^[A-Z]{3}$/.test(origin)) {
+    console.error('[Latest API] Invalid origin format:', origin)
+    return NextResponse.json(
+      { error: 'origin must be a 3-letter IATA airport code (e.g., BKK, JFK, LAX)' },
+      { status: 400 }
+    )
+  }
+
   if (!TOKEN) {
     return NextResponse.json(
       { error: 'TravelPayouts API token not configured' },
@@ -76,7 +85,7 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text()
       console.error('[Latest API] TravelPayouts error:', response.status, errorText)
-      throw new Error(`TravelPayouts API error: ${response.status}`)
+      throw new Error(`TravelPayouts API returned ${response.status}: ${errorText.substring(0, 200)}`)
     }
 
     const data = await response.json()
@@ -136,8 +145,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ...data, data: deals })
   } catch (error) {
     console.error('[Latest API] Error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch latest prices'
     return NextResponse.json(
-      { error: 'Failed to fetch latest prices' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

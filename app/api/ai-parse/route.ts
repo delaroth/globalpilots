@@ -32,17 +32,28 @@ export async function POST(request: NextRequest) {
 "${query}"
 
 Extract:
-- origin (departure city/airport code, null if not mentioned)
-- destination (arrival city/airport code, null if not mentioned)
+- origin (3-letter IATA airport code ONLY, null if not mentioned. Convert city names to IATA codes)
+- destination (3-letter IATA airport code ONLY, null if not mentioned. Convert city names to IATA codes)
 - budget (total amount in USD, null if not mentioned)
 - dates (any date/time info, null if not mentioned)
 - vibe (array of vibes like "beach", "adventure", "city", "food", "nature", empty array if none)
 - confidence (low/medium/high based on how clear the query is)
 
+IMPORTANT: Always use 3-letter IATA codes for airports:
+- NYC, New York → JFK
+- LA, Los Angeles → LAX
+- Bangkok → BKK
+- London → LHR
+- Paris → CDG
+- Tokyo → NRT
+- Singapore → SIN
+- Dubai → DXB
+
 Examples:
 "Beach vacation under $1500" → origin:null, destination:null, budget:1500, dates:null, vibe:["beach"], confidence:"medium"
-"NYC to Tokyo in July" → origin:"NYC", destination:"Tokyo", budget:null, dates:"July", vibe:[], confidence:"high"
-"Cheap weekend getaway from LA" → origin:"LA", destination:null, budget:null, dates:"weekend", vibe:[], confidence:"high"
+"NYC to Tokyo in July" → origin:"JFK", destination:"NRT", budget:null, dates:"July", vibe:[], confidence:"high"
+"Cheap weekend getaway from LA" → origin:"LAX", destination:null, budget:null, dates:"weekend", vibe:[], confidence:"high"
+"Bangkok to Singapore" → origin:"BKK", destination:"SIN", budget:null, dates:null, vibe:[], confidence:"high"
 
 Return this EXACT JSON structure:
 {

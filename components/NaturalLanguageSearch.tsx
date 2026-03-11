@@ -2,12 +2,35 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { majorAirports } from '@/lib/geolocation'
 
 export default function NaturalLanguageSearch() {
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+
+  // Convert city name or code to IATA code
+  const toIataCode = (location: string): string => {
+    if (!location) return ''
+
+    const upperLocation = location.toUpperCase()
+
+    // If it's already a 3-letter code, check if it's valid
+    if (/^[A-Z]{3}$/.test(upperLocation)) {
+      const airport = majorAirports.find(a => a.code === upperLocation)
+      if (airport) return upperLocation
+    }
+
+    // Otherwise, search by city name
+    const airport = majorAirports.find(a =>
+      a.city.toUpperCase() === upperLocation ||
+      a.city.toUpperCase().includes(upperLocation) ||
+      a.code === upperLocation
+    )
+
+    return airport ? airport.code : location
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,10 +61,15 @@ export default function NaturalLanguageSearch() {
       // Route based on parsed data
       if (data.origin && data.destination) {
         // Has both origin and destination - go to calendar
-        router.push(`/calendar?origin=${data.origin}&destination=${data.destination}`)
+        const originCode = toIataCode(data.origin)
+        const destCode = toIataCode(data.destination)
+        console.log('[NL Search] Redirecting to calendar:', { origin: data.origin, originCode, dest: data.destination, destCode })
+        router.push(`/calendar?origin=${originCode}&destination=${destCode}`)
       } else if (data.origin) {
         // Has only origin - go to weekend deals
-        router.push(`/weekend?origin=${data.origin}`)
+        const originCode = toIataCode(data.origin)
+        console.log('[NL Search] Redirecting to weekend:', { origin: data.origin, originCode })
+        router.push(`/weekend?origin=${originCode}`)
       } else if (data.vibe && data.vibe.length > 0) {
         // Has vibes - go to mystery
         router.push(`/mystery`)

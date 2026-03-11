@@ -30,12 +30,23 @@ export default function LayoverPage() {
 
     // Validate required fields
     if (!origin) {
-      setError('Please select a departure airport')
+      setError('Please select a departure airport. Type a 3-letter code like BKK, JFK, or LAX.')
       return
     }
 
     if (!destination) {
-      setError('Please select a destination airport')
+      setError('Please select a destination airport. Type a 3-letter code like BKK, JFK, or LAX.')
+      return
+    }
+
+    // Validate IATA codes
+    if (!/^[A-Z]{3}$/.test(origin)) {
+      setError('Invalid departure airport code. Please use a 3-letter IATA code like BKK, JFK, or LAX.')
+      return
+    }
+
+    if (!/^[A-Z]{3}$/.test(destination)) {
+      setError('Invalid destination airport code. Please use a 3-letter IATA code like BKK, JFK, or LAX.')
       return
     }
 
