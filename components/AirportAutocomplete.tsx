@@ -9,6 +9,7 @@ interface AirportAutocompleteProps {
   label: string
   placeholder?: string
   id: string
+  onSearchChange?: (text: string) => void // Optional callback for raw text input
 }
 
 export default function AirportAutocomplete({
@@ -17,6 +18,7 @@ export default function AirportAutocomplete({
   label,
   placeholder = 'Search city or airport code...',
   id,
+  onSearchChange,
 }: AirportAutocompleteProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -83,6 +85,10 @@ export default function AirportAutocomplete({
     setSelectedCity(city)
     setSearchQuery('')
     setShowDropdown(false)
+    // Clear text input when selection is made
+    if (onSearchChange) {
+      onSearchChange('')
+    }
   }
 
   // Auto-select when typing a valid IATA code
@@ -159,6 +165,10 @@ export default function AirportAutocomplete({
             onChange={(e) => {
               setSearchQuery(e.target.value)
               setShowDropdown(true)
+              // Notify parent of text changes if callback provided
+              if (onSearchChange) {
+                onSearchChange(e.target.value)
+              }
             }}
             onKeyDown={handleKeyDown}
             onFocus={() => setShowDropdown(true)}

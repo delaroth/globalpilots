@@ -131,75 +131,62 @@ function WeekendPageContent() {
     try {
       // Calculate date range based on timeframe
       const today = new Date()
-      let limit = 100 // Get more results to filter
+      let limit = 200 // Get more results to filter from
 
-      // Pass selected days, timeframe, and flexibility to API
-      const response = await fetch(
-        `/api/travelpayouts/latest?origin=${origin}&limit=${limit}&depart_day=${departDay}&return_day=${returnDay}&timeframe=${timeframe}&flexible_days=${flexibleDays}`
-      )
+      // Try progressively relaxing flexibility until we get at least 6 results
+      let dealsData: WeekendDeal[] = []
+      let currentFlexibility = flexibleDays
+      const maxFlexibility = 3 // Maximum ±3 days
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch weekend deals')
-      }
+      while (dealsData.length < 6 && currentFlexibility <= maxFlexibility) {
+        console.log(`[Weekend] Searching with flexibility ±${currentFlexibility} days...`)
 
-      const data = await response.json()
+        // Pass selected days, timeframe, and flexibility to API
+        const response = await fetch(
+          `/api/travelpayouts/latest?origin=${origin}&limit=${limit}&depart_day=${departDay}&return_day=${returnDay}&timeframe=${timeframe}&flexible_days=${currentFlexibility}`
+        )
 
-      if (data.error) {
-        throw new Error(data.error)
-      }
-
-      // Extract deals from response
-      let dealsData = data.data || []
-
-      console.log(`Received ${dealsData.length} deals from API, now filtering client-side...`)
-
-      // CLIENT-SIDE FILTER: Ensure depart_date matches selected departure day exactly
-      const selectedDepartDayIndex = dayNameToNumber(departDay)
-      dealsData = dealsData.filter((deal: WeekendDeal) => {
-        const departDate = new Date(deal.depart_date)
-        const actualDepartDayIndex = departDate.getUTCDay()
-        const matches = actualDepartDayIndex === selectedDepartDayIndex
-
-        if (!matches) {
-          console.log(`Filtering out ${deal.destination}: departs on day ${actualDepartDayIndex}, expected ${selectedDepartDayIndex}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch weekend deals')
         }
 
-        return matches
-      })
+        const data = await response.json()
 
-      console.log(`After client-side day filtering: ${dealsData.length} deals remaining`)
+        if (data.error) {
+          throw new Error(data.error)
+        }
 
-      // Filter by timeframe
-      const getTimeframeLimit = () => {
-        const now = new Date()
-        switch (timeframe) {
-          case 'thisweek':
-            const endOfWeek = new Date(now)
-            endOfWeek.setDate(now.getDate() + (7 - now.getDay()))
-            return endOfWeek
-          case 'thismonth':
-            return new Date(now.getFullYear(), now.getMonth() + 1, 0)
-          case '3months':
-            return new Date(now.setMonth(now.getMonth() + 3))
-          case '6months':
-            return new Date(now.setMonth(now.getMonth() + 6))
-          case 'thisyear':
-            return new Date(now.getFullYear(), 11, 31)
-          default:
-            return new Date(now.setMonth(now.getMonth() + 3))
+        dealsData = data.data || []
+        console.log(`[Weekend] Received ${dealsData.length} deals with ±${currentFlexibility} flexibility`)
+
+        // If we have enough results, stop
+        if (dealsData.length >= 6) {
+          break
+        }
+
+        // Try again with more flexibility (but only if user set some flexibility)
+        if (flexibleDays > 0 || dealsData.length < 6) {
+          currentFlexibility++
+        } else {
+          break // User wants exact dates, don't auto-relax
         }
       }
 
-      const timeframeLimit = getTimeframeLimit()
-
-      // Limit to top 6 results
-      console.log(`Limiting to top 6 results`)
-      dealsData = dealsData.slice(0, 6)
+      // API already filtered by day of week and timeframe with appropriate flexibility
+      // Limit to top 12 best deals
+      dealsData = dealsData.slice(0, 12)
 
       if (dealsData.length === 0) {
-        setError(`No ${departDay}-${returnDay} trips found in the selected timeframe. Try different days or timeframe!`)
+        setError(`No ${departDay}-${returnDay} trips found in the selected timeframe. Try different days, increase flexibility, or choose a longer timeframe!`)
       } else {
         setDeals(dealsData)
+
+        // Log the flexibility level used
+        if (currentFlexibility > flexibleDays) {
+          console.log(`[Weekend] ✅ Found ${dealsData.length} deals by relaxing to ±${currentFlexibility} days`)
+        } else {
+          console.log(`[Weekend] ✅ Found ${dealsData.length} deals with requested ±${flexibleDays} flexibility`)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')

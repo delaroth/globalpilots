@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 import MysteryLoading from '@/components/MysteryLoading'
 import MysteryReveal from '@/components/MysteryReveal'
+import { searchAirports, majorAirports } from '@/lib/geolocation'
 
 const vibeOptions = [
   { emoji: '🏖', label: 'Beach', value: 'beach' },
@@ -27,12 +28,14 @@ export default function MysteryPage() {
   const [step, setStep] = useState<'form' | 'loading' | 'reveal'>('form')
   const [budget, setBudget] = useState('')
   const [origin, setOrigin] = useState('')
+  const [originInputText, setOriginInputText] = useState('') // Track raw input text
   const [departDate, setDepartDate] = useState(getNextWeekDate())
   const [flexibleDates, setFlexibleDates] = useState(false)
   const [selectedVibes, setSelectedVibes] = useState<string[]>([])
   const [travellerType, setTravellerType] = useState('Solo')
   const [destination, setDestination] = useState(null)
   const [error, setError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false) // Track button state
 
   const handleVibeToggle = (vibe: string) => {
     if (selectedVibes.includes(vibe)) {
@@ -46,12 +49,42 @@ export default function MysteryPage() {
     e.preventDefault()
     console.log('[Mystery] Form submitted - starting validation...')
     setError('')
+    setIsSubmitting(true) // Show loading state immediately
+
+    // Auto-resolve origin if user typed text but didn't select from dropdown
+    let resolvedOrigin = origin
+    if (!origin && originInputText.trim()) {
+      console.log('[Mystery] Attempting to auto-resolve origin from text:', originInputText)
+
+      // Try to find exact city name match
+      const normalizedInput = originInputText.trim()
+      const matches = searchAirports(normalizedInput)
+
+      if (matches.length > 0) {
+        // Check for exact city name match (case-insensitive)
+        const exactMatch = matches.find(a =>
+          a.city.toLowerCase() === normalizedInput.toLowerCase()
+        )
+
+        if (exactMatch) {
+          resolvedOrigin = exactMatch.code
+          console.log('[Mystery] ✅ Auto-resolved "' + originInputText + '" to ' + resolvedOrigin)
+        } else if (matches.length === 1) {
+          // Only one match, use it
+          resolvedOrigin = matches[0].code
+          console.log('[Mystery] ✅ Auto-resolved "' + originInputText + '" to ' + resolvedOrigin + ' (single match)')
+        }
+      }
+    }
 
     // Validate required fields
-    if (!origin) {
-      const errorMsg = 'Please select your departure city!'
+    if (!resolvedOrigin) {
+      const errorMsg = originInputText.trim()
+        ? 'Please select a city from the dropdown suggestions. Multiple cities match your search - click one to confirm.'
+        : 'Please select your departure city!'
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
+      setIsSubmitting(false)
       return
     }
 
@@ -59,6 +92,7 @@ export default function MysteryPage() {
       const errorMsg = 'Please enter a budget greater than $0!'
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
+      setIsSubmitting(false)
       return
     }
 
@@ -66,6 +100,7 @@ export default function MysteryPage() {
       const errorMsg = 'Please enter a budget of at least $100 for a realistic trip!'
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
+      setIsSubmitting(false)
       return
     }
 
@@ -73,6 +108,7 @@ export default function MysteryPage() {
       const errorMsg = 'Please select at least one vibe!'
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
+      setIsSubmitting(false)
       return
     }
 
@@ -80,6 +116,7 @@ export default function MysteryPage() {
       const errorMsg = 'Please select a departure date!'
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
+      setIsSubmitting(false)
       return
     }
 
@@ -92,10 +129,11 @@ export default function MysteryPage() {
       const errorMsg = 'Please select a future date! Time travel tickets are unfortunately not available yet. 🕰️'
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
+      setIsSubmitting(false)
       return
     }
 
-    console.log('[Mystery] ✅ All validations passed! Starting search with:', { origin, budget, vibes: selectedVibes, departDate })
+    console.log('[Mystery] ✅ All validations passed! Starting search with:', { origin: resolvedOrigin, budget, vibes: selectedVibes, departDate })
     setStep('loading')
 
     try {
@@ -106,7 +144,7 @@ export default function MysteryPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          origin,
+          origin: resolvedOrigin, // Use resolved origin
           budget: parseFloat(budget),
           vibes: selectedVibes,
           dates: `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`,
@@ -137,11 +175,13 @@ export default function MysteryPage() {
 
       setDestination(data)
       setStep('reveal')
+      setIsSubmitting(false) // Reset on success
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
       console.error('[Mystery] ❌ Error during mystery destination generation:', err)
       setError(errorMsg)
       setStep('form')
+      setIsSubmitting(false) // Reset on error
     }
   }
 
@@ -223,6 +263,7 @@ export default function MysteryPage() {
                   label=""
                   value={origin}
                   onChange={setOrigin}
+                  onSearchChange={setOriginInputText} // Track raw text input
                   placeholder="Search your departure city..."
                 />
               </div>
@@ -310,9 +351,17 @@ export default function MysteryPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-bold text-xl py-5 px-6 rounded-lg transition shadow-2xl hover:shadow-3xl transform hover:scale-[1.02] active:scale-[0.98]"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-bold text-xl py-5 px-6 rounded-lg transition shadow-2xl hover:shadow-3xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
               >
-                ✨ Surprise Me! ✨
+                {isSubmitting ? (
+                  <>
+                    <div className="inline-block w-6 h-6 border-3 border-navy border-t-transparent rounded-full animate-spin"></div>
+                    <span>Finding your perfect destination...</span>
+                  </>
+                ) : (
+                  <>✨ Surprise Me! ✨</>
+                )}
               </button>
             </form>
 
