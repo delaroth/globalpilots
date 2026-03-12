@@ -9,9 +9,10 @@ export default function Navigation() {
   const pathname = usePathname()
 
   const links = [
+    { href: '/mystery', label: 'Mystery Vacation' },
+    { href: '/explore', label: 'Layover Explorer' },
     { href: '/search', label: 'Search Flights' },
-    { href: '/mystery', label: 'Mystery Trip' },
-    { href: '/alerts', label: 'Price Alerts' },
+    { href: '/discover', label: 'Explore Cheap' },
   ]
 
   return (

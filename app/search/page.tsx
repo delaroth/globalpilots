@@ -1,11 +1,10 @@
 'use client'
 import { Suspense, useState } from 'react'
-import Link from 'next/link'
+import Navigation from '@/components/Navigation'
+import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 import CalendarGrid from '@/components/CalendarGrid'
-import RouteComparison from '@/components/RouteComparison'
 import DestinationCard from '@/components/DestinationCard'
-import { majorHubs, LayoverRoute } from '@/lib/hubs'
 import { generateAffiliateLink, buildFlightLink } from '@/lib/affiliate'
 
 type DateMode = 'exact-date' | 'flexible-month' | 'day-windows'
@@ -52,7 +51,6 @@ function getPopularSuggestions(origin: string): { dest: string; city: string }[]
       { dest: 'BUD', city: 'Budapest' }, { dest: 'ATH', city: 'Athens' },
     ].filter(s => s.dest !== origin)
   }
-  // Default
   return [
     { dest: 'BKK', city: 'Bangkok' }, { dest: 'LHR', city: 'London' },
     { dest: 'NRT', city: 'Tokyo' }, { dest: 'BCN', city: 'Barcelona' },
@@ -74,13 +72,20 @@ function SearchPageContent() {
   const [destination, setDestination] = useState('')
   const [dateMode, setDateMode] = useState<DateMode>('flexible-month')
 
-  // Exact date - default 2 weeks from now
+  // Exact date
   const [exactDate, setExactDate] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() + 14)
     return d.toISOString().split('T')[0]
   })
 
-  // Flexible month - default current month
+  // Round trip
+  const [isRoundTrip, setIsRoundTrip] = useState(false)
+  const [returnDate, setReturnDate] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 21)
+    return d.toISOString().split('T')[0]
+  })
+
+  // Flexible month
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
 
   // Day windows
@@ -89,13 +94,8 @@ function SearchPageContent() {
   const [flexibleDays, setFlexibleDays] = useState(1)
   const [timeframe, setTimeframe] = useState('3months')
 
-  // Advanced options
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [layoverEnabled, setLayoverEnabled] = useState(false)
-
   // Loading
   const [loading, setLoading] = useState(false)
-  const [layoverLoading, setLayoverLoading] = useState(false)
   const [error, setError] = useState('')
 
   // Results
@@ -103,50 +103,16 @@ function SearchPageContent() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [exactDateResult, setExactDateResult] = useState<{ price: number; dayData: any; isLive?: boolean } | null>(null)
   const [weekendDeals, setWeekendDeals] = useState<WeekendDeal[]>([])
-  const [directPrice, setDirectPrice] = useState<number | null>(null)
-  const [layoverRoutes, setLayoverRoutes] = useState<LayoverRoute[]>([])
-  const [emptyRoute, setEmptyRoute] = useState(false) // No cached prices for this route
+  const [emptyRoute, setEmptyRoute] = useState(false)
   const [showPopularSuggestions, setShowPopularSuggestions] = useState(false)
-  const [priceSource, setPriceSource] = useState<'amadeus-live' | 'travelpayouts-cached' | 'kiwi-live'>('travelpayouts-cached')
 
   const today = new Date().toISOString().split('T')[0]
   const currentMonth = new Date().toISOString().slice(0, 7)
-  // Layover is only available for exact-date and flexible-month modes when destination is set
-  const layoverAvailable = (dateMode === 'exact-date' || dateMode === 'flexible-month') && !!destination && origin !== destination
-
-  const fetchLayover = async (orig: string, dest: string, date: string) => {
-    if (!layoverEnabled || !layoverAvailable) return
-    setLayoverLoading(true)
-    setDirectPrice(null)
-    setLayoverRoutes([])
-    try {
-      const res = await fetch(`/api/layover?origin=${orig}&destination=${dest}&depart_date=${date}`)
-      if (!res.ok) return
-      const data = await res.json()
-      if (data.directPrice !== undefined) setDirectPrice(data.directPrice)
-      if (data.priceSource) setPriceSource(data.priceSource)
-      if (data.layoverRoutes?.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const routes: LayoverRoute[] = data.layoverRoutes.map((route: any) => {
-          const hub = majorHubs.find(h => h.code === route.hub)
-          if (!hub) return null
-          return { hub, leg1Price: route.leg1Price, leg2Price: route.leg2Price, totalPrice: route.totalPrice, savings: route.savings ?? null, savingsPercent: route.savingsPercent ?? null }
-        }).filter(Boolean)
-        setLayoverRoutes(routes)
-      }
-    } catch (err) {
-      console.error('[Search] Layover error:', err)
-    } finally {
-      setLayoverLoading(false)
-    }
-  }
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Reset all results
     setCalendarData(null); setExactDateResult(null); setWeekendDeals([])
-    setDirectPrice(null); setLayoverRoutes([]); setError('')
-    setEmptyRoute(false); setShowPopularSuggestions(false)
+    setError(''); setEmptyRoute(false); setShowPopularSuggestions(false)
 
     if (!origin) { setError('Please select a departure airport'); return }
     if ((dateMode === 'exact-date' || dateMode === 'flexible-month') && !destination) {
@@ -166,13 +132,16 @@ function SearchPageContent() {
         } else {
           setCalendarData(data.data)
         }
-        fetchLayover(origin, destination, `${month}-01`)
 
       } else if (dateMode === 'exact-date') {
-        // Try Amadeus real-time price first
+        // Try Amadeus real-time price first (supports round-trip)
         let gotLivePrice = false
         try {
-          const amadeusRes = await fetch(`/api/amadeus/search?origin=${origin}&destination=${destination}&departure_date=${exactDate}&max=1`)
+          let amadeusUrl = `/api/amadeus/search?origin=${origin}&destination=${destination}&departure_date=${exactDate}&max=3`
+          if (isRoundTrip && returnDate) {
+            amadeusUrl += `&return_date=${returnDate}`
+          }
+          const amadeusRes = await fetch(amadeusUrl)
           if (amadeusRes.ok) {
             const amadeusData = await amadeusRes.json()
             if (amadeusData.offers?.length > 0) {
@@ -201,7 +170,6 @@ function SearchPageContent() {
             setExactDateResult({ price, dayData, isLive: false })
           }
         }
-        fetchLayover(origin, destination, exactDate)
 
       } else if (dateMode === 'day-windows') {
         let dealsData: WeekendDeal[] = []
@@ -215,9 +183,7 @@ function SearchPageContent() {
           if (dealsData.length >= 6) break
           flex++
         }
-        if (dealsData.length < 3) {
-          setShowPopularSuggestions(true)
-        }
+        if (dealsData.length < 3) setShowPopularSuggestions(true)
         if (dealsData.length > 0) {
           setWeekendDeals(dealsData.slice(0, 12))
         } else {
@@ -232,26 +198,13 @@ function SearchPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
-      {/* Nav bar - logo left, back to home right */}
-      <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-skyblue rounded-full flex items-center justify-center">
-              <span className="text-navy text-xl font-bold">G</span>
-            </div>
-            <span className="text-white text-xl font-bold">GlobePilot</span>
-          </Link>
-          <Link href="/" className="text-skyblue hover:text-skyblue-light transition">
-            ← Back to Home
-          </Link>
-        </div>
-      </nav>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+      <Navigation />
 
-      <div className="container mx-auto px-4 py-8 md:py-12">
+      <div className="container mx-auto px-4 py-8 md:py-12 flex-1">
         {/* Page header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">Smart Flight Search ✈️</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">Smart Flight Search</h1>
           <p className="text-xl text-skyblue-light">Search by exact dates, browse cheapest days, or pick which days you&apos;re free</p>
         </div>
 
@@ -259,7 +212,7 @@ function SearchPageContent() {
         <form onSubmit={handleSearch} className="max-w-3xl mx-auto mb-10">
           <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
 
-            {/* Row 1: Origin + Destination side by side */}
+            {/* Origin + Destination */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <AirportAutocomplete id="origin" label="From" value={origin} onChange={setOrigin} placeholder="Departure city or code..." />
               <AirportAutocomplete
@@ -269,17 +222,17 @@ function SearchPageContent() {
               />
             </div>
 
-            {/* Row 2: Date mode tabs */}
+            {/* Date mode tabs */}
             <div>
               <p className="text-sm font-medium text-navy mb-2">How do you want to search?</p>
               <div className="grid grid-cols-3 gap-2">
-                {[
+                {([
                   { mode: 'exact-date', emoji: '📌', label: 'Exact Date', desc: 'Know your date' },
                   { mode: 'flexible-month', emoji: '📅', label: 'Browse Month', desc: 'See all prices' },
                   { mode: 'day-windows', emoji: '🗓', label: 'My Days Off', desc: 'Thu–Sun, etc.' },
-                ].map(({ mode, emoji, label, desc }) => (
+                ] as const).map(({ mode, emoji, label, desc }) => (
                   <button key={mode} type="button"
-                    onClick={() => { setDateMode(mode as DateMode); setError('') }}
+                    onClick={() => { setDateMode(mode); setError('') }}
                     className={`p-3 rounded-xl border-2 text-left transition-all ${
                       dateMode === mode
                         ? 'border-skyblue bg-skyblue/10 shadow-md'
@@ -294,18 +247,52 @@ function SearchPageContent() {
               </div>
             </div>
 
-            {/* Row 3: Date inputs — conditional on mode */}
-
             {/* EXACT DATE MODE */}
             {dateMode === 'exact-date' && (
-              <div className="space-y-2">
-                <label htmlFor="exactDate" className="block text-sm font-medium text-navy">Travel Date</label>
-                <input type="date" id="exactDate" value={exactDate}
-                  onChange={e => setExactDate(e.target.value)}
-                  min={today}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
-                  required
-                />
+              <div className="space-y-4">
+                {/* Round-trip toggle */}
+                <div className="flex items-center gap-4">
+                  <button type="button" onClick={() => setIsRoundTrip(false)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${!isRoundTrip ? 'bg-skyblue text-navy' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                    One-way
+                  </button>
+                  <button type="button" onClick={() => setIsRoundTrip(true)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${isRoundTrip ? 'bg-skyblue text-navy' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                    Round-trip
+                  </button>
+                </div>
+
+                <div className={`grid gap-4 ${isRoundTrip ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                  <div className="space-y-2">
+                    <label htmlFor="exactDate" className="block text-sm font-medium text-navy">
+                      {isRoundTrip ? 'Departure' : 'Travel Date'}
+                    </label>
+                    <input type="date" id="exactDate" value={exactDate}
+                      onChange={e => {
+                        setExactDate(e.target.value)
+                        // Auto-adjust return date if it's before departure
+                        if (isRoundTrip && e.target.value > returnDate) {
+                          const d = new Date(e.target.value); d.setDate(d.getDate() + 7)
+                          setReturnDate(d.toISOString().split('T')[0])
+                        }
+                      }}
+                      min={today}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                      required
+                    />
+                  </div>
+                  {isRoundTrip && (
+                    <div className="space-y-2">
+                      <label htmlFor="returnDate" className="block text-sm font-medium text-navy">Return</label>
+                      <input type="date" id="returnDate" value={returnDate}
+                        onChange={e => setReturnDate(e.target.value)}
+                        min={exactDate}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                        required
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -325,7 +312,6 @@ function SearchPageContent() {
             {/* DAY WINDOWS MODE */}
             {dateMode === 'day-windows' && (
               <div className="space-y-4">
-                {/* Depart + Return day selectors */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label htmlFor="departDay" className="block text-sm font-medium text-navy">Depart on</label>
@@ -346,7 +332,6 @@ function SearchPageContent() {
                     </select>
                   </div>
                 </div>
-                {/* Timeframe */}
                 <div className="space-y-1">
                   <label htmlFor="timeframe" className="block text-sm font-medium text-navy">Search within</label>
                   <select id="timeframe" value={timeframe} onChange={e => setTimeframe(e.target.value)}
@@ -358,7 +343,6 @@ function SearchPageContent() {
                     <option value="thisyear">This year</option>
                   </select>
                 </div>
-                {/* Flexibility slider */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-navy">
                     Date flexibility: ±{flexibleDays} day{flexibleDays !== 1 ? 's' : ''}
@@ -375,38 +359,6 @@ function SearchPageContent() {
               </div>
             )}
 
-            {/* Advanced Options — collapsible */}
-            <div className="border-t border-gray-100 pt-4">
-              <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-sm text-gray-500 hover:text-navy transition">
-                <span className={`transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
-                Advanced options
-              </button>
-
-              {showAdvanced && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <label className={`flex items-start gap-3 cursor-pointer ${!layoverAvailable ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                    <input type="checkbox" checked={layoverEnabled}
-                      disabled={!layoverAvailable}
-                      onChange={e => setLayoverEnabled(e.target.checked)}
-                      className="mt-1 w-4 h-4 accent-skyblue"
-                    />
-                    <div>
-                      <p className="font-semibold text-navy text-sm">Find bonus destinations via layover arbitrage</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Compare direct flights vs. cheaper multi-city routes through hub airports — sometimes you save money AND get a bonus destination.
-                      </p>
-                      {!layoverAvailable && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          {dateMode === 'day-windows' ? 'Not available in "My Days Off" mode — use Exact Date or Browse Month.' : 'Select a destination to enable.'}
-                        </p>
-                      )}
-                    </div>
-                  </label>
-                </div>
-              )}
-            </div>
-
             {/* Search button */}
             <button type="submit" disabled={loading}
               className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg">
@@ -418,8 +370,8 @@ function SearchPageContent() {
         {/* Error */}
         {error && (
           <div className="max-w-3xl mx-auto mb-8">
-            <div className="bg-red-500 border-2 border-red-600 rounded-lg p-4 shadow-lg">
-              <p className="text-white font-semibold text-center">❌ {error}</p>
+            <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-4">
+              <p className="text-red-300 font-semibold text-center">{error}</p>
             </div>
           </div>
         )}
@@ -439,26 +391,26 @@ function SearchPageContent() {
         {/* ——— RESULTS ——— */}
         {!loading && (
           <>
-            {/* EMPTY ROUTE: no cached prices */}
+            {/* EMPTY ROUTE */}
             {emptyRoute && (
               <div className="max-w-md mx-auto mb-8">
                 <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
                   <div className="text-5xl mb-4">🔍</div>
-                  <h3 className="text-xl font-bold text-navy mb-3">No cached prices found</h3>
+                  <h3 className="text-xl font-bold text-navy mb-3">No prices found</h3>
                   <p className="text-gray-600 mb-6">
-                    No cached prices found for this route. Click below to see live prices on Aviasales.
+                    Click below to search live prices on Aviasales.
                   </p>
                   <button
                     onClick={() => {
                       const date = dateMode === 'exact-date' ? exactDate : `${month}-01`
-                      const link = buildFlightLink(origin, destination, date)
+                      const ret = isRoundTrip ? returnDate : undefined
+                      const link = buildFlightLink(origin, destination, date, ret)
                       window.open(link, '_blank')
                     }}
                     className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                   >
-                    Search Aviasales for Live Prices
+                    Search on Aviasales
                   </button>
-                  <p className="text-center text-xs text-gray-500 mt-3">Opens booking on Aviasales</p>
                 </div>
               </div>
             )}
@@ -484,7 +436,10 @@ function SearchPageContent() {
                     <p className="text-navy text-6xl font-bold mt-1">
                       {exactDateResult.isLive ? '' : '~'}${exactDateResult.price}
                     </p>
-                    <p className="text-navy/80 text-sm mt-2">{origin} → {destination} · {exactDate}</p>
+                    <p className="text-navy/80 text-sm mt-2">
+                      {origin} {isRoundTrip ? '↔' : '→'} {destination} · {exactDate}
+                      {isRoundTrip && returnDate && ` — ${returnDate}`}
+                    </p>
                     {!exactDateResult.isLive && (
                       <p className="text-navy/60 text-xs mt-1">Cached estimate — actual price may vary</p>
                     )}
@@ -497,7 +452,9 @@ function SearchPageContent() {
                   <div className="p-6">
                     <button
                       onClick={() => {
-                        const link = generateAffiliateLink({ origin, destination, departDate: exactDateResult.dayData?.departure_at || exactDateResult.dayData?.departureTime || exactDate })
+                        const depDate = exactDateResult.dayData?.departure_at || exactDateResult.dayData?.departureTime || exactDate
+                        const ret = isRoundTrip ? returnDate : undefined
+                        const link = generateAffiliateLink({ origin, destination, departDate: depDate, returnDate: ret })
                         window.open(link, '_blank')
                       }}
                       className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
@@ -541,7 +498,7 @@ function SearchPageContent() {
               </div>
             )}
 
-            {/* POPULAR SUGGESTIONS for thin day-windows results */}
+            {/* POPULAR SUGGESTIONS */}
             {showPopularSuggestions && (
               <div className="max-w-6xl mx-auto mt-8">
                 <div className="text-center mb-6">
@@ -562,60 +519,34 @@ function SearchPageContent() {
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="text-white font-semibold text-lg">{sug.city}</p>
-                          <p className="text-skyblue-light text-sm">{origin} &rarr; {sug.dest}</p>
+                          <p className="text-skyblue-light text-sm">{origin} → {sug.dest}</p>
                         </div>
                       </div>
-                      <p className="text-skyblue text-sm mt-3 font-medium">Search live prices &rarr;</p>
+                      <p className="text-skyblue text-sm mt-3 font-medium">Search live prices →</p>
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* LAYOVER RESULTS (shown below main results for exact-date and flexible-month) */}
-            {layoverEnabled && (layoverLoading || layoverRoutes.length > 0) && (
-              <div className="mt-12 max-w-3xl mx-auto">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="h-px flex-1 bg-skyblue/30"></div>
-                  <h2 className="text-xl font-bold text-white whitespace-nowrap">🔄 Layover Arbitrage</h2>
-                  <div className="h-px flex-1 bg-skyblue/30"></div>
-                </div>
-                {layoverLoading ? (
-                  <div className="text-center py-8">
-                    <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-skyblue"></div>
-                    <p className="text-skyblue-light mt-3 text-sm">Comparing stopover routes...</p>
-                  </div>
-                ) : (
-                  <RouteComparison
-                    origin={origin}
-                    destination={destination}
-                    departDate={dateMode === 'exact-date' ? exactDate : `${month}-01`}
-                    directPrice={directPrice}
-                    layoverRoutes={layoverRoutes}
-                    priceSource={priceSource}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Empty state (no results yet) */}
-            {!calendarData && !exactDateResult && weekendDeals.length === 0 && !error && (
+            {/* Empty state */}
+            {!calendarData && !exactDateResult && weekendDeals.length === 0 && !emptyRoute && !error && (
               <div className="max-w-3xl mx-auto mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
                     <div className="text-4xl mb-3">📌</div>
                     <h3 className="text-white font-semibold mb-2">Exact Date</h3>
-                    <p className="text-skyblue-light text-sm">Know when you&apos;re flying? See the price for that specific day and book instantly.</p>
+                    <p className="text-skyblue-light text-sm">Know when you&apos;re flying? Get a live price and book instantly.</p>
                   </div>
                   <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
                     <div className="text-4xl mb-3">📅</div>
                     <h3 className="text-white font-semibold mb-2">Browse Month</h3>
-                    <p className="text-skyblue-light text-sm">See every day of a month color-coded by price. Spot the cheapest days instantly.</p>
+                    <p className="text-skyblue-light text-sm">See every day color-coded by price. Spot the cheapest days.</p>
                   </div>
                   <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
                     <div className="text-4xl mb-3">🗓</div>
                     <h3 className="text-white font-semibold mb-2">My Days Off</h3>
-                    <p className="text-skyblue-light text-sm">Free Thursday to Sunday? Find the cheapest destinations you can reach on those days.</p>
+                    <p className="text-skyblue-light text-sm">Free Thursday to Sunday? Find the cheapest destinations for those days.</p>
                   </div>
                 </div>
               </div>
@@ -623,6 +554,8 @@ function SearchPageContent() {
           </>
         )}
       </div>
+
+      <Footer />
     </div>
   )
 }

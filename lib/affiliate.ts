@@ -27,7 +27,7 @@ export interface FlightParams {
  * Build Aviasales affiliate flight link
  * date = YYYY-MM-DD, converts to DDMM internally
  */
-export function buildFlightLink(origin: string, dest: string, date: string): string {
+export function buildFlightLink(origin: string, dest: string, date: string, returnDate?: string): string {
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr)
     const day = String(d.getDate()).padStart(2, '0')
@@ -36,7 +36,8 @@ export function buildFlightLink(origin: string, dest: string, date: string): str
   }
 
   const departFormatted = formatDate(date)
-  const searchPath = `${origin}${departFormatted}${dest}1`
+  const returnFormatted = returnDate ? formatDate(returnDate) : ''
+  const searchPath = `${origin}${departFormatted}${dest}${returnFormatted}1`
   const aviasalesUrl = `https://www.aviasales.com/search/${searchPath}`
 
   return `https://tp.media/r?campaign_id=${CAMPAIGN_ID}&marker=${MARKER}&p=4114&sub_id=${SUB_ID}&trs=${TRS}&u=${encodeURIComponent(aviasalesUrl)}`
@@ -121,7 +122,7 @@ export function buildBookingBundle(params: {
 
 // Legacy compat — used by search page and other existing code
 export function generateAffiliateLink(params: FlightParams): string {
-  return buildFlightLink(params.origin, params.destination, params.departDate)
+  return buildFlightLink(params.origin, params.destination, params.departDate, params.returnDate)
 }
 
 export function generateCustomAffiliateLink(destinationUrl: string): string {

@@ -4,10 +4,10 @@ export default function Footer() {
   const currentYear = new Date().getFullYear()
 
   const features = [
-    { href: '/calendar', label: 'Cheapest Days Calendar' },
-    { href: '/weekend', label: 'Weekend Deals' },
     { href: '/mystery', label: 'Mystery Vacation' },
-    { href: '/layover', label: 'Layover Arbitrage' },
+    { href: '/explore', label: 'Layover Explorer' },
+    { href: '/search', label: 'Smart Flight Search' },
+    { href: '/discover', label: 'Cheapest Destinations' },
     { href: '/alerts', label: 'Price Alerts' },
   ]
 
