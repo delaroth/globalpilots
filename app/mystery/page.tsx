@@ -37,6 +37,16 @@ export default function MysteryPage() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false) // Track button state
 
+  // NEW: Package builder state
+  const [tripDuration, setTripDuration] = useState(3)
+  const [packageComponents, setPackageComponents] = useState({
+    includeFlight: true,
+    includeHotel: true,
+    includeItinerary: true,
+    includeTransportation: false,
+  })
+  const [emailForUpdates, setEmailForUpdates] = useState('')
+
   const handleVibeToggle = (vibe: string) => {
     if (selectedVibes.includes(vibe)) {
       setSelectedVibes(selectedVibes.filter((v) => v !== vibe))
@@ -148,6 +158,9 @@ export default function MysteryPage() {
           budget: parseFloat(budget),
           vibes: selectedVibes,
           dates: `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`,
+          tripDuration,
+          packageComponents,
+          email: emailForUpdates || undefined,
         }),
       })
 
@@ -319,7 +332,7 @@ export default function MysteryPage() {
               </div>
 
               {/* Traveller Type */}
-              <div className="mb-8">
+              <div className="mb-6">
                 <label className="block text-lg font-semibold text-navy mb-3">
                   Travelling as... 👥
                 </label>
@@ -339,6 +352,96 @@ export default function MysteryPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Trip Duration */}
+              <div className="mb-6">
+                <label className="block text-lg font-semibold text-navy mb-2">
+                  Trip Duration: {tripDuration} day{tripDuration !== 1 ? 's' : ''} 🗓️
+                </label>
+                <input
+                  type="range"
+                  min="3"
+                  max="7"
+                  value={tripDuration}
+                  onChange={(e) => setTripDuration(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
+                />
+                <div className="flex justify-between text-sm text-gray-600 mt-1">
+                  <span>3 days</span>
+                  <span>7 days</span>
+                </div>
+              </div>
+
+              {/* Package Components */}
+              <div className="mb-6">
+                <label className="block text-lg font-semibold text-navy mb-3">
+                  What should we include? 📦
+                </label>
+                <div className="space-y-3">
+                  <label className="flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={packageComponents.includeFlight}
+                      onChange={(e) => setPackageComponents({...packageComponents, includeFlight: e.target.checked})}
+                      className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                    />
+                    <span className="ml-3 text-gray-700 group-hover:text-navy transition">
+                      ✈️ Flight (TravelPayouts affiliate link)
+                    </span>
+                  </label>
+                  <label className="flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={packageComponents.includeHotel}
+                      onChange={(e) => setPackageComponents({...packageComponents, includeHotel: e.target.checked})}
+                      className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                    />
+                    <span className="ml-3 text-gray-700 group-hover:text-navy transition">
+                      🏨 Hotel recommendations with prices
+                    </span>
+                  </label>
+                  <label className="flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={packageComponents.includeItinerary}
+                      onChange={(e) => setPackageComponents({...packageComponents, includeItinerary: e.target.checked})}
+                      className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                    />
+                    <span className="ml-3 text-gray-700 group-hover:text-navy transition">
+                      📍 Daily itinerary with activities
+                    </span>
+                  </label>
+                  <label className="flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={packageComponents.includeTransportation}
+                      onChange={(e) => setPackageComponents({...packageComponents, includeTransportation: e.target.checked})}
+                      className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                    />
+                    <span className="ml-3 text-gray-700 group-hover:text-navy transition">
+                      🚌 Local transportation tips
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Email Capture */}
+              <div className="mb-8">
+                <label htmlFor="email" className="block text-lg font-semibold text-navy mb-2">
+                  Email (optional) 📧
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={emailForUpdates}
+                  onChange={(e) => setEmailForUpdates(e.target.value)}
+                  placeholder="your@email.com"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                />
+                <p className="text-sm text-gray-600 mt-1">
+                  Get your trip details and travel tips via email
+                </p>
               </div>
 
               {/* Error Message */}
