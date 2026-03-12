@@ -4,13 +4,17 @@ import { generateAffiliateLink } from '@/lib/affiliate'
 
 interface PriceData {
   [date: string]: {
-    value: number
+    price: number
+    value?: number // Backward compatibility
     trip_class: number
     show_to_affiliates: boolean
     origin: string
     destination: string
     depart_date: string
     return_date: string
+    departure_at: string
+    return_at: string
+    airline?: string
   }
 }
 
@@ -35,21 +39,39 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
   }
 
   // Get all prices to calculate ranges
-  const prices = Object.values(data).map(d => d.value).filter(p => p > 0)
+  // Handle both 'price' and 'value' field names for backward compatibility
+  const prices = Object.values(data)
+    .map(d => d.price || d.value || 0)
+    .filter(p => typeof p === 'number' && isFinite(p) && p > 0)
+
+  // Check if we have valid prices
+  if (prices.length === 0) {
+    return (
+      <div className="text-center py-12 text-white">
+        <p className="text-xl">No valid flight prices found for this route and month.</p>
+        <p className="text-skyblue-light mt-2">Try different dates or destinations.</p>
+      </div>
+    )
+  }
+
   const minPrice = Math.min(...prices)
   const maxPrice = Math.max(...prices)
+  const avgPrice = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length)
   const range = maxPrice - minPrice
 
-  // Color coding: green (cheapest 33%), orange (middle 33%), red (expensive 33%)
+  // Color coding based on average price
   const getColorClass = (price: number) => {
-    const sortedPrices = [...prices].sort((a, b) => a - b)
-    const third = Math.floor(sortedPrices.length / 3)
+    // Green = at or below average, yellow = slightly above, red = significantly above
+    const percentAboveAvg = ((price - avgPrice) / avgPrice) * 100
 
-    if (price <= sortedPrices[third]) {
+    if (percentAboveAvg <= 0) {
+      // At or below average - green
       return 'bg-green-500 hover:bg-green-600'
-    } else if (price <= sortedPrices[third * 2]) {
-      return 'bg-orange-500 hover:bg-orange-600'
+    } else if (percentAboveAvg <= 15) {
+      // Slightly above average - yellow/orange
+      return 'bg-yellow-500 hover:bg-yellow-600'
     } else {
+      // Significantly above average - red
       return 'bg-red-500 hover:bg-red-600'
     }
   }
@@ -81,14 +103,17 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
     const dateStr = `${year}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     const dayData = data[dateStr]
 
-    if (dayData && dayData.value > 0) {
-      const affiliateLink = generateAffiliateLink({
-        origin,
-        destination,
-        departDate: dateStr,
-        returnDate: dayData.return_date,
-      })
-      window.open(affiliateLink, '_blank')
+    if (dayData) {
+      const price = dayData.price || dayData.value || 0
+      if (price > 0) {
+        const affiliateLink = generateAffiliateLink({
+          origin,
+          destination,
+          departDate: dayData.departure_at || dateStr,
+          returnDate: dayData.return_at || dayData.return_date,
+        })
+        window.open(affiliateLink, '_blank')
+      }
     }
   }
 
@@ -105,18 +130,18 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
         </h2>
 
         {/* Price legend */}
-        <div className="flex justify-center gap-4 mb-6 text-sm">
+        <div className="flex justify-center gap-4 mb-6 text-sm flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-500 rounded"></div>
-            <span className="text-white">Cheapest 33%</span>
+            <span className="text-white">At or Below Average (${avgPrice})</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-orange-500 rounded"></div>
-            <span className="text-white">Middle 33%</span>
+            <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+            <span className="text-white">Slightly Above Average</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-red-500 rounded"></div>
-            <span className="text-white">Expensive 33%</span>
+            <span className="text-white">Significantly Above Average</span>
           </div>
         </div>
 
@@ -147,7 +172,8 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
               dayData = data[altDateStr]
             }
 
-            const hasPrice = dayData && dayData.value > 0
+            const price = dayData ? (dayData.price || dayData.value || 0) : 0
+            const hasPrice = price > 0 && isFinite(price)
 
             // Past dates are greyed out
             if (isPast) {
@@ -172,7 +198,7 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
                   aspect-square rounded-lg flex flex-col items-center justify-center
                   transition-all duration-200 transform hover:scale-105
                   ${hasPrice
-                    ? `${getColorClass(dayData.value)} text-white cursor-pointer shadow-lg`
+                    ? `${getColorClass(price)} text-white cursor-pointer shadow-lg`
                     : 'bg-gray-700/50 text-gray-400 cursor-not-allowed'
                   }
                 `}
@@ -180,7 +206,7 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
                 <span className="text-lg font-semibold">{day}</span>
                 {hasPrice && (
                   <span className="text-xs mt-1 font-bold">
-                    ${dayData.value}
+                    ${Math.round(price)}
                   </span>
                 )}
               </button>
@@ -192,17 +218,15 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
         <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
           <div className="bg-navy-light/50 rounded-lg p-3">
             <p className="text-skyblue-light text-sm">Cheapest</p>
-            <p className="text-white text-xl font-bold">${minPrice}</p>
+            <p className="text-white text-xl font-bold">${Math.round(minPrice)}</p>
           </div>
           <div className="bg-navy-light/50 rounded-lg p-3">
             <p className="text-skyblue-light text-sm">Average</p>
-            <p className="text-white text-xl font-bold">
-              ${Math.round(prices.reduce((a, b) => a + b, 0) / prices.length)}
-            </p>
+            <p className="text-white text-xl font-bold">${avgPrice}</p>
           </div>
           <div className="bg-navy-light/50 rounded-lg p-3 col-span-2 md:col-span-1">
             <p className="text-skyblue-light text-sm">Most Expensive</p>
-            <p className="text-white text-xl font-bold">${maxPrice}</p>
+            <p className="text-white text-xl font-bold">${Math.round(maxPrice)}</p>
           </div>
         </div>
       </div>

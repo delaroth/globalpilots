@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 import MysteryLoading from '@/components/MysteryLoading'
@@ -18,10 +18,10 @@ const vibeOptions = [
 const travellerTypes = ['Solo', 'Couple', 'Group']
 
 export default function MysteryPage() {
-  // Default date to next week
-  const getNextWeekDate = () => {
+  // Default date to 2 weeks from now
+  const getTwoWeeksFromNow = () => {
     const date = new Date()
-    date.setDate(date.getDate() + 7)
+    date.setDate(date.getDate() + 14)
     return date.toISOString().split('T')[0]
   }
 
@@ -29,13 +29,14 @@ export default function MysteryPage() {
   const [budget, setBudget] = useState('')
   const [origin, setOrigin] = useState('')
   const [originInputText, setOriginInputText] = useState('') // Track raw input text
-  const [departDate, setDepartDate] = useState(getNextWeekDate())
+  const [departDate, setDepartDate] = useState(getTwoWeeksFromNow())
   const [flexibleDates, setFlexibleDates] = useState(false)
   const [selectedVibes, setSelectedVibes] = useState<string[]>([])
   const [travellerType, setTravellerType] = useState('Solo')
   const [destination, setDestination] = useState(null)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false) // Track button state
+  const errorRef = useRef<HTMLDivElement>(null)
 
   // NEW: Package builder state
   const [tripDuration, setTripDuration] = useState(3)
@@ -47,7 +48,15 @@ export default function MysteryPage() {
   })
   const [emailForUpdates, setEmailForUpdates] = useState('')
 
+  // Scroll to error when it appears
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [error])
+
   const handleVibeToggle = (vibe: string) => {
+    if (error) setError('') // Clear error when user interacts
     if (selectedVibes.includes(vibe)) {
       setSelectedVibes(selectedVibes.filter((v) => v !== vibe))
     } else {
@@ -254,7 +263,10 @@ export default function MysteryPage() {
                     type="number"
                     id="budget"
                     value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
+                    onChange={(e) => {
+                      setBudget(e.target.value)
+                      if (error) setError('') // Clear error when user types
+                    }}
                     placeholder="1500"
                     min="100"
                     className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-lg"
@@ -444,12 +456,26 @@ export default function MysteryPage() {
                 </p>
               </div>
 
-              {/* Error Message */}
+              {/* Error Message - Always visible when present */}
               {error && (
-                <div className="mb-6 bg-red-500 border-2 border-red-600 rounded-lg p-4 shadow-lg">
-                  <p className="text-white font-semibold text-center">❌ {error}</p>
+                <div
+                  ref={errorRef}
+                  className="mb-6 bg-red-50 border-2 border-red-500 rounded-lg p-4 shadow-lg animate-shake"
+                >
+                  <p className="text-red-700 font-semibold text-center text-lg">❌ {error}</p>
                 </div>
               )}
+
+              <style jsx>{`
+                @keyframes shake {
+                  0%, 100% { transform: translateX(0); }
+                  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                  20%, 40%, 60%, 80% { transform: translateX(5px); }
+                }
+                .animate-shake {
+                  animation: shake 0.5s ease-in-out;
+                }
+              `}</style>
 
               {/* Submit Button */}
               <button
@@ -487,7 +513,7 @@ export default function MysteryPage() {
         )}
 
         {/* Step 3: Reveal */}
-        {step === 'reveal' && destination && (
+        {step === 'reveal' && destination && destination.destination && destination.city_code_IATA && (
           <div>
             <MysteryReveal
               destination={destination}
@@ -501,6 +527,25 @@ export default function MysteryPage() {
                 className="text-skyblue-light hover:text-skyblue transition underline"
               >
                 ← Start Over
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error State: If step is reveal but destination is invalid */}
+        {step === 'reveal' && (!destination || !destination.destination || !destination.city_code_IATA) && (
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-red-50 border-2 border-red-500 rounded-2xl p-8 shadow-2xl text-center">
+              <div className="text-6xl mb-4">😕</div>
+              <h2 className="text-2xl font-bold text-red-700 mb-4">Oops! Something went wrong</h2>
+              <p className="text-red-600 mb-6">
+                We couldn't generate a valid destination. This might be a temporary issue.
+              </p>
+              <button
+                onClick={handleReset}
+                className="bg-skyblue hover:bg-skyblue-dark text-navy font-bold py-3 px-8 rounded-lg transition"
+              >
+                Try Again
               </button>
             </div>
           </div>
