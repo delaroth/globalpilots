@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { majorHubs } from '@/lib/hubs'
+import { AFFILIATE_FLAGS } from '@/lib/affiliate'
+import { searchKiwiMultiCity } from '@/lib/kiwi'
 
 export const dynamic = 'force-dynamic'
 
@@ -90,6 +92,33 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Use Kiwi multi-city search if enabled (real multi-leg data)
+    if (AFFILIATE_FLAGS.kiwi && process.env.KIWI_API_KEY) {
+      console.log('[Layover API] Using Kiwi multi-city search')
+      const kiwiResult = await searchKiwiMultiCity({
+        origin,
+        destination,
+        departDate: departDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+      })
+
+      const hubRoutes = kiwiResult.viaHub.map(v => ({
+        hub: v.hub,
+        hubCity: v.hubCity,
+        leg1Price: v.leg1.price,
+        leg2Price: v.leg2.price,
+        totalPrice: v.totalPrice,
+        savings: v.savings,
+        savingsPercent: v.savingsPercent,
+      }))
+
+      return NextResponse.json({
+        directPrice: kiwiResult.direct?.price || null,
+        layoverRoutes: hubRoutes,
+        bestLayover: hubRoutes.length > 0 ? hubRoutes[0] : null,
+      })
+    }
+
+    // Fallback: TravelPayouts hub-price approach
     // Fetch direct route price (optional - may not exist)
     const directUrl = `${API_BASE}/v2/prices/latest?origin=${origin}&destination=${destination}&limit=1&currency=usd&token=${TOKEN}`
     console.log('[Layover API] Fetching direct route:', origin, '->', destination)

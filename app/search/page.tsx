@@ -6,7 +6,7 @@ import CalendarGrid from '@/components/CalendarGrid'
 import RouteComparison from '@/components/RouteComparison'
 import DestinationCard from '@/components/DestinationCard'
 import { majorHubs, LayoverRoute } from '@/lib/hubs'
-import { generateAffiliateLink } from '@/lib/affiliate'
+import { generateAffiliateLink, buildFlightLink } from '@/lib/affiliate'
 
 type DateMode = 'exact-date' | 'flexible-month' | 'day-windows'
 
@@ -23,6 +23,49 @@ interface WeekendDeal {
   found_at: string
   distance: number
   actual: boolean
+}
+
+// Popular route suggestions by origin region
+function getPopularSuggestions(origin: string): { dest: string; city: string }[] {
+  const seAsiaOrigins = ['BKK', 'SIN', 'KUL', 'CGK', 'MNL', 'HKT', 'CNX', 'HAN', 'SGN', 'DPS']
+  const eastAsiaOrigins = ['NRT', 'HND', 'ICN', 'PVG', 'PEK', 'HKG', 'TPE']
+  const europeanOrigins = ['LHR', 'CDG', 'AMS', 'FRA', 'BCN', 'FCO', 'MAD', 'MUC', 'VIE', 'ZRH', 'LIS']
+
+  if (seAsiaOrigins.includes(origin)) {
+    return [
+      { dest: 'BKK', city: 'Bangkok' }, { dest: 'SIN', city: 'Singapore' },
+      { dest: 'KUL', city: 'Kuala Lumpur' }, { dest: 'HAN', city: 'Hanoi' },
+      { dest: 'SGN', city: 'Ho Chi Minh City' }, { dest: 'DPS', city: 'Bali' },
+    ].filter(s => s.dest !== origin)
+  }
+  if (eastAsiaOrigins.includes(origin)) {
+    return [
+      { dest: 'NRT', city: 'Tokyo' }, { dest: 'ICN', city: 'Seoul' },
+      { dest: 'HKG', city: 'Hong Kong' }, { dest: 'TPE', city: 'Taipei' },
+      { dest: 'BKK', city: 'Bangkok' }, { dest: 'SIN', city: 'Singapore' },
+    ].filter(s => s.dest !== origin)
+  }
+  if (europeanOrigins.includes(origin)) {
+    return [
+      { dest: 'BCN', city: 'Barcelona' }, { dest: 'LIS', city: 'Lisbon' },
+      { dest: 'PRG', city: 'Prague' }, { dest: 'KRK', city: 'Krakow' },
+      { dest: 'BUD', city: 'Budapest' }, { dest: 'ATH', city: 'Athens' },
+    ].filter(s => s.dest !== origin)
+  }
+  // Default
+  return [
+    { dest: 'BKK', city: 'Bangkok' }, { dest: 'LHR', city: 'London' },
+    { dest: 'NRT', city: 'Tokyo' }, { dest: 'BCN', city: 'Barcelona' },
+    { dest: 'DXB', city: 'Dubai' }, { dest: 'SIN', city: 'Singapore' },
+  ].filter(s => s.dest !== origin)
+}
+
+function getNextWeekendDate(): string {
+  const d = new Date()
+  const dayOfWeek = d.getDay()
+  const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7
+  d.setDate(d.getDate() + daysUntilFriday)
+  return d.toISOString().split('T')[0]
 }
 
 function SearchPageContent() {
@@ -62,6 +105,8 @@ function SearchPageContent() {
   const [weekendDeals, setWeekendDeals] = useState<WeekendDeal[]>([])
   const [directPrice, setDirectPrice] = useState<number | null>(null)
   const [layoverRoutes, setLayoverRoutes] = useState<LayoverRoute[]>([])
+  const [emptyRoute, setEmptyRoute] = useState(false) // No cached prices for this route
+  const [showPopularSuggestions, setShowPopularSuggestions] = useState(false)
 
   const today = new Date().toISOString().split('T')[0]
   const currentMonth = new Date().toISOString().slice(0, 7)
@@ -99,6 +144,7 @@ function SearchPageContent() {
     // Reset all results
     setCalendarData(null); setExactDateResult(null); setWeekendDeals([])
     setDirectPrice(null); setLayoverRoutes([]); setError('')
+    setEmptyRoute(false); setShowPopularSuggestions(false)
 
     if (!origin) { setError('Please select a departure airport'); return }
     if ((dateMode === 'exact-date' || dateMode === 'flexible-month') && !destination) {
@@ -113,8 +159,11 @@ function SearchPageContent() {
         if (!res.ok) throw new Error(`API error: ${res.status}`)
         const data = await res.json()
         if (data.error) throw new Error(data.error)
-        if (!data.data || Object.keys(data.data).length === 0) throw new Error('No flights found for this route and month. Try a different month.')
-        setCalendarData(data.data)
+        if (!data.data || Object.keys(data.data).length === 0) {
+          setEmptyRoute(true)
+        } else {
+          setCalendarData(data.data)
+        }
         fetchLayover(origin, destination, `${month}-01`)
 
       } else if (dateMode === 'exact-date') {
@@ -123,12 +172,14 @@ function SearchPageContent() {
         if (!res.ok) throw new Error(`API error: ${res.status}`)
         const data = await res.json()
         if (data.error) throw new Error(data.error)
-        // Try both YYYY-MM-DD and non-padded formats
         const dayData = data.data?.[exactDate] ||
           data.data?.[exactDate.replace(/-0(\d)/g, '-$1')]
         const price = dayData?.price || dayData?.value
-        if (!price) throw new Error('No flight price found for this date. Try a nearby date or use Browse Month mode.')
-        setExactDateResult({ price, dayData })
+        if (!price) {
+          setEmptyRoute(true)
+        } else {
+          setExactDateResult({ price, dayData })
+        }
         fetchLayover(origin, destination, exactDate)
 
       } else if (dateMode === 'day-windows') {
@@ -143,8 +194,14 @@ function SearchPageContent() {
           if (dealsData.length >= 6) break
           flex++
         }
-        if (dealsData.length === 0) throw new Error(`No ${departDay}–${returnDay} trips found. Try different days, more flexibility, or a longer timeframe.`)
-        setWeekendDeals(dealsData.slice(0, 12))
+        if (dealsData.length < 3) {
+          setShowPopularSuggestions(true)
+        }
+        if (dealsData.length > 0) {
+          setWeekendDeals(dealsData.slice(0, 12))
+        } else {
+          setShowPopularSuggestions(true)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
@@ -361,6 +418,30 @@ function SearchPageContent() {
         {/* ——— RESULTS ——— */}
         {!loading && (
           <>
+            {/* EMPTY ROUTE: no cached prices */}
+            {emptyRoute && (
+              <div className="max-w-md mx-auto mb-8">
+                <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
+                  <div className="text-5xl mb-4">🔍</div>
+                  <h3 className="text-xl font-bold text-navy mb-3">No cached prices found</h3>
+                  <p className="text-gray-600 mb-6">
+                    No cached prices found for this route. Click below to see live prices on Aviasales.
+                  </p>
+                  <button
+                    onClick={() => {
+                      const date = dateMode === 'exact-date' ? exactDate : `${month}-01`
+                      const link = buildFlightLink(origin, destination, date)
+                      window.open(link, '_blank')
+                    }}
+                    className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
+                  >
+                    Search Aviasales for Live Prices
+                  </button>
+                  <p className="text-center text-xs text-gray-500 mt-3">Opens booking on Aviasales</p>
+                </div>
+              </div>
+            )}
+
             {/* FLEXIBLE MONTH: CalendarGrid */}
             {calendarData && (
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -416,6 +497,37 @@ function SearchPageContent() {
                       returnDate={deal.return_date}
                       distance={deal.distance}
                     />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* POPULAR SUGGESTIONS for thin day-windows results */}
+            {showPopularSuggestions && (
+              <div className="max-w-6xl mx-auto mt-8">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-2">Popular This Weekend</h2>
+                  <p className="text-skyblue-light">Suggested routes from {origin} — click to search live prices</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {getPopularSuggestions(origin).map((sug) => (
+                    <button
+                      key={sug.dest}
+                      onClick={() => {
+                        const nextWeekend = getNextWeekendDate()
+                        const link = buildFlightLink(origin, sug.dest, nextWeekend)
+                        window.open(link, '_blank')
+                      }}
+                      className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/60 transition text-left"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-white font-semibold text-lg">{sug.city}</p>
+                          <p className="text-skyblue-light text-sm">{origin} &rarr; {sug.dest}</p>
+                        </div>
+                      </div>
+                      <p className="text-skyblue text-sm mt-3 font-medium">Search live prices &rarr;</p>
+                    </button>
                   ))}
                 </div>
               </div>

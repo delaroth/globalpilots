@@ -280,35 +280,106 @@ export function getAirportCodeFromCity(city: string): string | null {
 }
 
 /**
+ * Find the nearest airport to given coordinates using haversine distance
+ */
+function findNearestAirport(lat: number, lon: number): { code: string; city: string } | null {
+  // Airport coordinates (approximate) for major airports
+  const airportCoords: Record<string, { lat: number; lon: number }> = {
+    BKK: { lat: 13.69, lon: 100.75 }, SIN: { lat: 1.35, lon: 103.99 },
+    KUL: { lat: 2.74, lon: 101.70 }, CGK: { lat: -6.13, lon: 106.66 },
+    MNL: { lat: 14.51, lon: 121.02 }, HKG: { lat: 22.31, lon: 113.92 },
+    NRT: { lat: 35.76, lon: 140.39 }, ICN: { lat: 37.46, lon: 126.44 },
+    PVG: { lat: 31.14, lon: 121.81 }, DEL: { lat: 28.56, lon: 77.10 },
+    BOM: { lat: 19.09, lon: 72.87 }, DXB: { lat: 25.25, lon: 55.36 },
+    DOH: { lat: 25.26, lon: 51.57 }, IST: { lat: 41.26, lon: 28.74 },
+    LHR: { lat: 51.47, lon: -0.46 }, CDG: { lat: 49.01, lon: 2.55 },
+    AMS: { lat: 52.31, lon: 4.77 }, FRA: { lat: 50.03, lon: 8.57 },
+    FCO: { lat: 41.80, lon: 12.25 }, BCN: { lat: 41.30, lon: 2.08 },
+    MAD: { lat: 40.47, lon: -3.56 }, LIS: { lat: 38.77, lon: -9.13 },
+    JFK: { lat: 40.64, lon: -73.78 }, LAX: { lat: 33.94, lon: -118.41 },
+    ORD: { lat: 41.97, lon: -87.91 }, MIA: { lat: 25.80, lon: -80.29 },
+    SFO: { lat: 37.62, lon: -122.38 }, ATL: { lat: 33.64, lon: -84.43 },
+    SYD: { lat: -33.95, lon: 151.18 }, MEL: { lat: -37.67, lon: 144.84 },
+    GRU: { lat: -23.43, lon: -46.47 }, HAN: { lat: 21.22, lon: 105.81 },
+    SGN: { lat: 10.82, lon: 106.65 }, HKT: { lat: 8.11, lon: 98.32 },
+    CNX: { lat: 18.77, lon: 98.96 }, DPS: { lat: -8.75, lon: 115.17 },
+    TPE: { lat: 25.08, lon: 121.23 }, CMB: { lat: 7.18, lon: 79.88 },
+    CAI: { lat: 30.12, lon: 31.41 }, NBO: { lat: -1.32, lon: 36.93 },
+    CPT: { lat: -33.96, lon: 18.60 }, YYZ: { lat: 43.68, lon: -79.63 },
+    SEA: { lat: 47.45, lon: -122.31 }, DEN: { lat: 39.86, lon: -104.67 },
+  }
+
+  const toRad = (deg: number) => deg * Math.PI / 180
+  const haversine = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const dLat = toRad(lat2 - lat1)
+    const dLon = toRad(lon2 - lon1)
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+    return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  }
+
+  let nearest: { code: string; dist: number } | null = null
+  for (const [code, coords] of Object.entries(airportCoords)) {
+    const dist = haversine(lat, lon, coords.lat, coords.lon)
+    if (!nearest || dist < nearest.dist) {
+      nearest = { code, dist }
+    }
+  }
+
+  if (!nearest) return null
+  const airport = majorAirports.find(a => a.code === nearest!.code)
+  return airport ? { code: airport.code, city: airport.city } : null
+}
+
+const SESSION_KEY = 'globepilot_user_location'
+
+/**
  * Get user's approximate location using browser geolocation API
+ * Finds nearest airport by lat/lon, caches in sessionStorage
+ * Defaults to BKK (primary audience is SE Asia based)
  */
 export async function getUserLocation(): Promise<GeolocationResult | null> {
+  if (typeof window === 'undefined') {
+    return { city: 'Bangkok', airportCode: 'BKK' }
+  }
+
+  // Check sessionStorage cache
+  try {
+    const cached = sessionStorage.getItem(SESSION_KEY)
+    if (cached) {
+      return JSON.parse(cached)
+    }
+  } catch {}
+
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
-    return null
+    return { city: 'Bangkok', airportCode: 'BKK' }
   }
 
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         try {
-          // Use reverse geocoding to get city name
-          // For production, you'd use a proper geocoding service
-          // For now, we'll return a default
-          resolve({
-            city: 'New York',
-            airportCode: 'JFK',
-          })
-        } catch (error) {
-          resolve(null)
+          const nearest = findNearestAirport(position.coords.latitude, position.coords.longitude)
+          const result: GeolocationResult = nearest
+            ? { city: nearest.city, airportCode: nearest.code }
+            : { city: 'Bangkok', airportCode: 'BKK' }
+
+          // Cache in sessionStorage
+          try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(result)) } catch {}
+
+          resolve(result)
+        } catch {
+          resolve({ city: 'Bangkok', airportCode: 'BKK' })
         }
       },
-      (error) => {
-        console.error('Geolocation error:', error)
-        resolve(null)
+      () => {
+        // Geolocation denied or unavailable — default to BKK
+        const result = { city: 'Bangkok', airportCode: 'BKK' }
+        try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(result)) } catch {}
+        resolve(result)
       },
       {
         timeout: 5000,
-        maximumAge: 3600000, // 1 hour
+        maximumAge: 3600000,
       }
     )
   })

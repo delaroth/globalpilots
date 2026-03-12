@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/track-prices",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/generate-blog-posts",
+      "schedule": "0 6 * * 1"
     }
   ]
 }
