@@ -107,6 +107,7 @@ function SearchPageContent() {
   const [layoverRoutes, setLayoverRoutes] = useState<LayoverRoute[]>([])
   const [emptyRoute, setEmptyRoute] = useState(false) // No cached prices for this route
   const [showPopularSuggestions, setShowPopularSuggestions] = useState(false)
+  const [priceSource, setPriceSource] = useState<'amadeus-live' | 'travelpayouts-cached' | 'kiwi-live'>('travelpayouts-cached')
 
   const today = new Date().toISOString().split('T')[0]
   const currentMonth = new Date().toISOString().slice(0, 7)
@@ -123,6 +124,7 @@ function SearchPageContent() {
       if (!res.ok) return
       const data = await res.json()
       if (data.directPrice !== undefined) setDirectPrice(data.directPrice)
+      if (data.priceSource) setPriceSource(data.priceSource)
       if (data.layoverRoutes?.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const routes: LayoverRoute[] = data.layoverRoutes.map((route: any) => {
@@ -453,9 +455,10 @@ function SearchPageContent() {
               <div className="max-w-md mx-auto">
                 <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
                   <div className="bg-gradient-to-r from-skyblue to-skyblue-dark px-6 py-5 text-center">
-                    <p className="text-navy font-semibold text-sm uppercase tracking-wide">Flight Price</p>
-                    <p className="text-navy text-6xl font-bold mt-1">${exactDateResult.price}</p>
+                    <p className="text-navy font-semibold text-sm uppercase tracking-wide">Estimated Price</p>
+                    <p className="text-navy text-6xl font-bold mt-1">~${exactDateResult.price}</p>
                     <p className="text-navy/80 text-sm mt-2">{origin} → {destination} · {exactDate}</p>
+                    <p className="text-navy/60 text-xs mt-1">Cached estimate — actual price may vary</p>
                   </div>
                   <div className="p-6">
                     <button
@@ -465,9 +468,9 @@ function SearchPageContent() {
                       }}
                       className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                     >
-                      Book This Flight
+                      Search Live Prices
                     </button>
-                    <p className="text-center text-xs text-gray-500 mt-3">Opens booking on Aviasales</p>
+                    <p className="text-center text-xs text-gray-500 mt-3">Opens booking on Aviasales to confirm price</p>
                   </div>
                 </div>
               </div>
@@ -553,6 +556,7 @@ function SearchPageContent() {
                     departDate={dateMode === 'exact-date' ? exactDate : `${month}-01`}
                     directPrice={directPrice}
                     layoverRoutes={layoverRoutes}
+                    priceSource={priceSource}
                   />
                 )}
               </div>

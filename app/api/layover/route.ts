@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { majorHubs } from '@/lib/hubs'
 import { AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { searchKiwiMultiCity } from '@/lib/kiwi'
+import { getCheapestPrice, isAmadeusAvailable } from '@/lib/amadeus'
 
 export const dynamic = 'force-dynamic'
 
@@ -115,34 +116,44 @@ export async function GET(request: NextRequest) {
         directPrice: kiwiResult.direct?.price || null,
         layoverRoutes: hubRoutes,
         bestLayover: hubRoutes.length > 0 ? hubRoutes[0] : null,
+        priceSource: 'kiwi-live',
       })
     }
 
-    // Fallback: TravelPayouts hub-price approach
-    // Fetch direct route price (optional - may not exist)
-    const directUrl = `${API_BASE}/v2/prices/latest?origin=${origin}&destination=${destination}&limit=1&currency=usd&token=${TOKEN}`
-    console.log('[Layover API] Fetching direct route:', origin, '->', destination)
+    // Determine the date for Amadeus searches
+    const searchDate = departDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+    const useAmadeus = isAmadeusAvailable()
 
+    if (useAmadeus) {
+      console.log('[Layover API] Using Amadeus real-time prices')
+    } else {
+      console.log('[Layover API] Amadeus not available, falling back to TravelPayouts cached prices')
+    }
+
+    // Fetch direct route price
     let directPrice: number | null = null
 
-    try {
-      const directResponse = await fetch(directUrl, {
-        next: { revalidate: 21600 }, // Cache for 6 hours
-      })
-
-      if (directResponse.ok) {
-        const directData = await directResponse.json()
-        const directFlights = directData.data || []
-
-        if (directFlights.length > 0) {
-          directPrice = directFlights[0].value
-          console.log('[Layover API] Direct price:', directPrice)
-        } else {
-          console.log('[Layover API] No direct flight found - will show stopover options only')
+    if (useAmadeus) {
+      directPrice = await getCheapestPrice(origin, destination, searchDate)
+      console.log('[Layover API] Amadeus direct price:', directPrice)
+    } else {
+      const directUrl = `${API_BASE}/v2/prices/latest?origin=${origin}&destination=${destination}&limit=1&currency=usd&token=${TOKEN}`
+      console.log('[Layover API] Fetching cached direct route:', origin, '->', destination)
+      try {
+        const directResponse = await fetch(directUrl, {
+          next: { revalidate: 21600 },
+        })
+        if (directResponse.ok) {
+          const directData = await directResponse.json()
+          const directFlights = directData.data || []
+          if (directFlights.length > 0) {
+            directPrice = directFlights[0].value
+            console.log('[Layover API] Cached direct price:', directPrice)
+          }
         }
+      } catch (directError) {
+        console.log('[Layover API] Could not fetch direct price:', directError)
       }
-    } catch (directError) {
-      console.log('[Layover API] Could not fetch direct price - will show stopover options only:', directError)
     }
 
     // Get hubs dynamically based on destination region
@@ -152,50 +163,49 @@ export async function GET(request: NextRequest) {
 
     const hubRoutes: HubRoute[] = []
 
-    // Fetch all hub routes in parallel for better performance
+    // Fetch all hub routes in parallel
     const hubPromises = hubsToCheck.map(async (hub) => {
       try {
-        // Skip if hub is same as origin or destination
-        if (hub.code === origin || hub.code === destination) {
-          return null
+        if (hub.code === origin || hub.code === destination) return null
+
+        let leg1Price: number | null = null
+        let leg2Price: number | null = null
+
+        if (useAmadeus) {
+          // Real-time prices from Amadeus
+          const [l1, l2] = await Promise.all([
+            getCheapestPrice(origin, hub.code, searchDate),
+            getCheapestPrice(hub.code, destination, searchDate),
+          ])
+          leg1Price = l1
+          leg2Price = l2
+        } else {
+          // Cached prices from TravelPayouts
+          const leg1Url = `${API_BASE}/v2/prices/latest?origin=${origin}&destination=${hub.code}&limit=1&currency=usd&token=${TOKEN}`
+          const leg1Response = await fetch(leg1Url, { next: { revalidate: 21600 } })
+          if (!leg1Response.ok) return null
+          const leg1Data = await leg1Response.json()
+          const leg1Flights = leg1Data.data || []
+          if (leg1Flights.length === 0) return null
+          leg1Price = leg1Flights[0].value
+
+          const leg2Url = `${API_BASE}/v2/prices/latest?origin=${hub.code}&destination=${destination}&limit=1&currency=usd&token=${TOKEN}`
+          const leg2Response = await fetch(leg2Url, { next: { revalidate: 21600 } })
+          if (!leg2Response.ok) return null
+          const leg2Data = await leg2Response.json()
+          const leg2Flights = leg2Data.data || []
+          if (leg2Flights.length === 0) return null
+          leg2Price = leg2Flights[0].value
         }
 
-        // Fetch leg 1: Origin -> Hub
-        const leg1Url = `${API_BASE}/v2/prices/latest?origin=${origin}&destination=${hub.code}&limit=1&currency=usd&token=${TOKEN}`
-        const leg1Response = await fetch(leg1Url, {
-          next: { revalidate: 21600 },
-        })
+        if (leg1Price === null || leg2Price === null) return null
 
-        if (!leg1Response.ok) return null
-
-        const leg1Data = await leg1Response.json()
-        const leg1Flights = leg1Data.data || []
-        if (leg1Flights.length === 0) return null
-
-        const leg1Price = leg1Flights[0].value
-
-        // Fetch leg 2: Hub -> Destination
-        const leg2Url = `${API_BASE}/v2/prices/latest?origin=${hub.code}&destination=${destination}&limit=1&currency=usd&token=${TOKEN}`
-        const leg2Response = await fetch(leg2Url, {
-          next: { revalidate: 21600 },
-        })
-
-        if (!leg2Response.ok) return null
-
-        const leg2Data = await leg2Response.json()
-        const leg2Flights = leg2Data.data || []
-        if (leg2Flights.length === 0) return null
-
-        const leg2Price = leg2Flights[0].value
         const totalPrice = leg1Price + leg2Price
-
-        // Calculate savings if direct price exists
         const savings = directPrice !== null ? directPrice - totalPrice : null
         const savingsPercent = directPrice !== null && savings !== null ? Math.round((savings / directPrice) * 100) : null
 
         console.log(`[Layover API] ${hub.city}: $${leg1Price} + $${leg2Price} = $${totalPrice}${savings !== null ? ` (savings: $${savings})` : ''}`)
 
-        // Return ALL stopover routes, not just those with savings
         return {
           hub: hub.code,
           hubCity: hub.city,
@@ -211,14 +221,10 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Wait for all hub checks to complete
     const hubResults = await Promise.all(hubPromises)
 
-    // Filter out nulls
     hubResults.forEach((result) => {
-      if (result) {
-        hubRoutes.push(result)
-      }
+      if (result) hubRoutes.push(result)
     })
 
     // Sort by total price (cheapest first) if no direct price, otherwise by savings
@@ -234,6 +240,7 @@ export async function GET(request: NextRequest) {
       directPrice,
       layoverRoutes: hubRoutes,
       bestLayover: hubRoutes.length > 0 ? hubRoutes[0] : null,
+      priceSource: useAmadeus ? 'amadeus-live' : 'travelpayouts-cached',
     })
   } catch (error) {
     console.error('[Layover API] Error:', error)

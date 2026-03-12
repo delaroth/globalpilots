@@ -9,6 +9,7 @@ interface RouteComparisonProps {
   departDate: string
   directPrice: number | null
   layoverRoutes: LayoverRoute[]
+  priceSource?: 'amadeus-live' | 'travelpayouts-cached' | 'kiwi-live'
 }
 
 // Fun taglines for layover cities
@@ -34,7 +35,10 @@ export default function RouteComparison({
   departDate,
   directPrice,
   layoverRoutes,
+  priceSource = 'travelpayouts-cached',
 }: RouteComparisonProps) {
+  const isLive = priceSource === 'amadeus-live' || priceSource === 'kiwi-live'
+  const priceLabel = isLive ? 'Live Price' : 'Estimated Price'
   const handleBookDirect = () => {
     const affiliateLink = generateAffiliateLink({
       origin,
@@ -78,7 +82,7 @@ export default function RouteComparison({
               Found {layoverRoutes.length} Stopover Route{layoverRoutes.length !== 1 ? 's' : ''}
             </h2>
             <p className="text-xl">
-              Direct flight: ${directPrice} - Compare with stopovers below
+              Direct flight: {isLive ? '' : '~'}${directPrice} - Compare with stopovers below
             </p>
           </div>
         )
@@ -122,15 +126,16 @@ export default function RouteComparison({
 
               {/* Price */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6 text-center">
-                <p className="text-sm text-gray-600 mb-1">Total Price</p>
-                <p className="text-4xl font-bold text-gray-700">${directPrice}</p>
+                <p className="text-sm text-gray-600 mb-1">{priceLabel}</p>
+                <p className="text-4xl font-bold text-gray-700">{isLive ? '' : '~'}${directPrice}</p>
+                {!isLive && <p className="text-xs text-gray-400 mt-1">Cached estimate — actual price may differ</p>}
               </div>
 
               <button
                 onClick={handleBookDirect}
                 className="w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
               >
-                Book Direct Flight
+                {isLive ? 'Book Direct Flight' : 'Search Direct Flight'}
               </button>
             </div>
           </div>
@@ -221,10 +226,10 @@ export default function RouteComparison({
                   {/* Total Price */}
                   <div className={`${hasSavings ? 'bg-green-100' : 'bg-blue-100'} rounded-lg p-3 mb-3 text-center`}>
                     <p className={`text-xs ${hasSavings ? 'text-green-700' : 'text-blue-700'} mb-1`}>
-                      Total Price
+                      {priceLabel}
                     </p>
                     <p className={`text-3xl font-bold ${hasSavings ? 'text-green-600' : 'text-blue-600'}`}>
-                      ${Math.round(route.totalPrice)}
+                      {isLive ? '' : '~'}${Math.round(route.totalPrice)}
                     </p>
                     {hasSavings && (
                       <p className="text-xs text-green-700 mt-1 font-semibold">
@@ -249,7 +254,7 @@ export default function RouteComparison({
                         hasSavings ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
                       } text-white font-semibold py-2 px-3 rounded-lg transition text-xs shadow-md hover:shadow-lg`}
                     >
-                      Book Leg 1
+                      Search Leg 1
                     </button>
                     <button
                       onClick={() => handleBookLeg(route.hub.code, destination)}
@@ -257,7 +262,7 @@ export default function RouteComparison({
                         hasSavings ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
                       } text-white font-semibold py-2 px-3 rounded-lg transition text-xs shadow-md hover:shadow-lg`}
                     >
-                      Book Leg 2
+                      Search Leg 2
                     </button>
                   </div>
                 </div>
@@ -274,6 +279,11 @@ export default function RouteComparison({
           Sometimes booking two separate flights with a stopover in a major hub city {directPrice !== null ? 'is cheaper than flying direct' : 'can save you money'}.
           Use the layover as a chance to explore a bonus destination for a couple days - essentially getting two trips for {directPrice !== null ? 'less than the price of one' : 'the price of one'}!
         </p>
+        {!isLive && (
+          <p className="text-skyblue-light/60 text-xs mt-3">
+            Prices shown are cached estimates and may differ from live booking prices. Click &quot;Search&quot; to see current prices.
+          </p>
+        )}
       </div>
     </div>
   )

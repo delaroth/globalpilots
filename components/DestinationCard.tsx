@@ -77,7 +77,7 @@ export default function DestinationCard({
         {/* Destination */}
         <h3 className="text-2xl font-bold text-navy mb-1">{getCityName(destinationCode)}</h3>
         <p className="text-gray-500 text-sm mb-2">
-          {destinationCode} • via Aviasales
+          {destinationCode} • cached estimate
         </p>
         <p className="text-gray-600 text-sm mb-4">
           {formatDate(departDate)} - {formatDate(returnDate)}
@@ -86,7 +86,7 @@ export default function DestinationCard({
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-xs text-gray-600">Price</p>
+            <p className="text-xs text-gray-600">From ~</p>
             <p className="text-2xl font-bold text-green-600">${price}</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-3 text-center">
@@ -100,7 +100,7 @@ export default function DestinationCard({
           onClick={handleBookClick}
           className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg transform active:scale-95"
         >
-          Book This Trip
+          Search Live Prices
         </button>
       </div>
     </div>

@@ -152,9 +152,12 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
   return (
     <div className="w-full max-w-5xl mx-auto">
       <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20">
-        <h2 className="text-2xl font-bold text-white mb-6 text-center">
+        <h2 className="text-2xl font-bold text-white mb-2 text-center">
           {monthNames[monthNum - 1]} {year} - {origin} to {destination}
         </h2>
+        <p className="text-skyblue-light/70 text-xs text-center mb-6">
+          Prices are cached estimates — click a day to see live prices on Aviasales
+        </p>
 
         {/* Price legend */}
         <div className="flex justify-center gap-4 mb-6 text-sm flex-wrap">
@@ -239,15 +242,15 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
         {isFinite(minPrice) && isFinite(maxPrice) && isFinite(avgPrice) && (
           <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
             <div className="bg-navy-light/50 rounded-lg p-3">
-              <p className="text-skyblue-light text-sm">Cheapest</p>
+              <p className="text-skyblue-light text-sm">Cheapest ~</p>
               <p className="text-white text-xl font-bold">${Math.round(minPrice)}</p>
             </div>
             <div className="bg-navy-light/50 rounded-lg p-3">
-              <p className="text-skyblue-light text-sm">Average</p>
+              <p className="text-skyblue-light text-sm">Average ~</p>
               <p className="text-white text-xl font-bold">${avgPrice}</p>
             </div>
             <div className="bg-navy-light/50 rounded-lg p-3 col-span-2 md:col-span-1">
-              <p className="text-skyblue-light text-sm">Most Expensive</p>
+              <p className="text-skyblue-light text-sm">Most Expensive ~</p>
               <p className="text-white text-xl font-bold">${Math.round(maxPrice)}</p>
             </div>
           </div>
