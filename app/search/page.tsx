@@ -101,7 +101,7 @@ function SearchPageContent() {
   // Results
   const [calendarData, setCalendarData] = useState<Record<string, unknown> | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [exactDateResult, setExactDateResult] = useState<{ price: number; dayData: any } | null>(null)
+  const [exactDateResult, setExactDateResult] = useState<{ price: number; dayData: any; isLive?: boolean } | null>(null)
   const [weekendDeals, setWeekendDeals] = useState<WeekendDeal[]>([])
   const [directPrice, setDirectPrice] = useState<number | null>(null)
   const [layoverRoutes, setLayoverRoutes] = useState<LayoverRoute[]>([])
@@ -169,18 +169,37 @@ function SearchPageContent() {
         fetchLayover(origin, destination, `${month}-01`)
 
       } else if (dateMode === 'exact-date') {
-        const monthStr = exactDate.slice(0, 7)
-        const res = await fetch(`/api/travelpayouts/calendar?origin=${origin}&destination=${destination}&depart_date=${monthStr}`)
-        if (!res.ok) throw new Error(`API error: ${res.status}`)
-        const data = await res.json()
-        if (data.error) throw new Error(data.error)
-        const dayData = data.data?.[exactDate] ||
-          data.data?.[exactDate.replace(/-0(\d)/g, '-$1')]
-        const price = dayData?.price || dayData?.value
-        if (!price) {
-          setEmptyRoute(true)
-        } else {
-          setExactDateResult({ price, dayData })
+        // Try Amadeus real-time price first
+        let gotLivePrice = false
+        try {
+          const amadeusRes = await fetch(`/api/amadeus/search?origin=${origin}&destination=${destination}&departure_date=${exactDate}&max=1`)
+          if (amadeusRes.ok) {
+            const amadeusData = await amadeusRes.json()
+            if (amadeusData.offers?.length > 0) {
+              const offer = amadeusData.offers[0]
+              setExactDateResult({ price: offer.price, dayData: offer, isLive: true })
+              gotLivePrice = true
+            }
+          }
+        } catch (amadeusErr) {
+          console.log('[Search] Amadeus unavailable, falling back to cached:', amadeusErr)
+        }
+
+        // Fallback to TravelPayouts cached price
+        if (!gotLivePrice) {
+          const monthStr = exactDate.slice(0, 7)
+          const res = await fetch(`/api/travelpayouts/calendar?origin=${origin}&destination=${destination}&depart_date=${monthStr}`)
+          if (!res.ok) throw new Error(`API error: ${res.status}`)
+          const data = await res.json()
+          if (data.error) throw new Error(data.error)
+          const dayData = data.data?.[exactDate] ||
+            data.data?.[exactDate.replace(/-0(\d)/g, '-$1')]
+          const price = dayData?.price || dayData?.value
+          if (!price) {
+            setEmptyRoute(true)
+          } else {
+            setExactDateResult({ price, dayData, isLive: false })
+          }
         }
         fetchLayover(origin, destination, exactDate)
 
@@ -454,23 +473,40 @@ function SearchPageContent() {
             {exactDateResult && (
               <div className="max-w-md mx-auto">
                 <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-                  <div className="bg-gradient-to-r from-skyblue to-skyblue-dark px-6 py-5 text-center">
-                    <p className="text-navy font-semibold text-sm uppercase tracking-wide">Estimated Price</p>
-                    <p className="text-navy text-6xl font-bold mt-1">~${exactDateResult.price}</p>
+                  <div className={`px-6 py-5 text-center ${
+                    exactDateResult.isLive
+                      ? 'bg-gradient-to-r from-green-400 to-green-500'
+                      : 'bg-gradient-to-r from-skyblue to-skyblue-dark'
+                  }`}>
+                    <p className="text-navy font-semibold text-sm uppercase tracking-wide">
+                      {exactDateResult.isLive ? 'Live Price' : 'Estimated Price'}
+                    </p>
+                    <p className="text-navy text-6xl font-bold mt-1">
+                      {exactDateResult.isLive ? '' : '~'}${exactDateResult.price}
+                    </p>
                     <p className="text-navy/80 text-sm mt-2">{origin} → {destination} · {exactDate}</p>
-                    <p className="text-navy/60 text-xs mt-1">Cached estimate — actual price may vary</p>
+                    {!exactDateResult.isLive && (
+                      <p className="text-navy/60 text-xs mt-1">Cached estimate — actual price may vary</p>
+                    )}
+                    {exactDateResult.isLive && exactDateResult.dayData?.airlines && (
+                      <p className="text-navy/70 text-xs mt-1">
+                        {exactDateResult.dayData.airlines.join(', ')} · {exactDateResult.dayData.stops === 0 ? 'Direct' : `${exactDateResult.dayData.stops} stop${exactDateResult.dayData.stops > 1 ? 's' : ''}`}
+                      </p>
+                    )}
                   </div>
                   <div className="p-6">
                     <button
                       onClick={() => {
-                        const link = generateAffiliateLink({ origin, destination, departDate: exactDateResult.dayData?.departure_at || exactDate })
+                        const link = generateAffiliateLink({ origin, destination, departDate: exactDateResult.dayData?.departure_at || exactDateResult.dayData?.departureTime || exactDate })
                         window.open(link, '_blank')
                       }}
                       className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                     >
-                      Search Live Prices
+                      {exactDateResult.isLive ? 'Book on Aviasales' : 'Search Live Prices'}
                     </button>
-                    <p className="text-center text-xs text-gray-500 mt-3">Opens booking on Aviasales to confirm price</p>
+                    <p className="text-center text-xs text-gray-500 mt-3">
+                      {exactDateResult.isLive ? 'Book this fare on Aviasales' : 'Opens Aviasales to confirm price'}
+                    </p>
                   </div>
                 </div>
               </div>
