@@ -101,6 +101,15 @@ export default function CalendarPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+      {/* Redirect notice */}
+      <div className="bg-skyblue/20 border-b border-skyblue/30 px-6 py-3 text-center">
+        <p className="text-sm text-white">
+          This page has moved.
+          <Link href="/search?mode=flexible-month" className="text-skyblue font-semibold ml-1 underline">
+            Try the new unified Search page →
+          </Link>
+        </p>
+      </div>
       {/* Navigation */}
       <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">

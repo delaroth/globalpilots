@@ -69,28 +69,16 @@ export default function Home() {
             Explore All Features
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link href="/calendar" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">
-              <div className="text-4xl mb-4">📅</div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-skyblue transition">Cheapest Days</h3>
-              <p className="text-skyblue-light text-sm">See the cheapest day to fly each month with our interactive calendar</p>
-            </Link>
-
-            <Link href="/weekend" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">
-              <div className="text-4xl mb-4">🎉</div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-skyblue transition">Weekend Deals</h3>
-              <p className="text-skyblue-light text-sm">Find cheap weekend getaways from your city starting this week</p>
+            <Link href="/search" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">
+              <div className="text-4xl mb-4">✈️</div>
+              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-skyblue transition">Smart Flight Search</h3>
+              <p className="text-skyblue-light text-sm">Search by exact date, browse cheapest days, or find deals matching your days off</p>
             </Link>
 
             <Link href="/mystery" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">
               <div className="text-4xl mb-4">✨</div>
               <h3 className="text-xl font-bold text-white mb-2 group-hover:text-skyblue transition">Mystery Vacation</h3>
               <p className="text-skyblue-light text-sm">Let AI surprise you with the perfect destination for your budget</p>
-            </Link>
-
-            <Link href="/layover" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">
-              <div className="text-4xl mb-4">🔄</div>
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-skyblue transition">Layover Arbitrage</h3>
-              <p className="text-skyblue-light text-sm">Save money by turning layovers into bonus destinations</p>
             </Link>
 
             <Link href="/alerts" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 hover:border-skyblue hover:shadow-2xl transition-all transform hover:scale-105">

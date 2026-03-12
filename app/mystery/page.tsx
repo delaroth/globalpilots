@@ -33,10 +33,12 @@ export default function MysteryPage() {
   const [flexibleDates, setFlexibleDates] = useState(false)
   const [selectedVibes, setSelectedVibes] = useState<string[]>([])
   const [travellerType, setTravellerType] = useState('Solo')
-  const [destination, setDestination] = useState(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [destination, setDestination] = useState<any>(null)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false) // Track button state
   const errorRef = useRef<HTMLDivElement>(null)
+  const revealRef = useRef<HTMLDivElement>(null)
 
   // NEW: Package builder state
   const [tripDuration, setTripDuration] = useState(3)
@@ -54,6 +56,16 @@ export default function MysteryPage() {
       errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
   }, [error])
+
+  // Auto-scroll to reveal section when result arrives
+  useEffect(() => {
+    if (step === 'reveal' && destination && revealRef.current) {
+      // Small delay to ensure DOM is fully rendered
+      setTimeout(() => {
+        revealRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 100)
+    }
+  }, [step, destination])
 
   const handleVibeToggle = (vibe: string) => {
     if (error) setError('') // Clear error when user interacts
@@ -505,16 +517,40 @@ export default function MysteryPage() {
 
         {/* Step 2: Loading */}
         {step === 'loading' && (
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-navy-light/50 backdrop-blur-sm rounded-2xl p-12 border border-skyblue/20">
-              <MysteryLoading />
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-navy-dark/95 backdrop-blur-sm">
+            <div className="max-w-3xl w-full mx-4">
+              <div className="bg-navy-light/80 backdrop-blur-sm rounded-2xl p-12 border-2 border-skyblue/40 shadow-2xl">
+                <div className="text-center mb-8">
+                  <div className="text-7xl mb-6 animate-spin-slow inline-block">🌍</div>
+                  <h2 className="text-3xl font-bold text-white mb-3">
+                    Our AI is finding your perfect destination...
+                  </h2>
+                  <p className="text-skyblue-light text-lg">
+                    Searching flights, hotels, and creating your custom itinerary
+                  </p>
+                </div>
+                <MysteryLoading />
+              </div>
             </div>
+            <style jsx>{`
+              @keyframes spin-slow {
+                from {
+                  transform: rotate(0deg);
+                }
+                to {
+                  transform: rotate(360deg);
+                }
+              }
+              .animate-spin-slow {
+                animation: spin-slow 3s linear infinite;
+              }
+            `}</style>
           </div>
         )}
 
         {/* Step 3: Reveal */}
         {step === 'reveal' && destination && destination.destination && destination.city_code_IATA && (
-          <div>
+          <div ref={revealRef}>
             <MysteryReveal
               destination={destination}
               origin={origin}

@@ -19,14 +19,14 @@ export default function LayoverPage() {
   const [departDate, setDepartDate] = useState(getDefaultDate())
   const [loading, setLoading] = useState(false)
   const [directPrice, setDirectPrice] = useState<number | null>(null)
-  const [bestLayover, setBestLayover] = useState<LayoverRoute | null>(null)
+  const [layoverRoutes, setLayoverRoutes] = useState<LayoverRoute[]>([])
   const [error, setError] = useState('')
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setDirectPrice(null)
-    setBestLayover(null)
+    setLayoverRoutes([])
 
     // Validate required fields
     if (!origin) {
@@ -82,26 +82,29 @@ export default function LayoverPage() {
         throw new Error(data.error)
       }
 
-      if (!data.directPrice) {
-        setError('No direct flights found for this route. Try different airports or dates.')
-        return
-      }
-
+      // Set direct price (may be null if no direct flight found)
       setDirectPrice(data.directPrice)
 
-      // Convert the API response format to match LayoverRoute interface
-      if (data.bestLayover) {
-        const hub = majorHubs.find(h => h.code === data.bestLayover.hub)
-        if (hub) {
-          setBestLayover({
-            hub,
-            leg1Price: data.bestLayover.leg1Price,
-            leg2Price: data.bestLayover.leg2Price,
-            totalPrice: data.bestLayover.totalPrice,
-            savings: data.bestLayover.savings,
-            savingsPercent: data.bestLayover.savingsPercent,
-          })
-        }
+      // Convert all layover routes to match LayoverRoute interface
+      if (data.layoverRoutes && data.layoverRoutes.length > 0) {
+        const routes: LayoverRoute[] = data.layoverRoutes.map((route: any) => {
+          const hub = majorHubs.find(h => h.code === route.hub)
+          if (hub) {
+            return {
+              hub,
+              leg1Price: route.leg1Price,
+              leg2Price: route.leg2Price,
+              totalPrice: route.totalPrice,
+              savings: route.savings,
+              savingsPercent: route.savingsPercent,
+            }
+          }
+          return null
+        }).filter((r: LayoverRoute | null): r is LayoverRoute => r !== null)
+
+        setLayoverRoutes(routes)
+      } else {
+        setError('No stopover routes found for this trip. Try different airports or dates.')
       }
     } catch (err) {
       console.error('[Layover] Error:', err)
@@ -113,6 +116,15 @@ export default function LayoverPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+      {/* Redirect notice */}
+      <div className="bg-skyblue/20 border-b border-skyblue/30 px-6 py-3 text-center">
+        <p className="text-sm text-white">
+          This page has moved.
+          <Link href="/search?mode=exact-date" className="text-skyblue font-semibold ml-1 underline">
+            Try the new unified Search page →
+          </Link>
+        </p>
+      </div>
       {/* Navigation */}
       <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -221,18 +233,18 @@ export default function LayoverPage() {
         )}
 
         {/* Results */}
-        {directPrice !== null && !loading && (
+        {layoverRoutes.length > 0 && !loading && (
           <RouteComparison
             origin={origin}
             destination={destination}
             departDate={departDate}
             directPrice={directPrice}
-            bestLayover={bestLayover}
+            layoverRoutes={layoverRoutes}
           />
         )}
 
         {/* How it works */}
-        {!directPrice && !loading && (
+        {layoverRoutes.length === 0 && !loading && (
           <div className="max-w-4xl mx-auto mt-12">
             <h2 className="text-2xl font-bold text-white mb-6 text-center">
               How Layover Arbitrage Works

@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
 
     // Extract unique routes
     const uniqueRoutes = Array.from(
-      new Set(alerts.map((a: any) => `${a.origin}-${a.destination}`))
-    ).map(route => {
+      new Set<string>(alerts.map((a: any) => `${a.origin}-${a.destination}`))
+    ).map((route) => {
       const [origin, destination] = route.split('-')
       return { origin, destination }
     })

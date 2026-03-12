@@ -23,7 +23,7 @@ export default function PriceSlider({
   const percentAboveLow = ((targetPrice - historicalLow) / historicalLow) * 100
 
   const getStatus = () => {
-    if (percentAboveLow <= 5) return { text: 'Great Deal!', color: 'green', bg: 'bg-green-100', text: 'text-green-700' }
+    if (percentAboveLow <= 5) return { text: 'Great Deal!', color: 'green', bg: 'bg-green-100', textColor: 'text-green-700' }
     if (percentAboveLow <= 15) return { text: 'Good Price', color: 'blue', bg: 'bg-blue-100', textColor: 'text-blue-700' }
     if (percentAboveLow <= 30) return { text: 'Fair Price', color: 'yellow', bg: 'bg-yellow-100', textColor: 'text-yellow-700' }
     return { text: 'Above Average', color: 'orange', bg: 'bg-orange-100', textColor: 'text-orange-700' }

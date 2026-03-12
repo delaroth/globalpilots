@@ -12,8 +12,33 @@ interface HubRoute {
   leg1Price: number
   leg2Price: number
   totalPrice: number
-  savings: number
-  savingsPercent: number
+  savings: number | null
+  savingsPercent: number | null
+}
+
+// Dynamic hub selection based on destination region
+function getHubsByRegion(destination: string): string[] {
+  // Middle East destinations
+  const middleEastAirports = ['TLV', 'AMM', 'CAI', 'BEY', 'BAH', 'KWI', 'MCT']
+  // European destinations
+  const europeanAirports = ['LHR', 'CDG', 'AMS', 'FRA', 'MAD', 'BCN', 'FCO', 'MXP', 'MUC', 'VIE', 'ZRH', 'CPH', 'OSL', 'ARN', 'BRU', 'DUB', 'LIS', 'ATH', 'PRG', 'WAW']
+  // Asian destinations
+  const asianAirports = ['BKK', 'SIN', 'KUL', 'HKG', 'NRT', 'ICN', 'PVG', 'PEK', 'DEL', 'BOM', 'CGK', 'MNL', 'HAN', 'SGN', 'TPE']
+  // American destinations (North/South America)
+  const americanAirports = ['JFK', 'LAX', 'ORD', 'DFW', 'ATL', 'MIA', 'SFO', 'SEA', 'BOS', 'DEN', 'LAS', 'YYZ', 'YVR', 'MEX', 'GRU', 'EZE', 'BOG', 'LIM', 'SCL']
+
+  if (middleEastAirports.includes(destination)) {
+    return ['DXB', 'DOH', 'IST', 'CAI', 'AUH']
+  } else if (europeanAirports.includes(destination)) {
+    return ['LHR', 'CDG', 'AMS', 'FRA', 'IST', 'MUC']
+  } else if (asianAirports.includes(destination)) {
+    return ['SIN', 'HKG', 'NRT', 'ICN', 'BKK', 'KUL']
+  } else if (americanAirports.includes(destination)) {
+    return ['LHR', 'CDG', 'FRA', 'AMS', 'IST', 'DXB']
+  } else {
+    // Default: use top global hubs
+    return ['SIN', 'DXB', 'IST', 'DOH', 'LHR', 'CDG', 'AMS', 'FRA', 'HKG', 'NRT']
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -65,34 +90,37 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Fetch direct route price
+    // Fetch direct route price (optional - may not exist)
     const directUrl = `${API_BASE}/v2/prices/latest?origin=${origin}&destination=${destination}&limit=1&currency=usd&token=${TOKEN}`
     console.log('[Layover API] Fetching direct route:', origin, '->', destination)
 
-    const directResponse = await fetch(directUrl, {
-      next: { revalidate: 21600 }, // Cache for 6 hours
-    })
+    let directPrice: number | null = null
 
-    if (!directResponse.ok) {
-      throw new Error(`Direct route API error: ${directResponse.status}`)
-    }
-
-    const directData = await directResponse.json()
-    const directFlights = directData.data || []
-
-    if (directFlights.length === 0) {
-      return NextResponse.json({
-        error: 'No direct flights found for this route',
-        directPrice: null,
-        layoverRoutes: [],
+    try {
+      const directResponse = await fetch(directUrl, {
+        next: { revalidate: 21600 }, // Cache for 6 hours
       })
+
+      if (directResponse.ok) {
+        const directData = await directResponse.json()
+        const directFlights = directData.data || []
+
+        if (directFlights.length > 0) {
+          directPrice = directFlights[0].value
+          console.log('[Layover API] Direct price:', directPrice)
+        } else {
+          console.log('[Layover API] No direct flight found - will show stopover options only')
+        }
+      }
+    } catch (directError) {
+      console.log('[Layover API] Could not fetch direct price - will show stopover options only:', directError)
     }
 
-    const directPrice = directFlights[0].value
-    console.log('[Layover API] Direct price:', directPrice)
+    // Get hubs dynamically based on destination region
+    const hubCodes = getHubsByRegion(destination)
+    const hubsToCheck = majorHubs.filter(h => hubCodes.includes(h.code))
+    console.log('[Layover API] Checking hubs:', hubsToCheck.map(h => h.city).join(', '))
 
-    // Check top 5 hubs (prioritizing SIN, DXB, IST, DOH, KUL)
-    const hubsToCheck = majorHubs.slice(0, 5)
     const hubRoutes: HubRoute[] = []
 
     // Fetch all hub routes in parallel for better performance
@@ -131,24 +159,23 @@ export async function GET(request: NextRequest) {
 
         const leg2Price = leg2Flights[0].value
         const totalPrice = leg1Price + leg2Price
-        const savings = directPrice - totalPrice
 
-        console.log(`[Layover API] ${hub.city}: $${leg1Price} + $${leg2Price} = $${totalPrice} (savings: $${savings})`)
+        // Calculate savings if direct price exists
+        const savings = directPrice !== null ? directPrice - totalPrice : null
+        const savingsPercent = directPrice !== null && savings !== null ? Math.round((savings / directPrice) * 100) : null
 
-        // Only include if there are actual savings
-        if (savings > 0) {
-          return {
-            hub: hub.code,
-            hubCity: hub.city,
-            leg1Price,
-            leg2Price,
-            totalPrice,
-            savings,
-            savingsPercent: Math.round((savings / directPrice) * 100),
-          }
+        console.log(`[Layover API] ${hub.city}: $${leg1Price} + $${leg2Price} = $${totalPrice}${savings !== null ? ` (savings: $${savings})` : ''}`)
+
+        // Return ALL stopover routes, not just those with savings
+        return {
+          hub: hub.code,
+          hubCity: hub.city,
+          leg1Price,
+          leg2Price,
+          totalPrice,
+          savings,
+          savingsPercent,
         }
-
-        return null
       } catch (error) {
         console.error(`[Layover API] Error checking hub ${hub.city}:`, error)
         return null
@@ -158,16 +185,21 @@ export async function GET(request: NextRequest) {
     // Wait for all hub checks to complete
     const hubResults = await Promise.all(hubPromises)
 
-    // Filter out nulls and sort by savings
+    // Filter out nulls
     hubResults.forEach((result) => {
       if (result) {
         hubRoutes.push(result)
       }
     })
 
-    hubRoutes.sort((a, b) => b.savings - a.savings)
+    // Sort by total price (cheapest first) if no direct price, otherwise by savings
+    if (directPrice !== null) {
+      hubRoutes.sort((a, b) => (b.savings || 0) - (a.savings || 0))
+    } else {
+      hubRoutes.sort((a, b) => a.totalPrice - b.totalPrice)
+    }
 
-    console.log(`[Layover API] Found ${hubRoutes.length} routes with savings`)
+    console.log(`[Layover API] Found ${hubRoutes.length} stopover routes`)
 
     return NextResponse.json({
       directPrice,

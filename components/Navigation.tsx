@@ -9,10 +9,8 @@ export default function Navigation() {
   const pathname = usePathname()
 
   const links = [
-    { href: '/calendar', label: 'Calendar' },
-    { href: '/weekend', label: 'Weekend Deals' },
+    { href: '/search', label: 'Search Flights' },
     { href: '/mystery', label: 'Mystery Trip' },
-    { href: '/layover', label: 'Layover' },
     { href: '/alerts', label: 'Price Alerts' },
   ]
 
