@@ -28,7 +28,7 @@ export interface TieredSearchConfig {
 
 const BROWSE_CONFIG: TieredSearchConfig = {
   tier: 'browse',
-  allowedSources: ['travelpayouts', 'kiwi'],  // Cheap/free APIs only
+  allowedSources: ['travelpayouts'],  // Free cached data — sole source until Kiwi/FlightAPI keys are added
   maxResults: 10,
   cacheTtlMs: 6 * 60 * 60 * 1000, // 6 hours
   showLivePriceCta: true,

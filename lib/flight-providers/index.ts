@@ -5,9 +5,13 @@ import type { FlightSearchParams, FlightOffer, CheapestDestination, FlightProvid
 
 export type { FlightSearchParams, FlightOffer, CheapestDestination, FlightProvider }
 
-// Priority order: Kiwi (live LCC + deep links) → FlightAPI.io (live, credit-managed) → TravelPayouts (cached fallback)
-// Amadeus removed: self-service portal decommissioned July 2026.
-// FlightAPI auto-disables when credits are exhausted → falls through to TravelPayouts silently.
+// Priority order: Kiwi → FlightAPI.io → TravelPayouts
+// Kiwi: requires API key (apply at tequila.kiwi.com — needs active users)
+// FlightAPI: requires API key + credits ($49/mo for 30k credits)
+// TravelPayouts: always available, cached 1-3 day old prices (current sole source)
+//
+// The chain degrades gracefully: unavailable providers are skipped silently.
+// Adding a Kiwi or FlightAPI key instantly activates live data — no code change needed.
 const providers: FlightProvider[] = [
   kiwiProvider,
   flightapiProvider,
