@@ -49,7 +49,7 @@ function resolveConfidence(offer: FlightOffer): PriceConfidence {
   if (offer.confidence) return offer.confidence
   if (offer.isLive) return 'live'
   if (offer.source === 'travelpayouts') return 'cached'
-  if (offer.source === 'kiwi' || offer.source === 'amadeus' || offer.source === 'duffel') return 'live'
+  if (offer.source === 'kiwi' || offer.source === 'flightapi' || offer.source === 'duffel') return 'live'
   return 'estimated'
 }
 

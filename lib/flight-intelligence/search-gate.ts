@@ -40,8 +40,8 @@ const BROWSE_CONFIG: TieredSearchConfig = {
  */
 function buildLiveConfig(): TieredSearchConfig {
   const sources = STEALTH_MODE
-    ? ['amadeus', 'kiwi', 'skyscanner', 'flightapi'] // No Duffel in stealth
-    : ['duffel', 'amadeus', 'kiwi', 'skyscanner', 'flightapi']
+    ? ['kiwi', 'flightapi'] // No Duffel in stealth. Amadeus decommissioned.
+    : ['duffel', 'kiwi', 'flightapi']
 
   return {
     tier: 'live',

@@ -30,11 +30,9 @@ export interface ConfidenceResult {
 // ─── Source Base Confidence ───
 // Inherent reliability: how trustworthy is this provider's data on arrival?
 const SOURCE_BASE: Record<string, number> = {
-  'duffel':        0.98,  // Live bookable, highest trust, real inventory
-  'amadeus':       0.95,  // Live but sometimes stale inventory cache
+  'duffel':        0.98,  // Live bookable, highest trust, real inventory (future)
+  'flightapi':     0.92,  // Live from 700+ airlines, high coverage
   'kiwi':          0.90,  // Live, includes LCCs, but aggregated from carriers
-  'skyscanner':    0.88,  // Meta-search, good coverage, slight delay
-  'flightapi':     0.85,  // Aggregator, depends on upstream freshness
   'travelpayouts': 0.60,  // Cached 1-3 days, directional pricing only
   'estimated':     0.30,  // Hardcoded fallbacks, very rough
 }

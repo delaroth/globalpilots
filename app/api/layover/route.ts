@@ -111,8 +111,8 @@ async function fetchMultiProviderRoutes(origin: string, destination: string, sea
 
   // Determine which provider powered the results for the response metadata
   const providerUsed = directResult.provider !== 'none' ? directResult.provider : 'unknown'
-  const priceSource = providerUsed === 'amadeus' ? 'amadeus-live'
-    : providerUsed === 'kiwi' ? 'kiwi-live'
+  const priceSource = providerUsed === 'kiwi' ? 'kiwi-live'
+    : providerUsed === 'flightapi' ? 'flightapi-live'
     : providerUsed === 'travelpayouts' ? 'travelpayouts-cached'
     : 'unknown'
 

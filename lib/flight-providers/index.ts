@@ -1,20 +1,22 @@
 import { kiwiProvider } from './kiwi'
-import { amadeusProvider } from './amadeus'
+import { flightapiProvider } from './flightapi'
 import { travelpayoutsProvider } from './travelpayouts'
 import type { FlightSearchParams, FlightOffer, CheapestDestination, FlightProvider } from './types'
 
 export type { FlightSearchParams, FlightOffer, CheapestDestination, FlightProvider }
 
-// Priority order: Kiwi (best LCC coverage + deep links) → Amadeus (live bookable) → TravelPayouts (cached fallback)
+// Priority order: Kiwi (live LCC + deep links) → FlightAPI.io (live, credit-managed) → TravelPayouts (cached fallback)
+// Amadeus removed: self-service portal decommissioned July 2026.
+// FlightAPI auto-disables when credits are exhausted → falls through to TravelPayouts silently.
 const providers: FlightProvider[] = [
   kiwiProvider,
-  amadeusProvider,
+  flightapiProvider,
   travelpayoutsProvider,
 ]
 
 /**
  * Search flights across multiple providers with automatic fallback.
- * Tries providers in priority order: Kiwi → Amadeus → TravelPayouts.
+ * Tries providers in priority order: Kiwi → FlightAPI.io → TravelPayouts.
  * Returns the first successful result along with source metadata.
  */
 export async function searchFlightsMultiProvider(
