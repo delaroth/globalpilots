@@ -1,20 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 import RouteComparison from '@/components/RouteComparison'
 import { majorHubs, LayoverRoute } from '@/lib/hubs'
+import WhatNext from '@/components/WhatNext'
 import { generateAffiliateLink } from '@/lib/affiliate'
+import { saveRecentSearch } from '@/lib/recent-searches'
+import RecentSearches from '@/components/RecentSearches'
 
-export default function ExplorePage() {
+function ExplorePageContent() {
+  const searchParams = useSearchParams()
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
   const [departDate, setDepartDate] = useState(() => {
     const d = new Date(); d.setDate(d.getDate() + 14)
     return d.toISOString().split('T')[0]
   })
+
+  // Pre-fill from URL params (e.g., /explore?origin=BKK&destination=NRT)
+  useEffect(() => {
+    const o = searchParams.get('origin')
+    const d = searchParams.get('destination') || searchParams.get('dest')
+    if (o) setOrigin(o.toUpperCase())
+    if (d) setDestination(d.toUpperCase())
+  }, [searchParams])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -63,6 +76,12 @@ export default function ExplorePage() {
         setLayoverRoutes(routes)
       }
       setSearched(true)
+      const dateLabel = new Date(departDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      saveRecentSearch({
+        origin, destination, date: departDate, mode: 'explore',
+        label: `${origin} → ${destination} via hubs · ${dateLabel}`,
+        url: `/explore?origin=${origin}&dest=${destination}`,
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -108,6 +127,8 @@ export default function ExplorePage() {
             </button>
           </div>
         </form>
+
+        <RecentSearches />
 
         {/* Error */}
         {error && (
@@ -159,6 +180,8 @@ export default function ExplorePage() {
                 )}
               </div>
             )}
+
+            <WhatNext origin={origin} destination={destination} departDate={departDate} context="explore" />
           </div>
         )}
 
@@ -188,5 +211,20 @@ export default function ExplorePage() {
 
       <Footer />
     </main>
+  )
+}
+
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-skyblue mb-4"></div>
+          <p className="text-white text-lg">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ExplorePageContent />
+    </Suspense>
   )
 }

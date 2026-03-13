@@ -25,6 +25,26 @@ export default function AirportAutocomplete({
   const [selectedCity, setSelectedCity] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  const isOriginField = id.toLowerCase().includes('origin')
+
+  // Persist origin airport to localStorage for cross-page auto-fill
+  const saveOriginToStorage = (code: string) => {
+    if (isOriginField && code && typeof window !== 'undefined') {
+      localStorage.setItem('globepilot_origin', code)
+    }
+  }
+
+  // On mount, auto-fill origin from localStorage if value is empty
+  useEffect(() => {
+    if (isOriginField && !value && typeof window !== 'undefined') {
+      const saved = localStorage.getItem('globepilot_origin')
+      if (saved) {
+        onChange(saved)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Improved filtering: prioritize exact IATA code matches, then partial matches
   const filteredAirports = searchQuery.trim()
     ? (() => {
@@ -82,6 +102,7 @@ export default function AirportAutocomplete({
 
   const handleSelect = (code: string, city: string) => {
     onChange(code)
+    saveOriginToStorage(code)
     setSelectedCity(city)
     setSearchQuery('')
     setShowDropdown(false)
@@ -101,6 +122,7 @@ export default function AirportAutocomplete({
       if (exactMatch) {
         // Auto-select the exact IATA code match immediately
         onChange(exactMatch.code)
+        saveOriginToStorage(exactMatch.code)
         setSelectedCity(exactMatch.city)
         setSearchQuery('')
         setShowDropdown(false)

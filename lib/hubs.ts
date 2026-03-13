@@ -7,6 +7,7 @@ export const majorHubs = [
   { code: 'IST', city: 'Istanbul', region: 'Europe/Asia' },
   { code: 'DOH', city: 'Doha', region: 'Middle East' },
   { code: 'KUL', city: 'Kuala Lumpur', region: 'Asia' },
+  { code: 'BKK', city: 'Bangkok', region: 'Asia' },
   // Other major hubs
   { code: 'LHR', city: 'London', region: 'Europe' },
   { code: 'CDG', city: 'Paris', region: 'Europe' },

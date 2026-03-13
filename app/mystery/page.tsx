@@ -17,6 +17,16 @@ const vibeOptions = [
 
 const travellerTypes = ['Solo', 'Couple', 'Group']
 
+const quickThemes = [
+  { emoji: '🏖️', label: 'Beach Escape', vibes: ['beach'], budgetMin: '500', budgetMax: '800', color: 'from-cyan-400 to-blue-400' },
+  { emoji: '🏙️', label: 'City Culture', vibes: ['city', 'food'], budgetMin: '600', budgetMax: '1000', color: 'from-purple-400 to-pink-400' },
+  { emoji: '🏔️', label: 'Adventure Trip', vibes: ['adventure', 'nature'], budgetMin: '400', budgetMax: '700', color: 'from-green-400 to-emerald-500' },
+  { emoji: '🍜', label: 'Foodie Tour', vibes: ['food'], budgetMin: '500', budgetMax: '900', color: 'from-orange-400 to-red-400' },
+  { emoji: '🎒', label: 'Budget Backpacker', vibes: [], budgetMin: '300', budgetMax: '500', color: 'from-yellow-400 to-amber-500' },
+]
+
+const MAX_REROLLS = 3
+
 export default function MysteryPage() {
   // Default date to 2 weeks from now
   const getTwoWeeksFromNow = () => {
@@ -39,6 +49,17 @@ export default function MysteryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false) // Track button state
   const errorRef = useRef<HTMLDivElement>(null)
   const revealRef = useRef<HTMLDivElement>(null)
+
+  // Re-roll state
+  const [excludeList, setExcludeList] = useState<string[]>([])
+  const excludeListRef = useRef<string[]>([])
+  const [rerollCount, setRerollCount] = useState(0)
+  const [activeTheme, setActiveTheme] = useState<string | null>(null)
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    excludeListRef.current = excludeList
+  }, [excludeList])
 
   // NEW: Package builder state
   const [tripDuration, setTripDuration] = useState(3)
@@ -182,6 +203,7 @@ export default function MysteryPage() {
           tripDuration,
           packageComponents,
           email: emailForUpdates || undefined,
+          exclude: excludeListRef.current.length > 0 ? excludeListRef.current : undefined,
         }),
       })
 
@@ -220,13 +242,52 @@ export default function MysteryPage() {
   }
 
   const handleShowAnother = () => {
+    // Reset re-roll state for a fresh "Show Another"
+    setExcludeList([])
+    excludeListRef.current = []
+    setRerollCount(0)
     setStep('loading')
     handleSubmit({ preventDefault: () => {} } as React.FormEvent)
+  }
+
+  const handleReroll = () => {
+    if (rerollCount >= MAX_REROLLS) return
+
+    // Add the current destination's IATA to the exclude list
+    const currentIATA = destination?.city_code_IATA || destination?.iata
+    if (currentIATA) {
+      const updated = [...excludeList, currentIATA]
+      setExcludeList(updated)
+      excludeListRef.current = updated // Update ref synchronously for immediate use
+    }
+    setRerollCount(prev => prev + 1)
+    setDestination(null)
+    setStep('loading')
+    // Directly trigger API call since ref is already updated
+    setTimeout(() => {
+      handleSubmit({ preventDefault: () => {} } as React.FormEvent)
+    }, 50)
   }
 
   const handleReset = () => {
     setStep('form')
     setDestination(null)
+    setError('')
+    setExcludeList([])
+    excludeListRef.current = []
+    setRerollCount(0)
+    setActiveTheme(null)
+  }
+
+  const handleThemeSelect = (theme: typeof quickThemes[number]) => {
+    // Pre-fill vibes (or keep all if empty = "any vibe")
+    if (theme.vibes.length > 0) {
+      setSelectedVibes(theme.vibes)
+    }
+    // Pre-fill budget as the midpoint of the range
+    const midBudget = Math.round((parseInt(theme.budgetMin) + parseInt(theme.budgetMax)) / 2)
+    setBudget(String(midBudget))
+    setActiveTheme(theme.label)
     setError('')
   }
 
@@ -261,6 +322,33 @@ export default function MysteryPage() {
         {/* Step 1: Form */}
         {step === 'form' && (
           <div className="max-w-3xl mx-auto">
+            {/* Quick Picks / Theme Buttons */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-white text-center mb-4">Quick Picks</h2>
+              <div className="flex flex-wrap justify-center gap-3">
+                {quickThemes.map((theme) => (
+                  <button
+                    key={theme.label}
+                    type="button"
+                    onClick={() => handleThemeSelect(theme)}
+                    className={`bg-gradient-to-r ${theme.color} text-white font-semibold px-5 py-2.5 rounded-full shadow-lg transition-all transform hover:scale-105 hover:shadow-xl active:scale-95 text-sm ${
+                      activeTheme === theme.label ? 'ring-4 ring-white/60 scale-105' : ''
+                    }`}
+                  >
+                    {theme.emoji} {theme.label}
+                    <span className="block text-xs font-normal opacity-80">
+                      ${theme.budgetMin}-${theme.budgetMax}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {activeTheme && (
+                <p className="text-center text-skyblue-light text-sm mt-3">
+                  {activeTheme} selected! Pick your city and dates below, then hit Surprise Me.
+                </p>
+              )}
+            </div>
+
             <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
               {/* Budget */}
               <div className="mb-6">
@@ -556,6 +644,9 @@ export default function MysteryPage() {
               origin={origin}
               departDate={departDate}
               onShowAnother={handleShowAnother}
+              onReroll={handleReroll}
+              rerollCount={rerollCount}
+              maxRerolls={MAX_REROLLS}
             />
             <div className="text-center mt-6">
               <button

@@ -2,6 +2,7 @@
 
 import { generateAffiliateLink } from '@/lib/affiliate'
 import { majorAirports } from '@/lib/geolocation'
+import DestinationImage from '@/components/DestinationImage'
 
 interface DestinationCardProps {
   destination: string
@@ -61,13 +62,11 @@ export default function DestinationCard({
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
-      {/* Image placeholder */}
-      <div className="h-48 bg-gradient-to-br from-skyblue to-skyblue-dark relative">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-6xl">✈️</span>
-        </div>
+      {/* Destination image */}
+      <div className="relative">
+        <DestinationImage code={destinationCode} city={destination} />
         {isThisWeekend && (
-          <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+          <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold z-10">
             This Week!
           </div>
         )}

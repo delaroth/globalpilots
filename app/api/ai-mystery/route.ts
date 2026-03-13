@@ -19,6 +19,7 @@ interface MysteryRequest {
   tripDuration?: number
   packageComponents?: PackageComponents
   email?: string
+  exclude?: string[]
 }
 
 interface MysteryResponse {
@@ -127,7 +128,7 @@ function getOriginRegion(origin: string): string {
 export async function POST(request: NextRequest) {
   try {
     const body: MysteryRequest = await request.json()
-    const { origin, budget, vibes, dates, tripDuration = 3, packageComponents, email } = body
+    const { origin, budget, vibes, dates, tripDuration = 3, packageComponents, email, exclude = [] } = body
 
     if (!origin || !budget || !vibes || vibes.length === 0) {
       return NextResponse.json(
@@ -149,8 +150,8 @@ export async function POST(request: NextRequest) {
 
     console.log('[AI-Mystery] Budget allocation:', allocationText)
 
-    // Check cache
-    const cacheKey = `mystery:${origin}:${budget}:${vibes.join(',')}:${dates}:${tripDuration}:${JSON.stringify(components)}`
+    // Check cache (include exclude list to avoid serving cached excluded destinations)
+    const cacheKey = `mystery:${origin}:${budget}:${vibes.join(',')}:${dates}:${tripDuration}:${JSON.stringify(components)}:${exclude.sort().join(',')}`
     const cached = getCached<MysteryResponse>(cacheKey)
     if (cached) {
       console.log('[AI-Mystery] Cache hit')
@@ -232,6 +233,13 @@ export async function POST(request: NextRequest) {
         }))
     }
 
+    // Filter out excluded destinations (from re-roll)
+    if (exclude.length > 0) {
+      const excludeSet = new Set(exclude.map(e => e.toUpperCase()))
+      priceInfo = priceInfo.filter(d => !excludeSet.has(d.destination.toUpperCase()))
+      console.log(`[AI-Mystery] Excluded ${exclude.join(', ')}, ${priceInfo.length} destinations remaining`)
+    }
+
     if (priceInfo.length === 0) {
       return NextResponse.json(
         { error: 'No destinations found within your budget. Try increasing your budget.' },
@@ -246,6 +254,10 @@ export async function POST(request: NextRequest) {
       ? '\nIMPORTANT: The flight prices below are estimated ranges, not live data. Pick the best destination for the user\'s vibes and flag the price as an estimate.'
       : ''
 
+    const excludeNote = exclude.length > 0
+      ? `\nDo NOT suggest these destinations (already shown to user): ${exclude.join(', ')}. Pick a DIFFERENT destination.`
+      : ''
+
     const userPrompt = `Given:
 - Total Budget: ${budget} USD for ${tripDuration} days
 - Budget Tier: ${budgetTier}
@@ -254,7 +266,7 @@ export async function POST(request: NextRequest) {
 - Travel dates: ${dates}
 - Vibes: ${vibes.join(', ')}
 - Package includes: ${components.includeFlight ? 'Flight' : ''} ${components.includeHotel ? 'Hotel' : ''} ${components.includeItinerary ? 'Itinerary' : ''} ${components.includeTransportation ? 'Transport' : ''}
-- Available destinations with flight prices: ${JSON.stringify(priceInfo)}${estimateNote}
+- Available destinations with flight prices: ${JSON.stringify(priceInfo)}${estimateNote}${excludeNote}
 
 CRITICAL BUDGET RULES:
 1. Flight cost MUST be <= $${allocation.flight}

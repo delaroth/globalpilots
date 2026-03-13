@@ -1,11 +1,15 @@
 'use client'
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 import CalendarGrid from '@/components/CalendarGrid'
 import DestinationCard from '@/components/DestinationCard'
+import WhatNext from '@/components/WhatNext'
 import { generateAffiliateLink, buildFlightLink } from '@/lib/affiliate'
+import { saveRecentSearch } from '@/lib/recent-searches'
+import RecentSearches from '@/components/RecentSearches'
 
 type DateMode = 'exact-date' | 'flexible-month' | 'day-windows'
 
@@ -67,10 +71,19 @@ function getNextWeekendDate(): string {
 }
 
 function SearchPageContent() {
+  const searchParams = useSearchParams()
   // Form
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
   const [dateMode, setDateMode] = useState<DateMode>('flexible-month')
+
+  // Pre-fill from URL params (e.g., /search?dest=BKK or /search?origin=CNX&destination=NRT)
+  useEffect(() => {
+    const o = searchParams.get('origin')
+    const d = searchParams.get('destination') || searchParams.get('dest')
+    if (o) setOrigin(o.toUpperCase())
+    if (d) setDestination(d.toUpperCase())
+  }, [searchParams])
 
   // Exact date
   const [exactDate, setExactDate] = useState(() => {
@@ -131,6 +144,12 @@ function SearchPageContent() {
           setEmptyRoute(true)
         } else {
           setCalendarData(data.data)
+          const monthLabel = new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+          saveRecentSearch({
+            origin, destination, date: month, mode: 'flexible-month',
+            label: `${origin} → ${destination} · ${monthLabel}`,
+            url: `/search?origin=${origin}&dest=${destination}&date=${month}&mode=flexible-month`,
+          })
         }
 
       } else if (dateMode === 'exact-date') {
@@ -148,6 +167,12 @@ function SearchPageContent() {
               const offer = amadeusData.offers[0]
               setExactDateResult({ price: offer.price, dayData: offer, isLive: true })
               gotLivePrice = true
+              const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              saveRecentSearch({
+                origin, destination, date: exactDate, mode: 'exact-date',
+                label: `${origin} → ${destination} · ${dateLabel}`,
+                url: `/search?origin=${origin}&dest=${destination}&date=${exactDate}&mode=exact-date`,
+              })
             }
           }
         } catch (amadeusErr) {
@@ -168,6 +193,12 @@ function SearchPageContent() {
             setEmptyRoute(true)
           } else {
             setExactDateResult({ price, dayData, isLive: false })
+            const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            saveRecentSearch({
+              origin, destination, date: exactDate, mode: 'exact-date',
+              label: `${origin} → ${destination} · ${dateLabel}`,
+              url: `/search?origin=${origin}&dest=${destination}&date=${exactDate}&mode=exact-date`,
+            })
           }
         }
 
@@ -186,6 +217,13 @@ function SearchPageContent() {
         if (dealsData.length < 3) setShowPopularSuggestions(true)
         if (dealsData.length > 0) {
           setWeekendDeals(dealsData.slice(0, 12))
+          const capDepart = departDay.charAt(0).toUpperCase() + departDay.slice(1, 3)
+          const capReturn = returnDay.charAt(0).toUpperCase() + returnDay.slice(1, 3)
+          saveRecentSearch({
+            origin, destination: destination || undefined, mode: 'day-windows',
+            label: `${origin} → anywhere · ${capDepart}–${capReturn}`,
+            url: `/search?origin=${origin}&mode=day-windows&depart=${departDay}&return=${returnDay}`,
+          })
         } else {
           setShowPopularSuggestions(true)
         }
@@ -367,6 +405,8 @@ function SearchPageContent() {
           </div>
         </form>
 
+        <RecentSearches />
+
         {/* Error */}
         {error && (
           <div className="max-w-3xl mx-auto mb-8">
@@ -417,8 +457,11 @@ function SearchPageContent() {
 
             {/* FLEXIBLE MONTH: CalendarGrid */}
             {calendarData && (
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              <CalendarGrid data={calendarData as any} origin={origin} destination={destination} month={month} />
+              <>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <CalendarGrid data={calendarData as any} origin={origin} destination={destination} month={month} />
+                <WhatNext origin={origin} destination={destination} context="search" />
+              </>
             )}
 
             {/* EXACT DATE: single price card */}
@@ -466,6 +509,7 @@ function SearchPageContent() {
                     </p>
                   </div>
                 </div>
+                <WhatNext origin={origin} destination={destination} departDate={exactDate} context="search" />
               </div>
             )}
 

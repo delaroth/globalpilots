@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { buildBookingBundle, AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { trackActivity } from '@/lib/activity-feed'
+import { getDestinationCost } from '@/lib/destination-costs'
 
 interface DailyActivity {
   time: string
@@ -74,6 +75,9 @@ interface MysteryRevealProps {
   origin: string
   departDate: string
   onShowAnother: () => void
+  onReroll?: () => void
+  rerollCount?: number
+  maxRerolls?: number
 }
 
 export default function MysteryReveal({
@@ -81,13 +85,22 @@ export default function MysteryReveal({
   origin,
   departDate,
   onShowAnother,
+  onReroll,
+  rerollCount = 0,
+  maxRerolls = 3,
 }: MysteryRevealProps) {
   const [revealed, setRevealed] = useState(false)
   const bookingRef = useRef<HTMLDivElement>(null)
+  const [shareUrl, setShareUrl] = useState('')
+  const [sharing, setSharing] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const iata = destination.city_code_IATA || destination.iata || ''
   const flightPrice = destination.indicativeFlightPrice || destination.estimated_flight_cost
   const isEstimate = destination.priceIsEstimate
+
+  // Look up daily cost-of-living data for this destination
+  const costData = useMemo(() => getDestinationCost(iata), [iata])
 
   // Build booking bundle
   const bookingBundle = buildBookingBundle({
@@ -117,10 +130,47 @@ export default function MysteryReveal({
     }
   }, [revealed])
 
-  const handleShare = () => {
-    const url = `${window.location.origin}/mystery?dest=${encodeURIComponent(destination.destination)}`
-    navigator.clipboard.writeText(url)
-    alert('Link copied to clipboard!')
+  const handleShare = async () => {
+    // If we already have a share URL, just copy it
+    if (shareUrl) {
+      navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      return
+    }
+
+    setSharing(true)
+    try {
+      const res = await fetch('/api/trips/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination,
+          origin,
+          departDate,
+        }),
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to save trip')
+      }
+
+      const data = await res.json()
+      const url = `${window.location.origin}/trips/${data.id}`
+      setShareUrl(url)
+      navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Error sharing trip:', err)
+      // Fallback: copy a simple link
+      const url = `${window.location.origin}/mystery?dest=${encodeURIComponent(destination.destination)}`
+      navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } finally {
+      setSharing(false)
+    }
   }
 
   const totalCost = destination.budgetBreakdown?.total
@@ -423,6 +473,51 @@ export default function MysteryReveal({
               <p className="text-gray-700">{destination.localTip || destination.insider_tip}</p>
             </div>
 
+            {/* Daily Costs Mini-Breakdown from destination-costs data */}
+            {costData && (
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-5 mb-6 border border-indigo-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-bold text-navy">
+                    Daily Costs in {costData.city}
+                  </h3>
+                  <Link
+                    href={`/trip-cost?dest=${costData.code}`}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition"
+                  >
+                    Full calculator &rarr;
+                  </Link>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['budget', 'mid', 'comfort'] as const).map((t) => {
+                    const d = costData.dailyCosts[t]
+                    const total = d.hotel + d.food + d.transport + d.activities
+                    const tierLabel = t === 'budget' ? 'Budget' : t === 'mid' ? 'Mid-Range' : 'Comfort'
+                    return (
+                      <div key={t} className="bg-white rounded-lg p-3 text-center border border-gray-100">
+                        <p className="text-xs text-gray-500 font-medium mb-1">{tierLabel}</p>
+                        <p className="text-xl font-bold text-navy">${total}</p>
+                        <p className="text-xs text-gray-400">per day</p>
+                        <div className="mt-2 space-y-0.5 text-xs text-gray-500">
+                          <div className="flex justify-between">
+                            <span>Hotel</span><span>${d.hotel}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Food</span><span>${d.food}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Transport</span><span>${d.transport}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Activities</span><span>${d.activities}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* THREE BOOKING BUTTONS */}
             <div ref={bookingRef} className="space-y-3 mb-6">
               <h3 className="text-xl font-bold text-navy mb-4">Book Your Trip</h3>
@@ -467,8 +562,59 @@ export default function MysteryReveal({
               </a>
             </div>
 
+            {/* Continue Planning Links */}
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-6">
+              <span className="text-xs text-gray-400 mr-1">Continue planning:</span>
+              {origin && (
+                <Link
+                  href={`/explore?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(iata)}`}
+                  className="text-sm text-skyblue-light hover:text-skyblue transition"
+                >
+                  Layover routes to {destination.destination}
+                </Link>
+              )}
+              <Link
+                href={`/trip-cost?destination=${encodeURIComponent(iata)}`}
+                className="text-sm text-skyblue-light hover:text-skyblue transition"
+              >
+                Daily costs in {destination.destination}
+              </Link>
+              <Link
+                href={`/search?destination=${encodeURIComponent(iata)}`}
+                className="text-sm text-skyblue-light hover:text-skyblue transition"
+              >
+                Search more flights
+              </Link>
+            </div>
+
+            {/* Re-roll Section */}
+            {onReroll && (
+              <div className="mb-6 border-t-2 border-gray-100 pt-6">
+                {rerollCount < maxRerolls ? (
+                  <div className="text-center">
+                    <p className="text-sm text-gray-500 mb-3">
+                      Surprise #{rerollCount + 1} of {maxRerolls}
+                    </p>
+                    <button
+                      onClick={onReroll}
+                      className="inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-8 rounded-full transition-all transform hover:scale-105 border-2 border-gray-200 hover:border-gray-300"
+                    >
+                      <span className="text-xl">🎲</span>
+                      Not feeling it? Try another!
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+                    <p className="text-amber-700 font-semibold">
+                      🎯 Run out of surprises! Adjust your budget or preferences for more options.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Show Another + Share */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <button
                 onClick={onShowAnother}
                 className="bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl"
@@ -477,11 +623,50 @@ export default function MysteryReveal({
               </button>
               <button
                 onClick={handleShare}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-4 px-6 rounded-lg transition"
+                disabled={sharing}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-4 px-6 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Share This Trip
+                {sharing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : copied ? (
+                  <>
+                    <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    Link Copied!
+                  </>
+                ) : (
+                  'Share This Trip'
+                )}
               </button>
             </div>
+
+            {/* Share URL display */}
+            {shareUrl && (
+              <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-green-800 mb-2">Shareable link created!</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={shareUrl}
+                    className="flex-1 bg-white border border-green-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(shareUrl)
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 2000)
+                    }}
+                    className="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition text-sm whitespace-nowrap"
+                  >
+                    {copied ? 'Copied!' : 'Copy Link'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

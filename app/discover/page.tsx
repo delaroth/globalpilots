@@ -1,10 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
+import WhatNext from '@/components/WhatNext'
 import { buildFlightLink } from '@/lib/affiliate'
+import { saveRecentSearch } from '@/lib/recent-searches'
+import RecentSearches from '@/components/RecentSearches'
+import DestinationImage from '@/components/DestinationImage'
 
 interface DiscoverResult {
   destination: string
@@ -45,8 +50,17 @@ export default function DiscoverPage() {
         throw new Error(data.error || `API error: ${res.status}`)
       }
       const data = await res.json()
-      setResults(data.results || [])
+      const resultsList = data.results || []
+      setResults(resultsList)
       setSearched(true)
+      if (resultsList.length > 0) {
+        const dateLabel = new Date(departDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        saveRecentSearch({
+          origin, mode: 'discover', date: departDate,
+          label: `${origin} · cheapest · ${dateLabel}`,
+          url: `/discover?origin=${origin}&depart_date=${departDate}`,
+        })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -96,6 +110,8 @@ export default function DiscoverPage() {
           </div>
         </form>
 
+        <RecentSearches />
+
         {/* Error */}
         {error && (
           <div className="max-w-xl mx-auto mb-8">
@@ -123,45 +139,72 @@ export default function DiscoverPage() {
                 </p>
                 <div className="space-y-4">
                   {results.map((r, i) => (
-                    <button
-                      key={r.destination}
-                      onClick={() => {
-                        const link = buildFlightLink(origin, r.destination, r.departDate)
-                        window.open(link, '_blank')
-                      }}
-                      className="w-full bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all transform hover:scale-[1.02] overflow-hidden text-left"
-                    >
-                      <div className="flex items-center">
-                        {/* Rank */}
-                        <div className={`w-16 h-full flex items-center justify-center text-2xl font-bold shrink-0 py-6 ${
-                          i === 0 ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'
-                        }`}>
-                          #{i + 1}
-                        </div>
-
-                        {/* Details */}
-                        <div className="flex-1 px-5 py-4">
-                          <div className="flex items-baseline gap-2">
-                            <h3 className="text-xl font-bold text-navy">{r.city}</h3>
-                            <span className="text-gray-400 text-sm">{r.destination}</span>
+                    <div key={r.destination} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all overflow-hidden">
+                      <button
+                        onClick={() => {
+                          const link = buildFlightLink(origin, r.destination, r.departDate)
+                          window.open(link, '_blank')
+                        }}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center">
+                          {/* Rank */}
+                          <div className={`w-16 h-full flex items-center justify-center text-2xl font-bold shrink-0 py-6 ${
+                            i === 0 ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            #{i + 1}
                           </div>
-                          <p className="text-gray-500 text-sm mt-1">
-                            {formatDate(r.departDate)} — {formatDate(r.returnDate)}
-                          </p>
-                        </div>
 
-                        {/* Price */}
-                        <div className="text-right px-5 py-4 shrink-0">
-                          <p className="text-xs text-gray-400">from ~</p>
-                          <p className={`text-3xl font-bold ${i === 0 ? 'text-green-600' : 'text-navy'}`}>
-                            ${r.price}
-                          </p>
-                          <p className="text-skyblue text-xs font-medium mt-1">Search live price →</p>
+                          {/* Destination thumbnail */}
+                          <div className="w-16 h-16 shrink-0 my-2 ml-3 rounded-lg overflow-hidden">
+                            <DestinationImage code={r.destination} city={r.city} height="h-full" className="w-full" />
+                          </div>
+
+                          {/* Details */}
+                          <div className="flex-1 px-5 py-4">
+                            <div className="flex items-baseline gap-2">
+                              <h3 className="text-xl font-bold text-navy">{r.city}</h3>
+                              <span className="text-gray-400 text-sm">{r.destination}</span>
+                            </div>
+                            <p className="text-gray-500 text-sm mt-1">
+                              {formatDate(r.departDate)} — {formatDate(r.returnDate)}
+                            </p>
+                          </div>
+
+                          {/* Price */}
+                          <div className="text-right px-5 py-4 shrink-0">
+                            <p className="text-xs text-gray-400">from ~</p>
+                            <p className={`text-3xl font-bold ${i === 0 ? 'text-green-600' : 'text-navy'}`}>
+                              ${r.price}
+                            </p>
+                            <p className="text-skyblue text-xs font-medium mt-1">Search live price &rarr;</p>
+                          </div>
                         </div>
+                      </button>
+                      <div className="flex items-center gap-4 px-5 pb-3 pt-0">
+                        <Link
+                          href={`/trip-cost?destination=${encodeURIComponent(r.destination)}`}
+                          className="text-xs text-gray-400 hover:text-skyblue transition"
+                        >
+                          Plan a trip
+                        </Link>
+                        <Link
+                          href={`/explore?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(r.destination)}`}
+                          className="text-xs text-gray-400 hover:text-skyblue transition"
+                        >
+                          Layover routes
+                        </Link>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
+                <WhatNext
+                  origin={origin}
+                  destination={results[0]?.destination}
+                  destinationCity={results[0]?.city}
+                  departDate={departDate}
+                  context="discover"
+                />
               </>
             ) : (
               <div className="text-center py-12">

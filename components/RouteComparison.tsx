@@ -2,6 +2,7 @@
 
 import { generateAffiliateLink } from '@/lib/affiliate'
 import { LayoverRoute } from '@/lib/hubs'
+import CityGuide from '@/components/CityGuide'
 
 interface RouteComparisonProps {
   origin: string
@@ -265,6 +266,9 @@ export default function RouteComparison({
                       Search Leg 2
                     </button>
                   </div>
+
+                  {/* AI City Guide */}
+                  <CityGuide city={route.hub.city} hubCode={route.hub.code} />
                 </div>
               </div>
             )
