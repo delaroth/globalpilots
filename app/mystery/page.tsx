@@ -15,6 +15,14 @@ const vibeOptions = [
   { emoji: '🌿', label: 'Nature', value: 'nature' },
 ]
 
+const timeframeOptions = [
+  { label: 'This Month', value: 'this-month' },
+  { label: 'Next Month', value: 'next-month' },
+  { label: 'Next 3 Months', value: 'next-3-months' },
+  { label: 'Next 6 Months', value: 'next-6-months' },
+  { label: 'Anytime', value: 'anytime' },
+]
+
 const travellerTypes = ['Solo', 'Couple', 'Group']
 
 const quickThemes = [
@@ -41,6 +49,8 @@ export default function MysteryPage() {
   const [originInputText, setOriginInputText] = useState('') // Track raw input text
   const [departDate, setDepartDate] = useState(getTwoWeeksFromNow())
   const [flexibleDates, setFlexibleDates] = useState(false)
+  const [dateMode, setDateMode] = useState<'specific' | 'flexible'>('specific')
+  const [timeframe, setTimeframe] = useState('next-3-months')
   const [selectedVibes, setSelectedVibes] = useState<string[]>([])
   const [travellerType, setTravellerType] = useState('Solo')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -164,25 +174,27 @@ export default function MysteryPage() {
       return
     }
 
-    if (!departDate) {
-      const errorMsg = 'Please select a departure date!'
-      console.error('[Mystery] Validation failed:', errorMsg)
-      setError(errorMsg)
-      setIsSubmitting(false)
-      return
-    }
+    if (dateMode === 'specific') {
+      if (!departDate) {
+        const errorMsg = 'Please select a departure date!'
+        console.error('[Mystery] Validation failed:', errorMsg)
+        setError(errorMsg)
+        setIsSubmitting(false)
+        return
+      }
 
-    // Validate date is not in the past
-    const selectedDate = new Date(departDate)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+      // Validate date is not in the past
+      const selectedDate = new Date(departDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
 
-    if (selectedDate < today) {
-      const errorMsg = 'Please select a future date! Time travel tickets are unfortunately not available yet. 🕰️'
-      console.error('[Mystery] Validation failed:', errorMsg)
-      setError(errorMsg)
-      setIsSubmitting(false)
-      return
+      if (selectedDate < today) {
+        const errorMsg = 'Please select a future date! Time travel tickets are unfortunately not available yet. 🕰️'
+        console.error('[Mystery] Validation failed:', errorMsg)
+        setError(errorMsg)
+        setIsSubmitting(false)
+        return
+      }
     }
 
     console.log('[Mystery] ✅ All validations passed! Starting search with:', { origin: resolvedOrigin, budget, vibes: selectedVibes, departDate })
@@ -199,7 +211,9 @@ export default function MysteryPage() {
           origin: resolvedOrigin, // Use resolved origin
           budget: parseFloat(budget),
           vibes: selectedVibes,
-          dates: `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`,
+          dates: dateMode === 'specific'
+            ? `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`
+            : `flexible:${timeframe}`,
           tripDuration,
           packageComponents,
           email: emailForUpdates || undefined,
@@ -395,29 +409,80 @@ export default function MysteryPage() {
 
               {/* Travel Dates */}
               <div className="mb-6">
-                <label htmlFor="departDate" className="block text-lg font-semibold text-navy mb-2">
+                <label className="block text-lg font-semibold text-navy mb-2">
                   When do you want to go? 📅
                 </label>
-                <input
-                  type="date"
-                  id="departDate"
-                  value={departDate}
-                  onChange={(e) => setDepartDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
-                  required
-                />
-                <label className="flex items-center mt-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={flexibleDates}
-                    onChange={(e) => setFlexibleDates(e.target.checked)}
-                    className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
-                  />
-                  <span className="ml-2 text-gray-700">
-                    My dates are flexible (±3 days)
-                  </span>
-                </label>
+                {/* Date Mode Toggle */}
+                <div className="flex rounded-lg overflow-hidden border-2 border-gray-200 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setDateMode('specific')}
+                    className={`flex-1 py-2.5 text-sm font-semibold transition-all ${
+                      dateMode === 'specific'
+                        ? 'bg-skyblue text-navy'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    Specific Date
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDateMode('flexible')}
+                    className={`flex-1 py-2.5 text-sm font-semibold transition-all ${
+                      dateMode === 'flexible'
+                        ? 'bg-skyblue text-navy'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    Flexible Timeframe
+                  </button>
+                </div>
+
+                {/* Specific Date Mode */}
+                {dateMode === 'specific' && (
+                  <>
+                    <input
+                      type="date"
+                      id="departDate"
+                      value={departDate}
+                      onChange={(e) => setDepartDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                      required
+                    />
+                    <label className="flex items-center mt-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={flexibleDates}
+                        onChange={(e) => setFlexibleDates(e.target.checked)}
+                        className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                      />
+                      <span className="ml-2 text-gray-700">
+                        My dates are flexible (±3 days)
+                      </span>
+                    </label>
+                  </>
+                )}
+
+                {/* Flexible Timeframe Mode */}
+                {dateMode === 'flexible' && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {timeframeOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setTimeframe(option.value)}
+                        className={`py-3 px-4 rounded-lg font-medium transition-all text-sm ${
+                          timeframe === option.value
+                            ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue/50'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Vibes */}
@@ -474,14 +539,14 @@ export default function MysteryPage() {
                 <input
                   type="range"
                   min="3"
-                  max="7"
+                  max="14"
                   value={tripDuration}
                   onChange={(e) => setTripDuration(parseInt(e.target.value))}
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
                 />
                 <div className="flex justify-between text-sm text-gray-600 mt-1">
                   <span>3 days</span>
-                  <span>7 days</span>
+                  <span>14 days</span>
                 </div>
               </div>
 

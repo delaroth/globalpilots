@@ -13,6 +13,8 @@ interface MultiCityRequest {
   numCities: number
   region?: string
   vibe?: string[]
+  departureDate?: string
+  departureTimeframe?: string
 }
 
 interface CityStop {
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    const { origin, totalBudget, totalDays, numCities, region, vibe } = body
+    const { origin, totalBudget, totalDays, numCities, region, vibe, departureDate, departureTimeframe } = body
 
     // Validation
     if (!origin || !totalBudget || !totalDays || !numCities) {
@@ -71,16 +73,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (numCities < 2 || numCities > 5) {
+    if (numCities < 2 || numCities > 10) {
       return NextResponse.json(
-        { error: 'numCities must be between 2 and 5' },
+        { error: 'numCities must be between 2 and 10' },
         { status: 400 }
       )
     }
 
-    if (totalDays < 5 || totalDays > 30) {
+    if (totalDays < 5 || totalDays > 365) {
       return NextResponse.json(
-        { error: 'totalDays must be between 5 and 30' },
+        { error: 'totalDays must be between 5 and 365' },
         { status: 400 }
       )
     }
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check cache (1 hour TTL)
-    const cacheKey = `multi-city:${origin}:${totalBudget}:${totalDays}:${numCities}:${region || 'any'}:${(vibe || []).sort().join(',')}`
+    const cacheKey = `multi-city:${origin}:${totalBudget}:${totalDays}:${numCities}:${region || 'any'}:${(vibe || []).sort().join(',')}:${departureDate || ''}:${departureTimeframe || ''}`
     const cached = getCached<MultiCityResponse>(cacheKey)
     if (cached) {
       console.log('[Multi-City] Cache hit')
@@ -106,18 +108,56 @@ export async function POST(request: NextRequest) {
     const vibeText = vibe && vibe.length > 0 ? vibe.join(', ') : 'any'
     const regionText = region && region !== 'Any' ? region : 'anywhere in the world'
 
+    // Build departure timing context for the AI
+    let departureTiming = ''
+    if (departureDate) {
+      departureTiming = `The traveler wants to depart on exactly ${departureDate}. Plan the trip starting on this date.`
+    } else if (departureTimeframe) {
+      const timeframeDescriptions: Record<string, string> = {
+        'this-month': 'within the current month',
+        'next-month': 'sometime next month',
+        'next-3-months': 'within the next 3 months',
+        'next-6-months': 'within the next 6 months',
+        'anytime': 'anytime this year (flexible on timing)',
+      }
+      departureTiming = `The traveler is flexible and wants to depart ${timeframeDescriptions[departureTimeframe] || 'within the next 3 months'}. Suggest the best time to depart within this window considering weather, festivals, and flight prices.`
+    }
+
+    // Travel pace guidance based on trip length
+    const avgDaysPerCity = Math.round(totalDays / numCities)
+    let paceGuidance = ''
+    if (totalDays > 90) {
+      paceGuidance = `
+- This is an EXTENDED trip (${totalDays} days). Plan for slow-travel/digital nomad style.
+- Minimum ${Math.max(5, avgDaysPerCity - 5)} days per city — longer stays are better.
+- Budget allocation: approximately 25% for all flights, 75% for daily costs (factor in monthly accommodation discounts).
+- Focus on livability: coworking spaces, local neighborhoods, weekly markets.
+- estimatedDailyCost should reflect long-stay discounts (30-40% cheaper than short stays).`
+    } else if (totalDays > 30) {
+      paceGuidance = `
+- This is a LONG trip (${totalDays} days). Plan for relaxed travel, not rushed.
+- Minimum 3-5 days per city.
+- Budget allocation: approximately 30% for all flights, 70% for daily costs (factor in weekly accommodation discounts).
+- estimatedDailyCost should reflect medium-stay discounts (15-25% cheaper than short stays).`
+    } else {
+      paceGuidance = `
+- Minimum 2 days per city.
+- Budget allocation: approximately 40% for all flights, 60% for daily costs.`
+    }
+
     const userPrompt = `Plan a ${numCities}-city trip starting and ending at ${origin} with these constraints:
 - Total budget: $${totalBudget} USD (covers all flights between cities + daily expenses)
 - Total duration: ${totalDays} days
 - Number of cities to visit: ${numCities}
 - Region preference: ${regionText}
 - Travel vibes: ${vibeText}
+${departureTiming ? `- Departure timing: ${departureTiming}` : ''}
 
 PLANNING RULES:
 1. The route must START from ${origin} and the last flight should return to ${origin}
 2. Optimize city order to MINIMIZE backtracking and total flight distance
-3. Allocate days per city proportionally — bigger/more interesting cities get more days (minimum 2 days per city)
-4. Budget allocation: approximately 40% for all flights combined, 60% for daily costs (accommodation + food + activities)
+3. Allocate days per city proportionally — bigger/more interesting cities get more days
+${paceGuidance}
 5. estimatedFlightCost is the cost of the flight TO that city from the previous city (or from origin for the first city)
 6. estimatedDailyCost includes accommodation, food, local transport, and basic activities per day
 7. Choose cities that are geographically logical together — no zigzagging across continents
@@ -143,7 +183,8 @@ Return this EXACT JSON structure (no wrapping, no markdown):
 }`
 
     console.log('[Multi-City] Calling AI for trip planning...')
-    const aiResponse = await callAI(systemPrompt, userPrompt, 0.8, 2500)
+    const maxTokens = numCities <= 5 ? 2500 : numCities <= 7 ? 3500 : 4500
+    const aiResponse = await callAI(systemPrompt, userPrompt, 0.8, maxTokens)
     const aiResult = parseAIJSON<{
       cities: CityStop[]
       totalEstimatedCost: number
@@ -156,9 +197,48 @@ Return this EXACT JSON structure (no wrapping, no markdown):
     const routeString = `${origin} → ${cityNames.join(' → ')} → ${origin}`
 
     // Generate affiliate booking links for each flight leg
-    // Use a date 2 weeks from now as default departure
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() + 14)
+    // Calculate start date from departure preferences
+    let startDate: Date
+    if (departureDate) {
+      // Exact date provided
+      startDate = new Date(departureDate + 'T00:00:00')
+    } else if (departureTimeframe) {
+      // Calculate a reasonable start date from the timeframe
+      const now = new Date()
+      switch (departureTimeframe) {
+        case 'this-month':
+          // 2 weeks from now (or sooner if end of month)
+          startDate = new Date(now)
+          startDate.setDate(startDate.getDate() + 14)
+          break
+        case 'next-month':
+          // 1st of next month
+          startDate = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+          break
+        case 'next-3-months':
+          // 1 month from now
+          startDate = new Date(now)
+          startDate.setMonth(startDate.getMonth() + 1)
+          break
+        case 'next-6-months':
+          // 2 months from now
+          startDate = new Date(now)
+          startDate.setMonth(startDate.getMonth() + 2)
+          break
+        case 'anytime':
+          // 1 month from now
+          startDate = new Date(now)
+          startDate.setMonth(startDate.getMonth() + 1)
+          break
+        default:
+          startDate = new Date(now)
+          startDate.setDate(startDate.getDate() + 14)
+      }
+    } else {
+      // Fallback: 2 weeks from now
+      startDate = new Date()
+      startDate.setDate(startDate.getDate() + 14)
+    }
 
     const bookingLinks: { from: string; to: string; label: string; url: string }[] = []
     let currentDate = new Date(startDate)
@@ -210,8 +290,9 @@ Return this EXACT JSON structure (no wrapping, no markdown):
       reasoning: aiResult.reasoning,
     }
 
-    // Cache for 1 hour
-    setCache(cacheKey, response, 60 * 60 * 1000)
+    // Cache for 1-2 hours (longer trips cached longer)
+    const cacheTTL = totalDays > 30 ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000
+    setCache(cacheKey, response, cacheTTL)
 
     console.log('[Multi-City] Successfully planned route:', routeString)
     return NextResponse.json(response)

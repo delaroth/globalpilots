@@ -23,6 +23,37 @@ interface MysteryRequest {
   exclude?: string[]
 }
 
+function calculateFlexibleDateRange(timeframe: string): { dateFrom: string; dateTo: string } {
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const formatDate = (d: Date) => d.toISOString().split('T')[0]
+
+  switch (timeframe) {
+    case 'this-month': {
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      return { dateFrom: formatDate(today), dateTo: formatDate(endOfMonth) }
+    }
+    case 'next-month': {
+      const firstOfNext = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+      const endOfNext = new Date(today.getFullYear(), today.getMonth() + 2, 0)
+      return { dateFrom: formatDate(firstOfNext), dateTo: formatDate(endOfNext) }
+    }
+    case 'next-3-months': {
+      const threeMonths = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate())
+      return { dateFrom: formatDate(today), dateTo: formatDate(threeMonths) }
+    }
+    case 'next-6-months': {
+      const sixMonths = new Date(today.getFullYear(), today.getMonth() + 6, today.getDate())
+      return { dateFrom: formatDate(today), dateTo: formatDate(sixMonths) }
+    }
+    case 'anytime':
+    default: {
+      const oneYear = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate())
+      return { dateFrom: formatDate(today), dateTo: formatDate(oneYear) }
+    }
+  }
+}
+
 interface MysteryResponse {
   destination: string
   country: string
@@ -61,6 +92,8 @@ interface MysteryResponse {
   hotel_recommendations?: { name: string; estimated_price_per_night: number; neighborhood: string; why_recommended: string }[]
   daily_itinerary?: { day: number; activities: { time: string; activity: string; estimated_cost: number }[]; total_day_cost: number }[]
   local_transportation?: { airport_to_city: string; daily_transport: string; estimated_daily_cost: number }
+  suggestedDepartureDate?: string
+  suggestedReturnDate?: string
   blog_post_slug?: string
 }
 
@@ -197,17 +230,31 @@ export async function POST(request: NextRequest) {
     let priceInfo: { destination: string; city?: string; country?: string; price: number }[] = []
     let priceIsEstimate = false
 
+    // Parse flexible date ranges
+    const isFlexible = dates.startsWith('flexible:')
+    const flexibleTimeframe = isFlexible ? dates.replace('flexible:', '') : null
+    const flexibleRange = flexibleTimeframe ? calculateFlexibleDateRange(flexibleTimeframe) : null
+
     // Try Kiwi first if enabled
     if (AFFILIATE_FLAGS.kiwi && process.env.KIWI_API_KEY) {
       try {
         console.log('[AI-Mystery] Using Kiwi inspiration search')
-        const departDate = dates.split(' ')[0] || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
-        const dateTo = new Date(new Date(departDate).getTime() + 30 * 86400000).toISOString().split('T')[0]
+        let kiwiDateFrom: string
+        let kiwiDateTo: string
+
+        if (flexibleRange) {
+          kiwiDateFrom = flexibleRange.dateFrom
+          kiwiDateTo = flexibleRange.dateTo
+        } else {
+          const departDate = dates.split(' ')[0] || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+          kiwiDateFrom = departDate
+          kiwiDateTo = new Date(new Date(departDate).getTime() + 30 * 86400000).toISOString().split('T')[0]
+        }
 
         const kiwiResults = await searchKiwiInspiration({
           origin,
-          dateFrom: departDate,
-          dateTo,
+          dateFrom: kiwiDateFrom,
+          dateTo: kiwiDateTo,
           maxPrice: Math.floor(budget * 0.45),
         })
 
@@ -291,15 +338,19 @@ export async function POST(request: NextRequest) {
       ? `\nDo NOT suggest these destinations (already shown to user): ${exclude.join(', ')}. Pick a DIFFERENT destination.`
       : ''
 
+    const flexibleDateNote = flexibleRange
+      ? `\nThe user has flexible dates within the range ${flexibleRange.dateFrom} to ${flexibleRange.dateTo} (timeframe: ${flexibleTimeframe}). Suggest the optimal departure and return dates within this range for the destination you pick, considering weather, events, and best value. Include "suggestedDepartureDate" and "suggestedReturnDate" (YYYY-MM-DD format) in your response.`
+      : ''
+
     const userPrompt = `Given:
 - Total Budget: ${budget} USD for ${tripDuration} days
 - Budget Tier: ${budgetTier}
 - Budget Allocation: ${allocationText}
 - Departing from: ${origin}
-- Travel dates: ${dates}
+- Travel dates: ${isFlexible ? `Flexible (${flexibleTimeframe}), range: ${flexibleRange?.dateFrom} to ${flexibleRange?.dateTo}` : dates}
 - Vibes: ${vibes.join(', ')}
 - Package includes: ${components.includeFlight ? 'Flight' : ''} ${components.includeHotel ? 'Hotel' : ''} ${components.includeItinerary ? 'Itinerary' : ''} ${components.includeTransportation ? 'Transport' : ''}
-- Available destinations with flight prices: ${JSON.stringify(priceInfo)}${estimateNote}${excludeNote}
+- Available destinations with flight prices: ${JSON.stringify(priceInfo)}${estimateNote}${excludeNote}${flexibleDateNote}
 
 CRITICAL BUDGET RULES:
 1. Flight cost MUST be <= $${allocation.flight}
@@ -349,6 +400,8 @@ Return this EXACT JSON structure:
     { "day": 3, "activities": [{ "time": "9:00 AM", "activity": "Activity", "estimated_cost": cost }, { "time": "1:00 PM", "activity": "Activity", "estimated_cost": cost }, { "time": "6:00 PM", "activity": "Activity", "estimated_cost": cost }], "total_day_cost": sum }
   ],` : ''}
   ${components.includeTransportation ? `"local_transportation": { "airport_to_city": "Method and cost", "daily_transport": "Recommended method", "estimated_daily_cost": cost },` : ''}
+  ${flexibleRange ? `"suggestedDepartureDate": "YYYY-MM-DD within the flexible range",
+  "suggestedReturnDate": "YYYY-MM-DD within the flexible range",` : ''}
   "budget_breakdown": {
     "flight": ${allocation.flight},
     "hotel_total": ${allocation.hotel_total},

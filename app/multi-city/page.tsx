@@ -7,6 +7,14 @@ import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 
+const timeframeOptions = [
+  { label: 'This Month', value: 'this-month' },
+  { label: 'Next Month', value: 'next-month' },
+  { label: 'Next 3 Months', value: 'next-3-months' },
+  { label: 'Next 6 Months', value: 'next-6-months' },
+  { label: 'Anytime', value: 'anytime' },
+]
+
 const regionOptions = [
   { label: 'Any Region', value: 'Any' },
   { label: 'Southeast Asia', value: 'Southeast Asia' },
@@ -63,6 +71,13 @@ interface TripResult {
 function MultiCityContent() {
   const searchParams = useSearchParams()
   const [origin, setOrigin] = useState('')
+  const [departureMode, setDepartureMode] = useState<'exact' | 'flexible'>('flexible')
+  const [departureDate, setDepartureDate] = useState(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 14)
+    return d.toISOString().split('T')[0]
+  })
+  const [departureTimeframe, setDepartureTimeframe] = useState('next-3-months')
   const [totalBudget, setTotalBudget] = useState('')
   const [totalDays, setTotalDays] = useState(10)
   const [numCities, setNumCities] = useState(3)
@@ -148,6 +163,8 @@ function MultiCityContent() {
           numCities,
           region: region !== 'Any' ? region : undefined,
           vibe: selectedVibes.length > 0 ? selectedVibes : undefined,
+          departureDate: departureMode === 'exact' ? departureDate : undefined,
+          departureTimeframe: departureMode === 'flexible' ? departureTimeframe : undefined,
         }),
       })
 
@@ -230,6 +247,70 @@ function MultiCityContent() {
                 />
               </div>
 
+              {/* Departure Timing */}
+              <div>
+                <label className="block text-lg font-semibold text-navy mb-2">
+                  When do you want to leave?
+                </label>
+                {/* Mode toggle */}
+                <div className="flex rounded-lg bg-gray-100 p-1 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setDepartureMode('flexible')}
+                    className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-all ${
+                      departureMode === 'flexible'
+                        ? 'bg-white text-navy shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Flexible
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDepartureMode('exact')}
+                    className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-all ${
+                      departureMode === 'exact'
+                        ? 'bg-white text-navy shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Exact Date
+                  </button>
+                </div>
+
+                {departureMode === 'flexible' ? (
+                  <div className="flex flex-wrap gap-2">
+                    {timeframeOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setDepartureTimeframe(opt.value)}
+                        className={`px-4 py-2.5 rounded-xl font-medium text-sm transition-all transform hover:scale-105 ${
+                          departureTimeframe === opt.value
+                            ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue-dark'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <input
+                    type="date"
+                    value={departureDate}
+                    min={new Date().toISOString().split('T')[0]}
+                    onChange={(e) => setDepartureDate(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-lg"
+                  />
+                )}
+                <p className="text-sm text-gray-500 mt-1">
+                  {departureMode === 'flexible'
+                    ? 'AI will suggest optimal departure dates within your timeframe'
+                    : 'Booking links will use this exact departure date'}
+                </p>
+              </div>
+
               {/* Budget */}
               <div>
                 <label htmlFor="multi-budget" className="block text-lg font-semibold text-navy mb-2">
@@ -253,22 +334,33 @@ function MultiCityContent() {
                 <p className="text-sm text-gray-500 mt-1">Covers all flights + daily expenses across all cities</p>
               </div>
 
-              {/* Trip Length Slider */}
+              {/* Trip Length Slider — non-linear: 5-365 days */}
               <div>
                 <label className="block text-lg font-semibold text-navy mb-2">
-                  Trip length: <span className="text-skyblue-dark">{totalDays} days</span>
+                  Trip length: <span className="text-skyblue-dark">{
+                    totalDays <= 30 ? `${totalDays} days` :
+                    totalDays <= 60 ? `~${Math.round(totalDays / 7)} weeks` :
+                    `~${Math.round(totalDays / 30)} months`
+                  }</span>
                 </label>
                 <input
                   type="range"
-                  min="5"
-                  max="30"
-                  value={totalDays}
-                  onChange={(e) => setTotalDays(parseInt(e.target.value))}
+                  min="0"
+                  max="100"
+                  value={Math.round(Math.pow((totalDays - 5) / 360, 1 / 2.5) * 100)}
+                  onChange={(e) => {
+                    const pos = parseInt(e.target.value) / 100
+                    const days = Math.round(5 + Math.pow(pos, 2.5) * 360)
+                    setTotalDays(Math.min(365, Math.max(5, days)))
+                  }}
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
                 />
-                <div className="flex justify-between text-sm text-gray-500 mt-1">
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>5 days</span>
-                  <span>30 days</span>
+                  <span>1 month</span>
+                  <span>3 months</span>
+                  <span>6 months</span>
+                  <span>1 year</span>
                 </div>
               </div>
 
@@ -277,13 +369,13 @@ function MultiCityContent() {
                 <label className="block text-lg font-semibold text-navy mb-3">
                   Number of cities
                 </label>
-                <div className="flex gap-3">
-                  {[2, 3, 4, 5].map((n) => (
+                <div className="grid grid-cols-5 gap-2">
+                  {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                     <button
                       key={n}
                       type="button"
                       onClick={() => setNumCities(n)}
-                      className={`flex-1 py-3 rounded-xl font-bold text-lg transition-all transform hover:scale-105 ${
+                      className={`py-2.5 rounded-xl font-bold text-base transition-all transform hover:scale-105 ${
                         numCities === n
                           ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue-dark'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -434,11 +526,18 @@ function MultiCityContent() {
                     {/* City bubble */}
                     <div className="flex flex-col items-center">
                       <div className={`w-16 h-16 md:w-18 md:h-18 rounded-full flex items-center justify-center shadow-lg ring-2 ${
-                        idx === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500 ring-amber-400/50' :
-                        idx === 1 ? 'bg-gradient-to-br from-emerald-400 to-teal-500 ring-emerald-400/50' :
-                        idx === 2 ? 'bg-gradient-to-br from-purple-400 to-pink-500 ring-purple-400/50' :
-                        idx === 3 ? 'bg-gradient-to-br from-rose-400 to-red-500 ring-rose-400/50' :
-                        'bg-gradient-to-br from-blue-400 to-indigo-500 ring-blue-400/50'
+                        [
+                          'bg-gradient-to-br from-amber-400 to-orange-500 ring-amber-400/50',
+                          'bg-gradient-to-br from-emerald-400 to-teal-500 ring-emerald-400/50',
+                          'bg-gradient-to-br from-purple-400 to-pink-500 ring-purple-400/50',
+                          'bg-gradient-to-br from-rose-400 to-red-500 ring-rose-400/50',
+                          'bg-gradient-to-br from-blue-400 to-indigo-500 ring-blue-400/50',
+                          'bg-gradient-to-br from-cyan-400 to-sky-500 ring-cyan-400/50',
+                          'bg-gradient-to-br from-lime-400 to-green-500 ring-lime-400/50',
+                          'bg-gradient-to-br from-fuchsia-400 to-purple-500 ring-fuchsia-400/50',
+                          'bg-gradient-to-br from-sky-400 to-blue-500 ring-sky-400/50',
+                          'bg-gradient-to-br from-yellow-400 to-amber-500 ring-yellow-400/50',
+                        ][idx % 10]
                       }`}>
                         <div className="text-center">
                           <span className="text-white font-bold text-xs block">{city.code}</span>
@@ -491,6 +590,11 @@ function MultiCityContent() {
                     'from-purple-500/20 to-pink-500/20 border-purple-400/30 hover:border-purple-400/60',
                     'from-rose-500/20 to-red-500/20 border-rose-400/30 hover:border-rose-400/60',
                     'from-blue-500/20 to-indigo-500/20 border-blue-400/30 hover:border-blue-400/60',
+                    'from-cyan-500/20 to-sky-500/20 border-cyan-400/30 hover:border-cyan-400/60',
+                    'from-lime-500/20 to-green-500/20 border-lime-400/30 hover:border-lime-400/60',
+                    'from-fuchsia-500/20 to-purple-500/20 border-fuchsia-400/30 hover:border-fuchsia-400/60',
+                    'from-sky-500/20 to-blue-500/20 border-sky-400/30 hover:border-sky-400/60',
+                    'from-yellow-500/20 to-amber-500/20 border-yellow-400/30 hover:border-yellow-400/60',
                   ]
 
                   return (
