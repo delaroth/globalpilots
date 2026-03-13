@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
 import { buildFlightLink } from '@/lib/affiliate'
+import { getDestinationCost, getAllDestinations, type BudgetTier } from '@/lib/destination-costs'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
+
+const TRAVELPAYOUTS_TOKEN = process.env.TRAVELPAYOUTS_TOKEN
 
 interface MultiCityRequest {
   origin: string
@@ -35,6 +38,95 @@ interface MultiCityResponse {
   route: string
   bookingLinks: { from: string; to: string; label: string; url: string }[]
   reasoning: string
+  /** Whether flight prices are from live data or AI estimates */
+  pricesAreReal: boolean
+}
+
+// ─── Real Price Pre-Fetch ───
+
+interface RealPriceCandidate {
+  iata: string
+  city: string
+  country: string
+  region: string
+  flightPrice: number        // Real price from TravelPayouts
+  dailyCost: number          // From destination-costs.ts
+  source: 'travelpayouts'
+}
+
+/**
+ * Fetch real flight prices from TravelPayouts and cross-reference
+ * with destination-costs.ts for daily costs.
+ *
+ * Returns candidates with REAL flight prices and REAL daily costs.
+ */
+async function fetchRealCandidates(
+  origin: string,
+  budgetTier: BudgetTier,
+  maxFlightPrice?: number
+): Promise<RealPriceCandidate[]> {
+  if (!TRAVELPAYOUTS_TOKEN) return []
+
+  try {
+    const url = `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&currency=usd&limit=40&token=${TRAVELPAYOUTS_TOKEN}`
+    const response = await fetch(url, { next: { revalidate: 3600 } })
+
+    if (!response.ok) return []
+
+    const data = await response.json()
+    const rawDestinations = data.data || []
+
+    const candidates: RealPriceCandidate[] = []
+
+    for (const d of rawDestinations) {
+      if (maxFlightPrice && d.value > maxFlightPrice) continue
+
+      // Cross-reference with our cost database
+      const costData = getDestinationCost(d.destination)
+      if (!costData) continue // Skip cities we don't have daily cost data for
+
+      const daily = costData.dailyCosts[budgetTier]
+      const dailyTotal = daily.hotel + daily.food + daily.transport + daily.activities
+
+      candidates.push({
+        iata: d.destination,
+        city: costData.city,
+        country: costData.country,
+        region: costData.region,
+        flightPrice: d.value,
+        dailyCost: dailyTotal,
+        source: 'travelpayouts',
+      })
+    }
+
+    return candidates.sort((a, b) => a.flightPrice - b.flightPrice)
+  } catch (err) {
+    console.error('[Multi-City] Failed to fetch real prices:', err)
+    return []
+  }
+}
+
+/**
+ * Map accommodation level to budget tier for destination-costs lookup
+ */
+function accomToBudgetTier(accommodationLevel: string): BudgetTier {
+  if (accommodationLevel === 'hostel' || accommodationLevel === 'budget') return 'budget'
+  if (accommodationLevel === 'upscale' || accommodationLevel === 'luxury') return 'comfort'
+  return 'mid'
+}
+
+// Regional inter-city flight cost estimates (for legs the AI can't get from TravelPayouts)
+const REGIONAL_FLIGHT_ESTIMATES: Record<string, string> = {
+  'Southeast Asia': '$30-100',
+  'Europe': '$30-150',
+  'South Asia': '$40-120',
+  'East Asia': '$80-200',
+  'Middle East': '$50-150',
+  'Central America': '$80-200',
+  'South America': '$100-250',
+  'Africa': '$100-300',
+  'North America': '$100-300',
+  'Oceania': '$100-350',
 }
 
 export async function POST(request: NextRequest) {
@@ -106,6 +198,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(cached)
     }
 
+    // ─── Pre-fetch real prices from TravelPayouts ───
+    const budgetTier = accomToBudgetTier(accommodationLevel)
+    const maxFlightBudget = Math.floor(totalBudget * 0.5) // Don't show flights over 50% of total budget
+    const realCandidates = await fetchRealCandidates(origin, budgetTier, maxFlightBudget)
+
+    // Filter by region if specified
+    let filteredCandidates = realCandidates
+    if (region && region !== 'Any') {
+      const regionLower = region.toLowerCase()
+      filteredCandidates = realCandidates.filter(c =>
+        c.region.toLowerCase().includes(regionLower) ||
+        regionLower.includes(c.region.toLowerCase())
+      )
+      // If region filter leaves too few, include all
+      if (filteredCandidates.length < numCities * 2) {
+        filteredCandidates = realCandidates
+      }
+    }
+
+    const hasRealPrices = filteredCandidates.length >= numCities
+    console.log(`[Multi-City] Real price candidates: ${filteredCandidates.length} (need ${numCities}, hasReal: ${hasRealPrices})`)
+
     // Build AI prompts
     const systemPrompt = `You are an expert multi-city travel planner. You specialize in creating optimized multi-stop itineraries that minimize backtracking, maximize value for money, and create diverse travel experiences. You MUST respond with valid JSON only, no additional text or markdown.`
 
@@ -171,6 +285,33 @@ export async function POST(request: NextRequest) {
     const split = prioritySplits[budgetPriority] || prioritySplits['balanced']
     const maxNightly = accomMaxPerNight[accommodationLevel] || 120
 
+    // ─── Build the price-aware prompt ───
+    let realPriceBlock = ''
+    if (hasRealPrices) {
+      const candidateList = filteredCandidates.slice(0, 25).map(c =>
+        `  ${c.iata} — ${c.city}, ${c.country} (${c.region}): Flight from ${origin} = $${c.flightPrice}, Daily cost = $${c.dailyCost}`
+      ).join('\n')
+
+      // Determine dominant region for inter-city estimate
+      const regions = [...new Set(filteredCandidates.map(c => c.region))]
+      const interCityEstimates = regions.map(r =>
+        `  ${r}: ${REGIONAL_FLIGHT_ESTIMATES[r] || '$50-200'}`
+      ).join('\n')
+
+      realPriceBlock = `
+
+AVAILABLE DESTINATIONS WITH REAL PRICES FROM ${origin}:
+${candidateList}
+
+These are REAL cached flight prices from ${origin} to each city. You MUST:
+- Select your ${numCities} cities from this list
+- Use the flight price shown as estimatedFlightCost for the FIRST city
+- For inter-city flights (city-to-city), use these regional estimates:
+${interCityEstimates}
+- Use the daily cost shown as estimatedDailyCost (already calculated for the "${budgetTier}" tier)
+- DO NOT invent cities not on this list`
+    }
+
     const userPrompt = `Plan a ${numCities}-city trip starting and ending at ${origin} with these constraints:
 - Total budget: $${totalBudget} USD (covers all flights between cities + daily expenses)
 - Total duration: ${totalDays} days
@@ -178,6 +319,7 @@ export async function POST(request: NextRequest) {
 - Region preference: ${regionText}
 - Travel vibes: ${vibeText}
 ${departureTiming ? `- Departure timing: ${departureTiming}` : ''}
+${realPriceBlock}
 
 PLANNING RULES:
 1. The route must START from ${origin} and the last flight should return to ${origin}
@@ -220,6 +362,26 @@ Return this EXACT JSON structure (no wrapping, no markdown):
       returnFlightCost?: number
       reasoning: string
     }>(aiResponse.content)
+
+    // ─── Override AI flight prices with real data where available ───
+    if (hasRealPrices) {
+      const priceMap = new Map(filteredCandidates.map(c => [c.iata, c]))
+      for (const city of aiResult.cities) {
+        const real = priceMap.get(city.code)
+        if (real) {
+          // Use real daily cost from our database
+          city.estimatedDailyCost = real.dailyCost
+        }
+      }
+      // Override first city's flight cost with real TravelPayouts price
+      const firstCity = aiResult.cities[0]
+      if (firstCity) {
+        const realFirst = priceMap.get(firstCity.code)
+        if (realFirst) {
+          firstCity.estimatedFlightCost = realFirst.flightPrice
+        }
+      }
+    }
 
     // Build the route string
     const cityNames = aiResult.cities.map(c => c.code)
@@ -311,12 +473,19 @@ Return this EXACT JSON structure (no wrapping, no markdown):
       })
     }
 
+    // Recalculate total if we overrode prices
+    const recalculatedTotal = aiResult.cities.reduce(
+      (sum, c) => sum + c.estimatedFlightCost + (c.estimatedDailyCost * c.days),
+      0
+    ) + (aiResult.returnFlightCost || 0)
+
     const response: MultiCityResponse = {
       cities: aiResult.cities,
-      totalEstimatedCost: aiResult.totalEstimatedCost,
+      totalEstimatedCost: hasRealPrices ? recalculatedTotal : aiResult.totalEstimatedCost,
       route: routeString,
       bookingLinks,
       reasoning: aiResult.reasoning,
+      pricesAreReal: hasRealPrices,
     }
 
     // Cache for 1-2 hours (longer trips cached longer)

@@ -283,8 +283,20 @@ export function buildFlightLink(origin: string, dest: string, date: string, retu
 /**
  * Build Agoda hotel deep link
  * STEALTH: No affiliate cid appended — clean search URL only
+ *
+ * Optional budget constraints align the hotel search with the Side Quest
+ * value calculation — e.g. if our netValue math assumes $50/night,
+ * the link pre-filters to hotels under $50.
  */
-export function buildHotelLink(cityName: string, checkIn: string, nights: number = 3): string {
+export function buildHotelLink(
+  cityName: string,
+  checkIn: string,
+  nights: number = 3,
+  options?: {
+    maxPricePerNight?: number   // From destination-costs or Side Quest calculator
+    sortByPrice?: boolean       // Show cheapest first
+  }
+): string {
   const checkInDate = new Date(checkIn)
   const checkOutDate = new Date(checkInDate)
   checkOutDate.setDate(checkOutDate.getDate() + nights)
@@ -292,6 +304,14 @@ export function buildHotelLink(cityName: string, checkIn: string, nights: number
   const formatDate = (d: Date) => d.toISOString().split('T')[0]
 
   let url = `https://www.agoda.com/search?city=${encodeURIComponent(cityName)}&checkIn=${formatDate(checkInDate)}&checkOut=${formatDate(checkOutDate)}&adults=1`
+
+  // Budget constraints — align hotel search with Side Quest math
+  if (options?.maxPricePerNight) {
+    url += `&priceTo=${options.maxPricePerNight}`
+  }
+  if (options?.sortByPrice) {
+    url += `&sort=priceLowToHigh`
+  }
 
   // Only append affiliate tracking when commissions are allowed
   if (isAffiliateActive('agoda') && process.env.AGODA_AFFILIATE_ID) {

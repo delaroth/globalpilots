@@ -27,6 +27,10 @@ export type { SearchTier, TieredSearchConfig, AnnotatedOffer, UIAnnotation } fro
 export { enrichOffers, enrichSegment, calculateReliabilityScore } from './enrichment'
 export type { AircraftSpec, OnTimePerformance, GateStatus, EnrichedOffer, EnrichedSegment } from './enrichment'
 
+// Side Quest value calculator (layover economics)
+export { calculateSideQuestValue, rankSideQuests, formatForAIPrompt } from './side-quest'
+export type { SideQuestCandidate, SideQuestVerdict } from './side-quest'
+
 // Trip & package data model (with stealth status guards)
 export {
   buildMysteryTrip, buildMultiCityTrip, buildLayoverTrip,
