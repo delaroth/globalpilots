@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { majorHubs } from '@/lib/hubs'
 import { searchKiwiMultiCity, isKiwiAvailable } from '@/lib/kiwi'
 import { getCheapestRoutePrice } from '@/lib/flight-providers'
+import { getSearchTier } from '@/lib/flight-intelligence'
+import type { SearchTier } from '@/lib/flight-intelligence'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,13 +42,94 @@ function getHubsByRegion(destination: string): string[] {
   }
 }
 
+/**
+ * Shared multi-provider route lookup used by both browse and live tiers.
+ * Fetches direct price + hub route prices via the getCheapestRoutePrice chain
+ * (Kiwi single-route → Amadeus → TravelPayouts).
+ */
+async function fetchMultiProviderRoutes(origin: string, destination: string, searchDate: string) {
+  // Fetch direct route price via the provider chain
+  const directResult = await getCheapestRoutePrice(origin, destination, searchDate)
+  const directPrice = directResult.price
+  console.log(`[Layover API] Direct price: $${directPrice ?? 'N/A'} (via ${directResult.provider})`)
+
+  // Get hubs dynamically based on destination region
+  const hubCodes = getHubsByRegion(destination)
+  const hubsToCheck = majorHubs.filter(h => hubCodes.includes(h.code))
+  console.log('[Layover API] Checking hubs:', hubsToCheck.map(h => h.city).join(', '))
+
+  const hubRoutes: HubRoute[] = []
+
+  // Fetch all hub routes in parallel via the provider chain
+  const hubPromises = hubsToCheck.map(async (hub) => {
+    try {
+      if (hub.code === origin || hub.code === destination) return null
+
+      const [leg1Result, leg2Result] = await Promise.all([
+        getCheapestRoutePrice(origin, hub.code, searchDate),
+        getCheapestRoutePrice(hub.code, destination, searchDate),
+      ])
+
+      const leg1Price = leg1Result.price
+      const leg2Price = leg2Result.price
+
+      if (leg1Price === null || leg2Price === null) return null
+
+      const totalPrice = leg1Price + leg2Price
+      const savings = directPrice !== null ? directPrice - totalPrice : null
+      const savingsPercent = directPrice !== null && savings !== null ? Math.round((savings / directPrice) * 100) : null
+
+      console.log(`[Layover API] ${hub.city}: $${leg1Price} + $${leg2Price} = $${totalPrice}${savings !== null ? ` (savings: $${savings})` : ''}`)
+
+      return {
+        hub: hub.code,
+        hubCity: hub.city,
+        leg1Price,
+        leg2Price,
+        totalPrice,
+        savings,
+        savingsPercent,
+      }
+    } catch (error) {
+      console.error(`[Layover API] Error checking hub ${hub.city}:`, error)
+      return null
+    }
+  })
+
+  const hubResults = await Promise.all(hubPromises)
+
+  hubResults.forEach((result) => {
+    if (result) hubRoutes.push(result)
+  })
+
+  // Sort by total price (cheapest first) if no direct price, otherwise by savings
+  if (directPrice !== null) {
+    hubRoutes.sort((a, b) => (b.savings || 0) - (a.savings || 0))
+  } else {
+    hubRoutes.sort((a, b) => a.totalPrice - b.totalPrice)
+  }
+
+  // Determine which provider powered the results for the response metadata
+  const providerUsed = directResult.provider !== 'none' ? directResult.provider : 'unknown'
+  const priceSource = providerUsed === 'amadeus' ? 'amadeus-live'
+    : providerUsed === 'kiwi' ? 'kiwi-live'
+    : providerUsed === 'travelpayouts' ? 'travelpayouts-cached'
+    : 'unknown'
+
+  return { directPrice, hubRoutes, priceSource }
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const origin = searchParams.get('origin')
   const destination = searchParams.get('destination')
   const departDate = searchParams.get('depart_date')
 
-  console.log('[Layover API] Request:', { origin, destination, departDate })
+  const tierParam = searchParams.get('tier') as SearchTier | null
+  const tier: SearchTier = tierParam === 'live' ? 'live' : 'browse'
+  const tierConfig = getSearchTier(tier)
+
+  console.log('[Layover API] Request:', { origin, destination, departDate, tier, allowedSources: tierConfig.allowedSources })
 
   if (!origin || !destination) {
     console.error('[Layover API] Missing parameters')
@@ -81,119 +164,92 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // ── Priority 1: Kiwi multi-city search (real multi-leg data, includes LCCs) ──
-    if (isKiwiAvailable()) {
-      try {
-        console.log('[Layover API] Trying Kiwi multi-city search (priority 1)')
-        const kiwiResult = await searchKiwiMultiCity({
-          origin,
-          destination,
-          departDate: departDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
-        })
-
-        const hubRoutes = kiwiResult.viaHub.map(v => ({
-          hub: v.hub,
-          hubCity: v.hubCity,
-          leg1Price: v.leg1.price,
-          leg2Price: v.leg2.price,
-          totalPrice: v.totalPrice,
-          savings: v.savings,
-          savingsPercent: v.savingsPercent,
-        }))
-
-        console.log(`[Layover API] Kiwi returned ${hubRoutes.length} hub routes`)
-
-        return NextResponse.json({
-          directPrice: kiwiResult.direct?.price || null,
-          layoverRoutes: hubRoutes,
-          bestLayover: hubRoutes.length > 0 ? hubRoutes[0] : null,
-          priceSource: 'kiwi-live',
-        })
-      } catch (kiwiErr) {
-        console.warn('[Layover API] Kiwi failed, falling back:', kiwiErr instanceof Error ? kiwiErr.message : kiwiErr)
-      }
-    }
-
-    // ── Priority 2+3: Multi-provider fallback (Amadeus -> TravelPayouts) ──
     const searchDate = departDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
 
-    console.log('[Layover API] Using multi-provider price lookup')
+    // ═══════════════════════════════════════════════════════════════════
+    // Tier 2 (Live) — full Kiwi multi-city → multi-provider fallback
+    // Triggered explicitly by user action (e.g. "Get Live Price" button)
+    // ═══════════════════════════════════════════════════════════════════
+    if (tier === 'live') {
+      // Try Kiwi multi-city first (real multi-leg data, includes LCCs)
+      if (isKiwiAvailable()) {
+        try {
+          console.log('[Layover API] [live] Trying Kiwi multi-city search')
+          const kiwiResult = await searchKiwiMultiCity({
+            origin,
+            destination,
+            departDate: searchDate,
+          })
 
-    // Fetch direct route price via the provider chain
-    const directResult = await getCheapestRoutePrice(origin, destination, searchDate)
-    const directPrice = directResult.price
-    console.log(`[Layover API] Direct price: $${directPrice ?? 'N/A'} (via ${directResult.provider})`)
+          const hubRoutes = kiwiResult.viaHub.map(v => ({
+            hub: v.hub,
+            hubCity: v.hubCity,
+            leg1Price: v.leg1.price,
+            leg2Price: v.leg2.price,
+            totalPrice: v.totalPrice,
+            savings: v.savings,
+            savingsPercent: v.savingsPercent,
+          }))
 
-    // Get hubs dynamically based on destination region
-    const hubCodes = getHubsByRegion(destination)
-    const hubsToCheck = majorHubs.filter(h => hubCodes.includes(h.code))
-    console.log('[Layover API] Checking hubs:', hubsToCheck.map(h => h.city).join(', '))
+          console.log(`[Layover API] [live] Kiwi returned ${hubRoutes.length} hub routes`)
 
-    const hubRoutes: HubRoute[] = []
-
-    // Fetch all hub routes in parallel via the provider chain
-    const hubPromises = hubsToCheck.map(async (hub) => {
-      try {
-        if (hub.code === origin || hub.code === destination) return null
-
-        const [leg1Result, leg2Result] = await Promise.all([
-          getCheapestRoutePrice(origin, hub.code, searchDate),
-          getCheapestRoutePrice(hub.code, destination, searchDate),
-        ])
-
-        const leg1Price = leg1Result.price
-        const leg2Price = leg2Result.price
-
-        if (leg1Price === null || leg2Price === null) return null
-
-        const totalPrice = leg1Price + leg2Price
-        const savings = directPrice !== null ? directPrice - totalPrice : null
-        const savingsPercent = directPrice !== null && savings !== null ? Math.round((savings / directPrice) * 100) : null
-
-        console.log(`[Layover API] ${hub.city}: $${leg1Price} + $${leg2Price} = $${totalPrice}${savings !== null ? ` (savings: $${savings})` : ''}`)
-
-        return {
-          hub: hub.code,
-          hubCity: hub.city,
-          leg1Price,
-          leg2Price,
-          totalPrice,
-          savings,
-          savingsPercent,
+          return NextResponse.json({
+            directPrice: kiwiResult.direct?.price || null,
+            layoverRoutes: hubRoutes,
+            bestLayover: hubRoutes.length > 0 ? hubRoutes[0] : null,
+            priceSource: 'kiwi-live',
+            searchTier: 'live' as const,
+            fetchedAt: Date.now(),
+            showLivePriceCta: false,
+            confidence: 'live' as const,
+          })
+        } catch (kiwiErr) {
+          console.warn('[Layover API] [live] Kiwi failed, falling back:', kiwiErr instanceof Error ? kiwiErr.message : kiwiErr)
         }
-      } catch (error) {
-        console.error(`[Layover API] Error checking hub ${hub.city}:`, error)
-        return null
       }
-    })
 
-    const hubResults = await Promise.all(hubPromises)
+      // Live fallback: full multi-provider chain (Kiwi → Amadeus → TravelPayouts)
+      console.log('[Layover API] [live] Using multi-provider price lookup')
+      const { directPrice, hubRoutes, priceSource } = await fetchMultiProviderRoutes(origin, destination, searchDate)
 
-    hubResults.forEach((result) => {
-      if (result) hubRoutes.push(result)
-    })
+      console.log(`[Layover API] [live] Found ${hubRoutes.length} stopover routes (source: ${priceSource})`)
 
-    // Sort by total price (cheapest first) if no direct price, otherwise by savings
-    if (directPrice !== null) {
-      hubRoutes.sort((a, b) => (b.savings || 0) - (a.savings || 0))
-    } else {
-      hubRoutes.sort((a, b) => a.totalPrice - b.totalPrice)
+      return NextResponse.json({
+        directPrice,
+        layoverRoutes: hubRoutes,
+        bestLayover: hubRoutes.length > 0 ? hubRoutes[0] : null,
+        priceSource,
+        searchTier: 'live' as const,
+        fetchedAt: Date.now(),
+        showLivePriceCta: false,
+        confidence: 'live' as const,
+      })
     }
 
-    // Determine which provider powered the results for the response metadata
-    const providerUsed = directResult.provider !== 'none' ? directResult.provider : 'unknown'
-    const priceSource = providerUsed === 'amadeus' ? 'amadeus-live'
-      : providerUsed === 'kiwi' ? 'kiwi-live'
-      : providerUsed === 'travelpayouts' ? 'travelpayouts-cached'
-      : 'unknown'
+    // ═══════════════════════════════════════════════════════════════════
+    // Tier 1 (Browse) — default, cached/cheap sources only
+    // No expensive Kiwi multi-city search; relies on TravelPayouts
+    // cached data via the multi-provider fallback chain.
+    // ═══════════════════════════════════════════════════════════════════
+    console.log('[Layover API] [browse] Using cached/cheap provider lookup')
+    const { directPrice, hubRoutes, priceSource } = await fetchMultiProviderRoutes(origin, destination, searchDate)
 
-    console.log(`[Layover API] Found ${hubRoutes.length} stopover routes (provider: ${providerUsed})`)
+    // Determine confidence based on the provider that actually returned data
+    const confidence = priceSource === 'travelpayouts-cached' ? 'cached' as const
+      : priceSource === 'unknown' ? 'estimated' as const
+      : 'cached' as const
+
+    console.log(`[Layover API] [browse] Found ${hubRoutes.length} stopover routes (source: ${priceSource}, confidence: ${confidence})`)
 
     return NextResponse.json({
       directPrice,
       layoverRoutes: hubRoutes,
       bestLayover: hubRoutes.length > 0 ? hubRoutes[0] : null,
       priceSource,
+      searchTier: 'browse' as const,
+      fetchedAt: Date.now(),
+      showLivePriceCta: true,
+      confidence,
     })
   } catch (error) {
     console.error('[Layover API] Error:', error)
