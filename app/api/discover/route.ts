@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { majorAirports } from '@/lib/geolocation'
+import { searchCheapestDestinations, isKiwiAvailable } from '@/lib/kiwi'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,14 +26,70 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'origin must be a 3-letter IATA code' }, { status: 400 })
   }
 
-  if (!TOKEN) {
-    return NextResponse.json({ error: 'API token not configured' }, { status: 500 })
-  }
-
   try {
-    // Fetch cheapest destinations from origin
+    // ── Priority 1: Kiwi "fly_to=anywhere" (real-time, includes LCCs) ──
+    if (isKiwiAvailable()) {
+      try {
+        const searchDate = departDate && departDate.length === 10
+          ? departDate
+          : departDate
+            ? `${departDate}-15` // mid-month if only YYYY-MM
+            : new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+
+        console.log(`[Discover API] Trying Kiwi fly_to=anywhere from ${origin} on ${searchDate}`)
+
+        const kiwiResults = await searchCheapestDestinations({
+          origin,
+          departDate: searchDate,
+          limit: Math.max(limit, 20), // fetch extra for dedup
+        })
+
+        if (kiwiResults.length > 0) {
+          // Deduplicate by destination code (keep cheapest per city)
+          const seen = new Set<string>()
+          const unique: typeof kiwiResults = []
+          for (const r of kiwiResults) {
+            if (!seen.has(r.destinationCode) && r.destinationCode !== origin) {
+              seen.add(r.destinationCode)
+              unique.push(r)
+            }
+            if (unique.length >= limit) break
+          }
+
+          const results = unique.map(r => ({
+            destination: r.destinationCode,
+            city: r.cityName || getCityName(r.destinationCode),
+            price: r.price,
+            departDate: r.departureTime ? r.departureTime.split('T')[0] : searchDate,
+            returnDate: r.arrivalTime ? r.arrivalTime.split('T')[0] : null,
+            airline: r.airlines.length > 0 ? r.airlines[0] : null,
+            deepLink: r.deepLink,
+          }))
+
+          console.log(`[Discover API] Kiwi returned ${results.length} destinations from ${origin}`)
+
+          return NextResponse.json({
+            origin,
+            results,
+            count: results.length,
+            priceSource: 'kiwi-live',
+            priceNote: 'Live prices from Kiwi.com — click to book.',
+          })
+        }
+
+        console.log('[Discover API] Kiwi returned 0 results, falling back to TravelPayouts')
+      } catch (kiwiErr) {
+        console.warn('[Discover API] Kiwi failed, falling back to TravelPayouts:', kiwiErr instanceof Error ? kiwiErr.message : kiwiErr)
+      }
+    }
+
+    // ── Priority 2: TravelPayouts cached prices ──
+    if (!TOKEN) {
+      return NextResponse.json({ error: 'No API providers available' }, { status: 500 })
+    }
+
     const url = `${API_BASE}/v2/prices/latest?origin=${origin}&limit=200&currency=usd&token=${TOKEN}`
-    console.log('[Discover API] Fetching cheapest destinations from', origin)
+    console.log('[Discover API] Fetching cheapest destinations from TravelPayouts for', origin)
 
     const response = await fetch(url, { next: { revalidate: 21600 } })
 
@@ -46,7 +103,7 @@ export async function GET(request: NextRequest) {
     // Filter by departure date if provided
     if (departDate) {
       if (departDate.length === 10) {
-        // Exact date YYYY-MM-DD: match within ±3 days
+        // Exact date YYYY-MM-DD: match within +/-3 days
         const target = new Date(departDate)
         deals = deals.filter((d: any) => {
           const depart = new Date(d.depart_date)
@@ -94,13 +151,14 @@ export async function GET(request: NextRequest) {
       origin,
       results,
       count: results.length,
+      priceSource: 'travelpayouts-cached',
       priceNote: 'Prices are cached estimates. Click to see live prices.',
     })
   } catch (err) {
     console.error('[Discover API] Error:', err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to fetch destinations' },
-      { status: 500 }
+      { error: 'Failed to fetch destinations. Please try again.' },
+      { status: 502 }
     )
   }
 }

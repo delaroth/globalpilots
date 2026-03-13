@@ -47,9 +47,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ alerts })
   } catch (error) {
     console.error('[Alerts List] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch alerts'
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Failed to fetch alerts. Please try again.' },
       { status: 500 }
     )
   }

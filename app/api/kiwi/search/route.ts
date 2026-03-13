@@ -1,63 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { searchKiwiFlights } from '@/lib/kiwi'
+import { searchFlights, isKiwiAvailable } from '@/lib/kiwi'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
-  if (!process.env.KIWI_API_KEY) {
+  if (!isKiwiAvailable()) {
     return NextResponse.json(
-      { error: 'Kiwi not yet active' },
+      { error: 'Flight search service not available' },
       { status: 503 }
     )
   }
 
   const searchParams = request.nextUrl.searchParams
   const origin = searchParams.get('origin')
-  const destination = searchParams.get('destination') || 'anywhere'
-  const dateFrom = searchParams.get('date_from')
-  const dateTo = searchParams.get('date_to')
-  const maxPrice = searchParams.get('max_price')
-  const limit = searchParams.get('limit')
+  const destination = searchParams.get('destination')
+  const departureDate = searchParams.get('departure_date')
+  const returnDate = searchParams.get('return_date')
+  const max = searchParams.get('max')
 
-  if (!origin || !dateFrom || !dateTo) {
+  if (!origin || !destination || !departureDate) {
     return NextResponse.json(
-      { error: 'Missing required parameters: origin, date_from, date_to' },
+      { error: 'Missing required parameters: origin, destination, departure_date' },
+      { status: 400 }
+    )
+  }
+
+  if (!/^[A-Z]{3}$/.test(origin)) {
+    return NextResponse.json(
+      { error: 'origin must be a 3-letter IATA airport code' },
+      { status: 400 }
+    )
+  }
+
+  if (!/^[A-Z]{3}$/.test(destination)) {
+    return NextResponse.json(
+      { error: 'destination must be a 3-letter IATA airport code' },
       { status: 400 }
     )
   }
 
   try {
-    const results = await searchKiwiFlights({
+    const results = await searchFlights({
       origin,
       destination,
-      dateFrom,
-      dateTo,
-      maxPrice: maxPrice ? parseInt(maxPrice) : undefined,
-      limit: limit ? parseInt(limit) : 20,
+      departDate: departureDate,
+      returnDate: returnDate || undefined,
+      maxResults: max ? parseInt(max) : 10,
     })
 
-    // Return in same shape as /api/travelpayouts/latest for UI compatibility
-    const data = results.map(r => ({
-      value: r.price,
-      origin: r.flyFrom,
-      destination: r.flyTo,
-      gate: r.cityTo,
-      depart_date: r.departureDate,
-      return_date: r.returnDate || '',
-      number_of_changes: 0,
-      distance: 0,
-      actual: true,
-      trip_class: 0,
-      show_to_affiliates: true,
-      found_at: new Date().toISOString(),
-    }))
-
-    return NextResponse.json({ success: true, data })
+    return NextResponse.json({
+      success: true,
+      source: 'kiwi-live',
+      count: results.length,
+      offers: results,
+    })
   } catch (error) {
-    console.error('[Kiwi API] Error:', error)
+    console.error('[Kiwi Search API] Error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Kiwi search failed' },
-      { status: 500 }
+      { error: 'Flight search failed. Please try again.' },
+      { status: 502 }
     )
   }
 }

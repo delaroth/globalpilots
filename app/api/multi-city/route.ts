@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
 import { buildFlightLink } from '@/lib/affiliate'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,13 +35,38 @@ interface MultiCityResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: MultiCityRequest = await request.json()
+    // Rate limit: 10 requests per minute for this expensive AI endpoint
+    const clientIp = getClientIp(request)
+    const rl = rateLimit(`multi-city:${clientIp}`, 10, 60 * 1000)
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment and try again.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) } }
+      )
+    }
+
+    let body: MultiCityRequest
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid request body. Expected JSON.' },
+        { status: 400 }
+      )
+    }
     const { origin, totalBudget, totalDays, numCities, region, vibe } = body
 
     // Validation
     if (!origin || !totalBudget || !totalDays || !numCities) {
       return NextResponse.json(
         { error: 'Missing required parameters: origin, totalBudget, totalDays, numCities' },
+        { status: 400 }
+      )
+    }
+
+    if (!/^[A-Z]{3}$/.test(origin)) {
+      return NextResponse.json(
+        { error: 'origin must be a 3-letter IATA airport code' },
         { status: 400 }
       )
     }
@@ -191,9 +217,17 @@ Return this EXACT JSON structure (no wrapping, no markdown):
     return NextResponse.json(response)
   } catch (error) {
     console.error('[Multi-City] Error:', error)
+    const isTimeout = error instanceof Error && error.message.includes('timed out')
+    const isAIFailure = error instanceof Error && error.message.includes('AI providers failed')
+    const statusCode = isTimeout ? 504 : isAIFailure ? 502 : 500
+    const clientMessage = isTimeout
+      ? 'Request timed out. Please try again.'
+      : isAIFailure
+        ? 'AI service is temporarily unavailable. Please try again later.'
+        : 'Failed to plan multi-city trip. Please try again.'
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to plan multi-city trip' },
-      { status: 500 }
+      { error: clientMessage },
+      { status: statusCode }
     )
   }
 }

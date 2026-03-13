@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +35,16 @@ const CACHE_TTL = 7 * 24 * 60 * 60 * 1000
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limit: 15 requests per minute for this AI endpoint
+    const clientIp = getClientIp(request)
+    const rl = rateLimit(`city-guide:${clientIp}`, 15, 60 * 1000)
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment and try again.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) } }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const city = searchParams.get('city')
     const hours = parseInt(searchParams.get('hours') || '12', 10)
@@ -42,6 +53,20 @@ export async function GET(request: NextRequest) {
     if (!city) {
       return NextResponse.json(
         { error: 'Missing required parameter: city' },
+        { status: 400 }
+      )
+    }
+
+    if (city.length > 100) {
+      return NextResponse.json(
+        { error: 'City name is too long' },
+        { status: 400 }
+      )
+    }
+
+    if (isNaN(hours) || hours < 1 || hours > 72) {
+      return NextResponse.json(
+        { error: 'Hours must be between 1 and 72' },
         { status: 400 }
       )
     }
@@ -106,9 +131,17 @@ Include exactly 3-5 top_activities and 3 food_picks. Make the guide practical an
     return NextResponse.json(result)
   } catch (error) {
     console.error('[City-Guide] Error:', error)
+    const isTimeout = error instanceof Error && error.message.includes('timed out')
+    const isAIFailure = error instanceof Error && error.message.includes('AI providers failed')
+    const statusCode = isTimeout ? 504 : isAIFailure ? 502 : 500
+    const clientMessage = isTimeout
+      ? 'Request timed out. Please try again.'
+      : isAIFailure
+        ? 'AI service is temporarily unavailable. Please try again later.'
+        : 'Failed to generate city guide. Please try again.'
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to generate city guide' },
-      { status: 500 }
+      { error: clientMessage },
+      { status: statusCode }
     )
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getAllEditorialPosts } from '@/lib/blog-posts'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,43 +8,67 @@ export async function GET(request: NextRequest) {
   try {
     console.log('[Blog List] Fetching all blog posts...')
 
-    // Fetch all blog posts ordered by view count
-    const { data, error } = await (supabase as any)
-      .from('blog_posts')
-      .select('*')
-      .order('view_count', { ascending: false })
+    // Fetch Supabase destination guides
+    let supabasePosts: any[] = []
+    try {
+      const { data, error } = await (supabase as any)
+        .from('blog_posts')
+        .select('*')
+        .order('view_count', { ascending: false })
 
-    if (error) {
-      console.error('[Blog List] Database error:', error)
-      throw new Error('Failed to fetch blog posts')
+      if (!error && data) {
+        supabasePosts = data
+      }
+    } catch (e) {
+      console.warn('[Blog List] Supabase fetch failed, continuing with editorial posts only')
     }
 
-    console.log(`[Blog List] ✅ Found ${data.length} blog posts`)
+    console.log(`[Blog List] Found ${supabasePosts.length} destination guides`)
 
-    // Transform to frontend format
-    const posts = data.map((post: any) => ({
+    // Transform Supabase posts to frontend format
+    const destinationPosts = supabasePosts.map((post: any) => ({
       id: post.id,
-      destinationCode: post.destination_code,
-      destinationName: post.destination_name,
+      destination_code: post.destination_code,
+      destination_name: post.destination_name,
       country: post.country,
       title: post.title,
-      metaDescription: post.meta_description,
+      meta_description: post.meta_description,
       slug: post.slug,
-      viewCount: post.view_count,
-      createdAt: post.created_at,
-      updatedAt: post.updated_at
+      view_count: post.view_count,
+      created_at: post.created_at,
+      type: 'destination' as const
     }))
+
+    // Get static editorial posts
+    const editorialPosts = getAllEditorialPosts().map(post => ({
+      id: post.id,
+      destination_code: null,
+      destination_name: null,
+      country: null,
+      title: post.title,
+      meta_description: post.meta_description,
+      slug: post.slug,
+      view_count: post.view_count,
+      created_at: post.created_at,
+      type: 'editorial' as const,
+      category: post.category,
+      excerpt: post.excerpt
+    }))
+
+    // Combine and sort: editorial first (they're the SEO content), then destination guides
+    const allPosts = [...editorialPosts, ...destinationPosts]
+
+    console.log(`[Blog List] Total posts: ${allPosts.length} (${editorialPosts.length} editorial + ${destinationPosts.length} destination)`)
 
     return NextResponse.json({
       success: true,
-      posts
+      posts: allPosts
     })
 
   } catch (error) {
     console.error('[Blog List] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch blog posts'
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Failed to fetch blog posts. Please try again.' },
       { status: 500 }
     )
   }

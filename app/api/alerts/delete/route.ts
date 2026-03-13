@@ -32,9 +32,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('[Alerts Delete] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to delete alert'
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Failed to delete alert. Please try again.' },
       { status: 500 }
     )
   }

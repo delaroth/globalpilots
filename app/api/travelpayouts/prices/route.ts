@@ -18,9 +18,17 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (!TOKEN) {
+  if (!/^[A-Z]{3}$/i.test(origin) || !/^[A-Z]{3}$/i.test(destination)) {
     return NextResponse.json(
-      { error: 'TravelPayouts API token not configured' },
+      { error: 'origin and destination must be 3-letter IATA codes' },
+      { status: 400 }
+    )
+  }
+
+  if (!TOKEN) {
+    console.error('[Prices API] TravelPayouts token not configured')
+    return NextResponse.json(
+      { error: 'Service not configured' },
       { status: 500 }
     )
   }
@@ -38,6 +46,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!response.ok) {
+      console.error('[Prices API] TravelPayouts error:', response.status)
       throw new Error(`TravelPayouts API error: ${response.status}`)
     }
 
@@ -45,10 +54,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Prices API error:', error)
+    console.error('[Prices API] Error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch price data' },
-      { status: 500 }
+      { error: 'Failed to fetch price data. Please try again.' },
+      { status: 502 }
     )
   }
 }

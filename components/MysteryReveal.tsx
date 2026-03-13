@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { buildBookingBundle, AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { trackActivity } from '@/lib/activity-feed'
-import { getDestinationCost } from '@/lib/destination-costs'
+import type { DestinationCost } from '@/lib/destination-costs'
 
 interface DailyActivity {
   time: string
@@ -99,8 +99,14 @@ export default function MysteryReveal({
   const flightPrice = destination.indicativeFlightPrice || destination.estimated_flight_cost
   const isEstimate = destination.priceIsEstimate
 
-  // Look up daily cost-of-living data for this destination
-  const costData = useMemo(() => getDestinationCost(iata), [iata])
+  // Dynamically import destination-costs to avoid bundling ~60KB of data on the mystery page
+  const [costData, setCostData] = useState<DestinationCost | undefined>(undefined)
+  useEffect(() => {
+    if (!iata) return
+    import('@/lib/destination-costs').then(mod => {
+      setCostData(mod.getDestinationCost(iata))
+    })
+  }, [iata])
 
   // Build booking bundle
   const bookingBundle = buildBookingBundle({

@@ -5,6 +5,7 @@ import { calculateBudgetAllocation, PackageComponents, formatAllocationForAI, ge
 import { supabase } from '@/lib/supabase'
 import { AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { searchKiwiInspiration } from '@/lib/kiwi'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -127,12 +128,44 @@ function getOriginRegion(origin: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: MysteryRequest = await request.json()
+    // Rate limit: 10 requests per minute for this expensive AI endpoint
+    const clientIp = getClientIp(request)
+    const rl = rateLimit(`ai-mystery:${clientIp}`, 10, 60 * 1000)
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment and try again.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) } }
+      )
+    }
+
+    let body: MysteryRequest
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid request body. Expected JSON.' },
+        { status: 400 }
+      )
+    }
     const { origin, budget, vibes, dates, tripDuration = 3, packageComponents, email, exclude = [] } = body
 
     if (!origin || !budget || !vibes || vibes.length === 0) {
       return NextResponse.json(
-        { error: 'Missing required parameters' },
+        { error: 'Missing required parameters: origin, budget, vibes' },
+        { status: 400 }
+      )
+    }
+
+    if (typeof budget !== 'number' || budget < 100 || budget > 50000) {
+      return NextResponse.json(
+        { error: 'Budget must be a number between 100 and 50000' },
+        { status: 400 }
+      )
+    }
+
+    if (!/^[A-Z]{3}$/.test(origin)) {
+      return NextResponse.json(
+        { error: 'origin must be a 3-letter IATA airport code' },
         { status: 400 }
       )
     }
@@ -363,9 +396,18 @@ Return this EXACT JSON structure:
     return NextResponse.json(result)
   } catch (error) {
     console.error('[AI-Mystery] Error:', error)
+    // Don't leak internal error details to client
+    const isTimeout = error instanceof Error && error.message.includes('timed out')
+    const isAIFailure = error instanceof Error && error.message.includes('AI providers failed')
+    const statusCode = isTimeout ? 504 : isAIFailure ? 502 : 500
+    const clientMessage = isTimeout
+      ? 'Request timed out. Please try again.'
+      : isAIFailure
+        ? 'AI service is temporarily unavailable. Please try again later.'
+        : 'Failed to generate destination. Please try again.'
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to generate destination' },
-      { status: 500 }
+      { error: clientMessage },
+      { status: statusCode }
     )
   }
 }

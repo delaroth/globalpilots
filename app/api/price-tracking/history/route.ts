@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     if (!TOKEN) {
       return NextResponse.json(
-        { error: 'TravelPayouts API token not configured' },
+        { error: 'Service not configured' },
         { status: 500 }
       )
     }
@@ -163,9 +163,8 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('[Price History] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch price history'
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Failed to fetch price history. Please try again.' },
       { status: 500 }
     )
   }

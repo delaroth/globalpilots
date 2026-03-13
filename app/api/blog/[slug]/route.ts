@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getEditorialPostBySlug } from '@/lib/blog-posts'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,28 @@ export async function GET(
 
     console.log('[Blog Slug] Fetching blog post:', slug)
 
-    // Fetch blog post by slug
+    // Check editorial posts first (static, no DB needed)
+    const editorialPost = getEditorialPostBySlug(slug)
+    if (editorialPost) {
+      console.log('[Blog Slug] Found editorial post:', slug)
+      return NextResponse.json({
+        success: true,
+        post: {
+          id: editorialPost.id,
+          title: editorialPost.title,
+          meta_description: editorialPost.meta_description,
+          slug: editorialPost.slug,
+          view_count: editorialPost.view_count,
+          created_at: editorialPost.created_at,
+          type: 'editorial',
+          category: editorialPost.category,
+          excerpt: editorialPost.excerpt,
+          content: editorialPost.content
+        }
+      })
+    }
+
+    // Fall back to Supabase destination guides
     const { data, error } = await (supabase as any)
       .from('blog_posts')
       .select('*')
@@ -40,21 +62,21 @@ export async function GET(
       .update({ view_count: data.view_count + 1 })
       .eq('id', data.id)
 
-    console.log('[Blog Slug] ✅ Blog post fetched:', slug)
+    console.log('[Blog Slug] Found destination guide:', slug)
 
     // Transform to frontend format
     const post = {
       id: data.id,
-      destinationCode: data.destination_code,
-      destinationName: data.destination_name,
+      destination_code: data.destination_code,
+      destination_name: data.destination_name,
       country: data.country,
       title: data.title,
-      metaDescription: data.meta_description,
+      meta_description: data.meta_description,
       content: data.content,
       slug: data.slug,
-      viewCount: data.view_count + 1, // Return updated count
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+      view_count: data.view_count + 1,
+      created_at: data.created_at,
+      type: 'destination'
     }
 
     return NextResponse.json({
@@ -64,9 +86,8 @@ export async function GET(
 
   } catch (error) {
     console.error('[Blog Slug] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch blog post'
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Failed to fetch blog post. Please try again.' },
       { status: 500 }
     )
   }

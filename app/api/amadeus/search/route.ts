@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   if (!isAmadeusAvailable()) {
     return NextResponse.json(
-      { error: 'Amadeus API not configured' },
+      { error: 'Flight search service not available' },
       { status: 503 }
     )
   }
@@ -50,7 +50,9 @@ export async function GET(request: NextRequest) {
     })
   } catch (err) {
     console.error('[Amadeus API] Search error:', err)
-    const message = err instanceof Error ? err.message : 'Amadeus search failed'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Flight search failed. Please try again.' },
+      { status: 502 }
+    )
   }
 }

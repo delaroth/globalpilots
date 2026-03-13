@@ -42,6 +42,15 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   const description = dest.whyThisPlace || dest.why_its_perfect
     || `An AI-picked mystery trip to ${dest.destination}, ${dest.country}. Flights, hotels, and a full itinerary — all within budget.`
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
+  const ogImageUrl = `${baseUrl}/api/og?${new URLSearchParams({
+    title: `Mystery Vacation: ${dest.destination}`,
+    subtitle: `$${Math.round(totalCost)} total — flights, hotels & itinerary included`,
+    type: 'mystery',
+  }).toString()}`
+
   return {
     title,
     description,
@@ -50,12 +59,14 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
       description,
       type: 'website',
       siteName: 'GlobePilot',
-      url: `https://globepilot.com/trips/${params.id}`,
+      url: `https://globepilots.com/trips/${params.id}`,
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: [ogImageUrl],
     },
   }
 }

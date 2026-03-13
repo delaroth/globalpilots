@@ -1,15 +1,26 @@
 'use client'
 import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
-import CalendarGrid from '@/components/CalendarGrid'
 import DestinationCard from '@/components/DestinationCard'
 import WhatNext from '@/components/WhatNext'
 import { generateAffiliateLink, buildFlightLink } from '@/lib/affiliate'
 import { saveRecentSearch } from '@/lib/recent-searches'
 import RecentSearches from '@/components/RecentSearches'
+
+// Lazy load CalendarGrid — only rendered after a flexible-month search completes
+const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
+  ssr: false,
+  loading: () => (
+    <div className="text-center py-12">
+      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-skyblue"></div>
+      <p className="text-white mt-4">Loading calendar...</p>
+    </div>
+  ),
+})
 
 type DateMode = 'exact-date' | 'flexible-month' | 'day-windows'
 
@@ -114,7 +125,7 @@ function SearchPageContent() {
   // Results
   const [calendarData, setCalendarData] = useState<Record<string, unknown> | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [exactDateResult, setExactDateResult] = useState<{ price: number; dayData: any; isLive?: boolean } | null>(null)
+  const [exactDateResult, setExactDateResult] = useState<{ price: number; dayData: any; isLive?: boolean; source?: string; deepLink?: string } | null>(null)
   const [weekendDeals, setWeekendDeals] = useState<WeekendDeal[]>([])
   const [emptyRoute, setEmptyRoute] = useState(false)
   const [showPopularSuggestions, setShowPopularSuggestions] = useState(false)
@@ -153,19 +164,25 @@ function SearchPageContent() {
         }
 
       } else if (dateMode === 'exact-date') {
-        // Try Amadeus real-time price first (supports round-trip)
+        // Priority 1: Try Kiwi (best LCC coverage, has deep links)
         let gotLivePrice = false
         try {
-          let amadeusUrl = `/api/amadeus/search?origin=${origin}&destination=${destination}&departure_date=${exactDate}&max=3`
+          let kiwiUrl = `/api/kiwi/search?origin=${origin}&destination=${destination}&departure_date=${exactDate}&max=3`
           if (isRoundTrip && returnDate) {
-            amadeusUrl += `&return_date=${returnDate}`
+            kiwiUrl += `&return_date=${returnDate}`
           }
-          const amadeusRes = await fetch(amadeusUrl)
-          if (amadeusRes.ok) {
-            const amadeusData = await amadeusRes.json()
-            if (amadeusData.offers?.length > 0) {
-              const offer = amadeusData.offers[0]
-              setExactDateResult({ price: offer.price, dayData: offer, isLive: true })
+          const kiwiRes = await fetch(kiwiUrl)
+          if (kiwiRes.ok) {
+            const kiwiData = await kiwiRes.json()
+            if (kiwiData.offers?.length > 0) {
+              const offer = kiwiData.offers[0]
+              setExactDateResult({
+                price: offer.price,
+                dayData: { ...offer, airlines: offer.airlines, stops: offer.stops },
+                isLive: true,
+                source: 'kiwi',
+                deepLink: offer.deepLink,
+              })
               gotLivePrice = true
               const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
               saveRecentSearch({
@@ -175,11 +192,38 @@ function SearchPageContent() {
               })
             }
           }
-        } catch (amadeusErr) {
-          console.log('[Search] Amadeus unavailable, falling back to cached:', amadeusErr)
+        } catch (kiwiErr) {
+          console.log('[Search] Kiwi unavailable, trying Amadeus:', kiwiErr)
         }
 
-        // Fallback to TravelPayouts cached price
+        // Priority 2: Try Amadeus real-time price (supports round-trip)
+        if (!gotLivePrice) {
+          try {
+            let amadeusUrl = `/api/amadeus/search?origin=${origin}&destination=${destination}&departure_date=${exactDate}&max=3`
+            if (isRoundTrip && returnDate) {
+              amadeusUrl += `&return_date=${returnDate}`
+            }
+            const amadeusRes = await fetch(amadeusUrl)
+            if (amadeusRes.ok) {
+              const amadeusData = await amadeusRes.json()
+              if (amadeusData.offers?.length > 0) {
+                const offer = amadeusData.offers[0]
+                setExactDateResult({ price: offer.price, dayData: offer, isLive: true, source: 'amadeus' })
+                gotLivePrice = true
+                const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                saveRecentSearch({
+                  origin, destination, date: exactDate, mode: 'exact-date',
+                  label: `${origin} → ${destination} · ${dateLabel}`,
+                  url: `/search?origin=${origin}&dest=${destination}&date=${exactDate}&mode=exact-date`,
+                })
+              }
+            }
+          } catch (amadeusErr) {
+            console.log('[Search] Amadeus unavailable, falling back to cached:', amadeusErr)
+          }
+        }
+
+        // Priority 3: Fallback to TravelPayouts cached price
         if (!gotLivePrice) {
           const monthStr = exactDate.slice(0, 7)
           const res = await fetch(`/api/travelpayouts/calendar?origin=${origin}&destination=${destination}&depart_date=${monthStr}`)
@@ -192,7 +236,7 @@ function SearchPageContent() {
           if (!price) {
             setEmptyRoute(true)
           } else {
-            setExactDateResult({ price, dayData, isLive: false })
+            setExactDateResult({ price, dayData, isLive: false, source: 'travelpayouts' })
             const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             saveRecentSearch({
               origin, destination, date: exactDate, mode: 'exact-date',
@@ -495,17 +539,30 @@ function SearchPageContent() {
                   <div className="p-6">
                     <button
                       onClick={() => {
-                        const depDate = exactDateResult.dayData?.departure_at || exactDateResult.dayData?.departureTime || exactDate
-                        const ret = isRoundTrip ? returnDate : undefined
-                        const link = generateAffiliateLink({ origin, destination, departDate: depDate, returnDate: ret })
-                        window.open(link, '_blank')
+                        if (exactDateResult.source === 'kiwi' && exactDateResult.deepLink) {
+                          // Kiwi deep link goes directly to the booking page for this exact fare
+                          window.open(exactDateResult.deepLink, '_blank')
+                        } else {
+                          const depDate = exactDateResult.dayData?.departure_at || exactDateResult.dayData?.departureTime || exactDate
+                          const ret = isRoundTrip ? returnDate : undefined
+                          const link = generateAffiliateLink({ origin, destination, departDate: depDate, returnDate: ret })
+                          window.open(link, '_blank')
+                        }
                       }}
                       className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                     >
-                      {exactDateResult.isLive ? 'Book on Aviasales' : 'Search Live Prices'}
+                      {exactDateResult.source === 'kiwi'
+                        ? 'Book This Fare on Kiwi'
+                        : exactDateResult.isLive
+                          ? 'Book on Aviasales'
+                          : 'Search Live Prices'}
                     </button>
                     <p className="text-center text-xs text-gray-500 mt-3">
-                      {exactDateResult.isLive ? 'Book this fare on Aviasales' : 'Opens Aviasales to confirm price'}
+                      {exactDateResult.source === 'kiwi'
+                        ? 'Opens Kiwi.com to book this exact fare'
+                        : exactDateResult.isLive
+                          ? 'Book this fare on Aviasales'
+                          : 'Opens Aviasales to confirm price'}
                     </p>
                   </div>
                 </div>

@@ -1,8 +1,18 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { generateAffiliateLink } from '@/lib/affiliate'
 import { LayoverRoute } from '@/lib/hubs'
-import CityGuide from '@/components/CityGuide'
+
+// Lazy load CityGuide — only rendered when user clicks "What to do in X?"
+const CityGuide = dynamic(() => import('@/components/CityGuide'), {
+  ssr: false,
+  loading: () => (
+    <div className="mt-3 bg-navy/50 rounded-lg px-4 py-3 text-center">
+      <p className="text-skyblue-light text-sm">Loading guide...</p>
+    </div>
+  ),
+})
 
 interface RouteComparisonProps {
   origin: string

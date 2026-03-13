@@ -45,9 +45,8 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[Alerts Update] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to update alert'
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Failed to update alert. Please try again.' },
       { status: 500 }
     )
   }

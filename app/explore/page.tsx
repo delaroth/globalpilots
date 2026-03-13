@@ -2,15 +2,26 @@
 
 import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
-import RouteComparison from '@/components/RouteComparison'
 import { majorHubs, LayoverRoute } from '@/lib/hubs'
 import WhatNext from '@/components/WhatNext'
 import { generateAffiliateLink } from '@/lib/affiliate'
 import { saveRecentSearch } from '@/lib/recent-searches'
 import RecentSearches from '@/components/RecentSearches'
+
+// Lazy load RouteComparison (includes CityGuide) — only shown after search results
+const RouteComparison = dynamic(() => import('@/components/RouteComparison'), {
+  ssr: false,
+  loading: () => (
+    <div className="text-center py-12">
+      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-skyblue"></div>
+      <p className="text-white mt-4">Loading route comparison...</p>
+    </div>
+  ),
+})
 
 function ExplorePageContent() {
   const searchParams = useSearchParams()

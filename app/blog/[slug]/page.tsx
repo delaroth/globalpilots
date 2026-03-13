@@ -16,7 +16,7 @@ interface BlogContent {
   safety_tips: string
 }
 
-interface BlogPost {
+interface DestinationPost {
   id: string
   destination_code: string
   destination_name: string
@@ -27,14 +27,29 @@ interface BlogPost {
   slug: string
   view_count: number
   created_at: string
+  type: 'destination'
 }
 
+interface EditorialPost {
+  id: string
+  title: string
+  meta_description: string
+  content: string // HTML content
+  slug: string
+  view_count: number
+  created_at: string
+  type: 'editorial'
+  category: string
+  excerpt: string
+}
+
+type BlogPost = DestinationPost | EditorialPost
+
 // Try to extract origin/destination from blog post title and slug
-function extractRouteInfo(post: BlogPost): { originIata: string | null; destIata: string; destCity: string } {
+function extractRouteInfo(post: DestinationPost): { originIata: string | null; destIata: string; destCity: string } {
   const destCity = post.destination_name
   const destIata = post.destination_code
 
-  // Try to find "from {city}" pattern in title
   const fromMatch = post.title.match(/from\s+(.+?)(?:\s+to|\s*$)/i)
   let originIata: string | null = null
 
@@ -47,6 +62,242 @@ function extractRouteInfo(post: BlogPost): { originIata: string | null; destIata
   }
 
   return { originIata, destIata, destCity }
+}
+
+function EditorialPostView({ post }: { post: EditorialPost }) {
+  return (
+    <>
+      {/* Header */}
+      <div className="max-w-4xl mx-auto mb-8">
+        <div className="bg-gradient-to-br from-navy via-navy-dark to-skyblue-dark rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center opacity-5">
+            <span className="text-[200px]">&#x2708;&#xFE0F;</span>
+          </div>
+          <div className="relative z-10">
+            {post.category && (
+              <span className="inline-block bg-skyblue/20 text-skyblue-light text-sm font-semibold px-4 py-1 rounded-full mb-4 uppercase tracking-wide">
+                {post.category}
+              </span>
+            )}
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
+              {post.title}
+            </h1>
+            <p className="text-lg text-skyblue-light/80 max-w-2xl mx-auto mb-4">
+              {post.excerpt}
+            </p>
+            <div className="flex items-center justify-center gap-6 text-sm text-white/60">
+              <span>{new Date(post.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-4xl mx-auto">
+        <article className="bg-white rounded-2xl shadow-2xl p-8 md:p-12">
+          <div
+            className="prose prose-lg max-w-none
+              prose-headings:text-navy prose-headings:font-bold
+              prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4
+              prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
+              prose-p:text-gray-700 prose-p:leading-relaxed
+              prose-a:text-skyblue prose-a:font-semibold prose-a:no-underline hover:prose-a:underline
+              prose-li:text-gray-700
+              prose-strong:text-navy
+              prose-ul:my-4 prose-li:my-1"
+            dangerouslySetInnerHTML={{ __html: post.content }}
+          />
+        </article>
+
+        {/* Back to Blog */}
+        <div className="mt-8 text-center">
+          <Link
+            href="/blog"
+            className="inline-block bg-white hover:bg-gray-50 text-navy font-semibold py-3 px-8 rounded-lg transition shadow-lg"
+          >
+            &larr; Back to All Guides
+          </Link>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function DestinationPostView({ post }: { post: DestinationPost }) {
+  const routeInfo = extractRouteInfo(post)
+  const defaultOrigin = routeInfo.originIata || 'BKK'
+  const departDate = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+  const bookingBundle = buildBookingBundle({
+    origin: defaultOrigin,
+    destination: routeInfo.destIata,
+    cityName: routeInfo.destCity,
+    departDate,
+    nights: 3,
+  })
+
+  return (
+    <>
+      {/* Header */}
+      <div className="max-w-4xl mx-auto mb-8">
+        <div className="bg-gradient-to-br from-skyblue via-skyblue-dark to-navy rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center opacity-10">
+            <span className="text-9xl">&#x1F30D;</span>
+          </div>
+          <div className="relative z-10">
+            <p className="text-skyblue-light text-sm font-semibold mb-2 uppercase tracking-wide">
+              Travel Guide
+            </p>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
+              {post.destination_name}
+            </h1>
+            <p className="text-xl text-skyblue-light mb-4">{post.country}</p>
+            <div className="flex items-center justify-center gap-6 text-sm text-white/80">
+              <span>{post.view_count} views</span>
+              <span>&bull;</span>
+              <span>{new Date(post.created_at).toLocaleDateString()}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-4xl mx-auto">
+        <article className="bg-white rounded-2xl shadow-2xl p-8 md:p-12">
+          <p className="text-lg text-gray-700 italic mb-8 pb-8 border-b border-gray-200">
+            {post.meta_description}
+          </p>
+
+          <section className="mb-8">
+            <h2 className="text-3xl font-bold text-navy mb-4 flex items-center gap-3">
+              <span className="text-4xl">&#x2728;</span>
+              Why Visit {post.destination_name}?
+            </h2>
+            <div className="prose prose-lg max-w-none">
+              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {post.content.why_visit}
+              </p>
+            </div>
+          </section>
+
+          <section className="mb-8 bg-skyblue/10 rounded-xl p-6">
+            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+              <span className="text-3xl">&#x1F4C5;</span>
+              Best Time to Visit
+            </h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {post.content.best_time_to_visit}
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+              <span className="text-3xl">&#x1F4B0;</span>
+              Budget Breakdown
+            </h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {post.content.budget_breakdown}
+            </p>
+          </section>
+
+          <section className="mb-8 bg-yellow-50 rounded-xl p-6">
+            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+              <span className="text-3xl">&#x1F3AF;</span>
+              Top Attractions
+            </h2>
+            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {post.content.top_attractions}
+            </div>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+              <span className="text-3xl">&#x1F37D;&#xFE0F;</span>
+              Local Food Guide
+            </h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {post.content.local_food_guide}
+            </p>
+          </section>
+
+          <section className="mb-8 bg-green-50 rounded-xl p-6">
+            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+              <span className="text-3xl">&#x1F4A1;</span>
+              Money Saving Tips
+            </h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {post.content.money_saving_tips}
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+              <span className="text-3xl">&#x1F6E1;&#xFE0F;</span>
+              Safety Tips
+            </h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {post.content.safety_tips}
+            </p>
+          </section>
+
+          {/* BOOK THIS TRIP */}
+          <div className="mt-12 pt-8 border-t border-gray-200">
+            <div className="bg-gradient-to-r from-skyblue/20 to-navy/20 rounded-xl p-8">
+              <h3 className="text-2xl font-bold text-navy mb-3 text-center">
+                Book Your Trip to {post.destination_name}
+              </h3>
+              <p className="text-gray-700 mb-6 text-center">
+                Ready to go? Book flights, hotels, and activities for your trip.
+              </p>
+              <div className="space-y-3 max-w-md mx-auto">
+                <a
+                  href={bookingBundle.flightUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg text-center"
+                >
+                  {AFFILIATE_FLAGS.kiwi ? 'Search Flights on Kiwi' : 'Search Flights on Aviasales'}
+                </a>
+                <a
+                  href={bookingBundle.hotelUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg text-center"
+                >
+                  Search Hotels on Agoda
+                </a>
+                <a
+                  href={bookingBundle.activitiesUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg text-center"
+                >
+                  Browse Activities on GetYourGuide
+                </a>
+              </div>
+              <div className="mt-6 text-center">
+                <Link
+                  href="/mystery"
+                  className="inline-block text-skyblue hover:text-skyblue-dark font-semibold transition"
+                >
+                  Or let AI plan your perfect trip &rarr;
+                </Link>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        {/* Back to Guides */}
+        <div className="mt-8 text-center">
+          <Link
+            href="/blog"
+            className="inline-block bg-white hover:bg-gray-50 text-navy font-semibold py-3 px-8 rounded-lg transition shadow-lg"
+          >
+            &larr; Back to All Guides
+          </Link>
+        </div>
+      </div>
+    </>
+  )
 }
 
 export default function BlogPostPage() {
@@ -127,7 +378,6 @@ export default function BlogPostPage() {
 
         <div className="container mx-auto px-4 py-20">
           <div className="max-w-2xl mx-auto bg-red-50 border-2 border-red-500 rounded-xl p-8 text-center">
-            <div className="text-6xl mb-4">&#x274C;</div>
             <h1 className="text-2xl font-bold text-red-700 mb-2">{error}</h1>
             <p className="text-red-600 mb-6">The guide you&apos;re looking for doesn&apos;t exist.</p>
             <Link
@@ -141,18 +391,6 @@ export default function BlogPostPage() {
       </div>
     )
   }
-
-  // Build booking bundle for this destination
-  const routeInfo = extractRouteInfo(post)
-  const defaultOrigin = routeInfo.originIata || 'BKK'
-  const departDate = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
-  const bookingBundle = buildBookingBundle({
-    origin: defaultOrigin,
-    destination: routeInfo.destIata,
-    cityName: routeInfo.destCity,
-    departDate,
-    nights: 3,
-  })
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
@@ -177,186 +415,20 @@ export default function BlogPostPage() {
       </nav>
 
       <div className="container mx-auto px-4 py-12">
-        {/* Header */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <div className="bg-gradient-to-br from-skyblue via-skyblue-dark to-navy rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center opacity-10">
-              <span className="text-9xl">&#x1F30D;</span>
-            </div>
-            <div className="relative z-10">
-              <p className="text-skyblue-light text-sm font-semibold mb-2 uppercase tracking-wide">
-                Travel Guide
-              </p>
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-                {post.destination_name}
-              </h1>
-              <p className="text-xl text-skyblue-light mb-4">{post.country}</p>
-              <div className="flex items-center justify-center gap-6 text-sm text-white/80">
-                <span>{post.view_count} views</span>
-                <span>&bull;</span>
-                <span>{new Date(post.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        {post.type === 'editorial' ? (
+          <EditorialPostView post={post as EditorialPost} />
+        ) : (
+          <DestinationPostView post={post as DestinationPost} />
+        )}
 
-        {/* Content */}
-        <div className="max-w-4xl mx-auto">
-          <article className="bg-white rounded-2xl shadow-2xl p-8 md:p-12">
-            {/* Meta Description */}
-            <p className="text-lg text-gray-700 italic mb-8 pb-8 border-b border-gray-200">
-              {post.meta_description}
-            </p>
-
-            {/* Why Visit */}
-            <section className="mb-8">
-              <h2 className="text-3xl font-bold text-navy mb-4 flex items-center gap-3">
-                <span className="text-4xl">&#x2728;</span>
-                Why Visit {post.destination_name}?
-              </h2>
-              <div className="prose prose-lg max-w-none">
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {post.content.why_visit}
-                </p>
-              </div>
-            </section>
-
-            {/* Best Time to Visit */}
-            <section className="mb-8 bg-skyblue/10 rounded-xl p-6">
-              <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
-                <span className="text-3xl">&#x1F4C5;</span>
-                Best Time to Visit
-              </h2>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {post.content.best_time_to_visit}
-              </p>
-            </section>
-
-            {/* Budget Breakdown */}
-            <section className="mb-8">
-              <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
-                <span className="text-3xl">&#x1F4B0;</span>
-                Budget Breakdown
-              </h2>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {post.content.budget_breakdown}
-              </p>
-            </section>
-
-            {/* Top Attractions */}
-            <section className="mb-8 bg-yellow-50 rounded-xl p-6">
-              <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
-                <span className="text-3xl">&#x1F3AF;</span>
-                Top Attractions
-              </h2>
-              <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {post.content.top_attractions}
-              </div>
-            </section>
-
-            {/* Local Food Guide */}
-            <section className="mb-8">
-              <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
-                <span className="text-3xl">&#x1F37D;&#xFE0F;</span>
-                Local Food Guide
-              </h2>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {post.content.local_food_guide}
-              </p>
-            </section>
-
-            {/* Money Saving Tips */}
-            <section className="mb-8 bg-green-50 rounded-xl p-6">
-              <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
-                <span className="text-3xl">&#x1F4A1;</span>
-                Money Saving Tips
-              </h2>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {post.content.money_saving_tips}
-              </p>
-            </section>
-
-            {/* Safety Tips */}
-            <section className="mb-8">
-              <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
-                <span className="text-3xl">&#x1F6E1;&#xFE0F;</span>
-                Safety Tips
-              </h2>
-              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {post.content.safety_tips}
-              </p>
-            </section>
-
-            {/* BOOK THIS TRIP — Affiliate links section */}
-            <div className="mt-12 pt-8 border-t border-gray-200">
-              <div className="bg-gradient-to-r from-skyblue/20 to-navy/20 rounded-xl p-8">
-                <h3 className="text-2xl font-bold text-navy mb-3 text-center">
-                  Book Your Trip to {post.destination_name}
-                </h3>
-                <p className="text-gray-700 mb-6 text-center">
-                  Ready to go? Book flights, hotels, and activities for your trip.
-                </p>
-
-                <div className="space-y-3 max-w-md mx-auto">
-                  <a
-                    href={bookingBundle.flightUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg text-center"
-                  >
-                    {AFFILIATE_FLAGS.kiwi ? 'Search Flights on Kiwi' : 'Search Flights on Aviasales'}
-                  </a>
-
-                  <a
-                    href={bookingBundle.hotelUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg text-center"
-                  >
-                    Search Hotels on Agoda
-                  </a>
-
-                  <a
-                    href={bookingBundle.activitiesUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg text-center"
-                  >
-                    Browse Activities on GetYourGuide
-                  </a>
-                </div>
-
-                <div className="mt-6 text-center">
-                  <Link
-                    href="/mystery"
-                    className="inline-block text-skyblue hover:text-skyblue-dark font-semibold transition"
-                  >
-                    Or let AI plan your perfect trip &rarr;
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Share */}
-            <div className="mt-6 text-center">
-              <button
-                onClick={handleShare}
-                className="text-skyblue hover:text-skyblue-dark font-semibold transition"
-              >
-                Share this guide
-              </button>
-            </div>
-          </article>
-
-          {/* Back to Guides */}
-          <div className="mt-8 text-center">
-            <Link
-              href="/blog"
-              className="inline-block bg-white hover:bg-gray-50 text-navy font-semibold py-3 px-8 rounded-lg transition shadow-lg"
-            >
-              &larr; Back to All Guides
-            </Link>
-          </div>
+        {/* Share button */}
+        <div className="mt-4 text-center">
+          <button
+            onClick={handleShare}
+            className="text-skyblue hover:text-skyblue-dark font-semibold transition"
+          >
+            Share this guide
+          </button>
         </div>
       </div>
     </div>

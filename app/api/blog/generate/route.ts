@@ -152,9 +152,8 @@ Return this EXACT JSON structure:
 
   } catch (error) {
     console.error('[Blog Generate] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to generate blog'
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'Failed to generate blog post. Please try again.' },
       { status: 500 }
     )
   }

@@ -7,6 +7,7 @@ import PriceSlider from '@/components/PriceSlider'
 import LiveActivityFeed from '@/components/LiveActivityFeed'
 import RouteTrackingBadge from '@/components/RouteTrackingBadge'
 import RecentDealsCarousel from '@/components/RecentDealsCarousel'
+import EmailCapture from '@/components/EmailCapture'
 
 interface PriceAlert {
   id: string
@@ -558,6 +559,11 @@ export default function AlertsPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Email Subscription CTA */}
+        <div className="max-w-4xl mx-auto mt-12">
+          <EmailCapture context="alerts" />
         </div>
       </div>
     </div>

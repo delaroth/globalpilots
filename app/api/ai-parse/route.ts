@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,12 +15,37 @@ interface ParseResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    // Rate limit: 20 requests per minute for this AI endpoint
+    const clientIp = getClientIp(request)
+    const rl = rateLimit(`ai-parse:${clientIp}`, 20, 60 * 1000)
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment and try again.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) } }
+      )
+    }
+
+    let body: { query?: string }
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid request body. Expected JSON.' },
+        { status: 400 }
+      )
+    }
     const { query } = body
 
     if (!query || typeof query !== 'string') {
       return NextResponse.json(
         { error: 'Missing required parameter: query' },
+        { status: 400 }
+      )
+    }
+
+    if (query.length > 500) {
+      return NextResponse.json(
+        { error: 'Query is too long. Maximum 500 characters.' },
         { status: 400 }
       )
     }
@@ -71,9 +97,14 @@ Return this EXACT JSON structure:
     return NextResponse.json(result)
   } catch (error) {
     console.error('[AI-Parse] Error:', error)
+    const isTimeout = error instanceof Error && error.message.includes('timed out')
+    const statusCode = isTimeout ? 504 : 500
+    const clientMessage = isTimeout
+      ? 'Request timed out. Please try again.'
+      : 'Failed to parse query. Please try again.'
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to parse query' },
-      { status: 500 }
+      { error: clientMessage },
+      { status: statusCode }
     )
   }
 }

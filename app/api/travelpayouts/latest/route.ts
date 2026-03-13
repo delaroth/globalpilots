@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
 
   if (!TOKEN) {
     return NextResponse.json(
-      { error: 'TravelPayouts API token not configured' },
+      { error: 'Service not configured' },
       { status: 500 }
     )
   }
@@ -216,10 +216,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ...data, data: deals })
   } catch (error) {
     console.error('[Latest API] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch latest prices'
     return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
+      { error: 'Failed to fetch latest prices. Please try again.' },
+      { status: 502 }
     )
   }
 }

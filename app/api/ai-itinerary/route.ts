@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,12 +32,44 @@ interface ItineraryResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: ItineraryRequest = await request.json()
+    // Rate limit: 10 requests per minute for this AI endpoint
+    const clientIp = getClientIp(request)
+    const rl = rateLimit(`ai-itinerary:${clientIp}`, 10, 60 * 1000)
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment and try again.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) } }
+      )
+    }
+
+    let body: ItineraryRequest
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid request body. Expected JSON.' },
+        { status: 400 }
+      )
+    }
     const { destination, days, vibe } = body
 
     if (!destination || !days || !vibe) {
       return NextResponse.json(
         { error: 'Missing required parameters: destination, days, vibe' },
+        { status: 400 }
+      )
+    }
+
+    if (typeof days !== 'number' || days < 1 || days > 30) {
+      return NextResponse.json(
+        { error: 'Days must be between 1 and 30' },
+        { status: 400 }
+      )
+    }
+
+    if (typeof destination !== 'string' || destination.length > 100) {
+      return NextResponse.json(
+        { error: 'Invalid destination' },
         { status: 400 }
       )
     }
@@ -90,9 +123,17 @@ Return this EXACT JSON structure:
     return NextResponse.json(result)
   } catch (error) {
     console.error('[AI-Itinerary] Error:', error)
+    const isTimeout = error instanceof Error && error.message.includes('timed out')
+    const isAIFailure = error instanceof Error && error.message.includes('AI providers failed')
+    const statusCode = isTimeout ? 504 : isAIFailure ? 502 : 500
+    const clientMessage = isTimeout
+      ? 'Request timed out. Please try again.'
+      : isAIFailure
+        ? 'AI service is temporarily unavailable. Please try again later.'
+        : 'Failed to generate itinerary. Please try again.'
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to generate itinerary' },
-      { status: 500 }
+      { error: clientMessage },
+      { status: statusCode }
     )
   }
 }

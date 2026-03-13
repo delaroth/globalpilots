@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,16 @@ interface PredictResponse {
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limit: 15 requests per minute for this AI endpoint
+    const clientIp = getClientIp(request)
+    const rl = rateLimit(`ai-predict:${clientIp}`, 15, 60 * 1000)
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment and try again.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) } }
+      )
+    }
+
     const searchParams = request.nextUrl.searchParams
     const origin = searchParams.get('origin')
     const destination = searchParams.get('destination')
@@ -22,6 +33,13 @@ export async function GET(request: NextRequest) {
     if (!origin || !destination) {
       return NextResponse.json(
         { error: 'Missing required parameters: origin, destination' },
+        { status: 400 }
+      )
+    }
+
+    if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
+      return NextResponse.json(
+        { error: 'origin and destination must be 3-letter IATA codes' },
         { status: 400 }
       )
     }
@@ -36,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     if (!TOKEN) {
       return NextResponse.json(
-        { error: 'TravelPayouts API token not configured' },
+        { error: 'Service not configured' },
         { status: 500 }
       )
     }
@@ -117,9 +135,17 @@ Return this EXACT JSON structure:
     return NextResponse.json(result)
   } catch (error) {
     console.error('[AI-Predict] Error:', error)
+    const isTimeout = error instanceof Error && error.message.includes('timed out')
+    const isAIFailure = error instanceof Error && error.message.includes('AI providers failed')
+    const statusCode = isTimeout ? 504 : isAIFailure ? 502 : 500
+    const clientMessage = isTimeout
+      ? 'Request timed out. Please try again.'
+      : isAIFailure
+        ? 'AI service is temporarily unavailable. Please try again later.'
+        : 'Failed to predict prices. Please try again.'
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to predict prices' },
-      { status: 500 }
+      { error: clientMessage },
+      { status: statusCode }
     )
   }
 }

@@ -48,9 +48,13 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Signup error:', error)
+    console.error('[Signup] Error:', error)
+    // Only reveal specific auth errors, not internal details
+    const message = error instanceof Error && error.message.includes('already exists')
+      ? error.message
+      : 'Failed to create account. Please try again.'
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create account' },
+      { error: message },
       { status: 500 }
     )
   }

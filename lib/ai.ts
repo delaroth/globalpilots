@@ -11,8 +11,31 @@ interface AIResponse {
   provider: 'deepseek' | 'claude'
 }
 
+// Timeout duration for AI calls (30 seconds)
+const AI_TIMEOUT_MS = 30000
+
 /**
- * Call AI with DeepSeek primary and Claude fallback
+ * Fetch with a timeout. Rejects with a clear error if the request takes too long.
+ */
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal })
+    return response
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`AI request timed out after ${timeoutMs / 1000}s`)
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Call AI with DeepSeek primary and Claude fallback.
+ * Both calls are subject to a 30-second timeout.
  */
 export async function callAI(
   systemPrompt: string,
@@ -26,7 +49,7 @@ export async function callAI(
       throw new Error('DeepSeek API key not configured')
     }
 
-    const response = await fetch(`${DEEPSEEK_API_BASE}/chat/completions`, {
+    const response = await fetchWithTimeout(`${DEEPSEEK_API_BASE}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -41,7 +64,7 @@ export async function callAI(
         temperature,
         max_tokens: maxTokens,
       }),
-    })
+    }, AI_TIMEOUT_MS)
 
     if (!response.ok) {
       throw new Error(`DeepSeek API error: ${response.status}`)
@@ -74,7 +97,7 @@ export async function callAI(
 
       console.log('[AI] Falling back to Claude...')
 
-      const response = await fetch(`${ANTHROPIC_API_BASE}/v1/messages`, {
+      const response = await fetchWithTimeout(`${ANTHROPIC_API_BASE}/v1/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +113,7 @@ export async function callAI(
             { role: 'user', content: userPrompt },
           ],
         }),
-      })
+      }, AI_TIMEOUT_MS)
 
       if (!response.ok) {
         throw new Error(`Claude API error: ${response.status}`)
@@ -114,7 +137,7 @@ export async function callAI(
       }
     } catch (claudeError) {
       console.error('[AI] Claude also failed:', claudeError)
-      throw new Error('Both AI providers failed')
+      throw new Error('Both AI providers failed. Please try again later.')
     }
   }
 }

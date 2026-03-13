@@ -16,6 +16,7 @@ const TRAVELPAYOUTS_TOKEN = process.env.TRAVELPAYOUTS_TOKEN
  *   departDate   - YYYY-MM-DD (optional, for flight search)
  */
 export async function GET(request: NextRequest) {
+  try {
   const searchParams = request.nextUrl.searchParams
   const destination = searchParams.get('destination')?.toUpperCase()
   const daysStr = searchParams.get('days')
@@ -127,4 +128,11 @@ export async function GET(request: NextRequest) {
     totalEstimatedCost: totalWithFlight,
     savingTips: destData.savingTips,
   })
+  } catch (error) {
+    console.error('[Trip-Cost] Error:', error)
+    return NextResponse.json(
+      { error: 'Failed to calculate trip cost. Please try again.' },
+      { status: 500 }
+    )
+  }
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import EmailCapture from '@/components/EmailCapture'
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -60,19 +61,19 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <Link href="/" className="hover:text-skyblue transition">
+                <Link href="/about" className="hover:text-skyblue transition">
                   How It Works
                 </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-skyblue transition">
+                <Link href="/privacy" className="hover:text-skyblue transition">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-skyblue transition">
+                <Link href="/terms" className="hover:text-skyblue transition">
                   Terms of Service
-                </a>
+                </Link>
               </li>
             </ul>
 
@@ -90,6 +91,11 @@ export default function Footer() {
               </a>
             </div>
           </div>
+        </div>
+
+        {/* Deal Alerts Signup */}
+        <div className="border-t border-skyblue/20 pt-8 pb-8 max-w-md">
+          <EmailCapture context="footer" />
         </div>
 
         {/* Bottom Bar */}

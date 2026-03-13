@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   if (!TOKEN) {
     console.error('[Calendar API] Token not configured')
     return NextResponse.json(
-      { error: 'TravelPayouts API token not configured' },
+      { error: 'Service not configured' },
       { status: 500 }
     )
   }
@@ -80,10 +80,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data)
   } catch (error) {
     console.error('[Calendar API] Error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch calendar data. Please try again.'
     return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
+      { error: 'Failed to fetch calendar data. Please try again.' },
+      { status: 502 }
     )
   }
 }

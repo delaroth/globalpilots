@@ -1,5 +1,6 @@
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
+import InstallPrompt from '@/components/InstallPrompt'
 import Link from 'next/link'
 
 export default function Home() {
@@ -96,6 +97,7 @@ export default function Home() {
       </section>
 
       <Footer />
+      <InstallPrompt />
     </main>
   )
 }
