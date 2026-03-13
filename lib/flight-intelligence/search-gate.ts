@@ -2,9 +2,12 @@
 // Controls when to show cached estimates (Tier 1: Browse) vs hit live APIs (Tier 2: Live).
 // Protects expensive API quotas (Duffel search-to-book ratio, Kiwi rate limits)
 // while keeping the UX snappy for casual browsers.
+//
+// STEALTH MODE: Duffel is excluded from allowed sources entirely — sandbox only.
 
 import type { FlightOffer, PriceConfidence } from '@/lib/flight-providers/types'
 import { calculateConfidence, inferRouteVolatility, type ConfidenceInput } from './confidence'
+import { STEALTH_MODE, DUFFEL_SANDBOX, getDuffelToken } from '@/lib/stealth'
 
 export type SearchTier = 'browse' | 'live'
 
@@ -31,12 +34,22 @@ const BROWSE_CONFIG: TieredSearchConfig = {
   showLivePriceCta: true,
 }
 
-const LIVE_CONFIG: TieredSearchConfig = {
-  tier: 'live',
-  allowedSources: ['duffel', 'amadeus', 'kiwi', 'skyscanner', 'flightapi'],
-  maxResults: 20,
-  cacheTtlMs: 15 * 60 * 1000, // 15 minutes (live offers expire)
-  showLivePriceCta: false,
+/**
+ * Build the live tier config dynamically based on stealth mode.
+ * In stealth mode: Duffel is excluded from allowed sources entirely.
+ */
+function buildLiveConfig(): TieredSearchConfig {
+  const sources = STEALTH_MODE
+    ? ['amadeus', 'kiwi', 'skyscanner', 'flightapi'] // No Duffel in stealth
+    : ['duffel', 'amadeus', 'kiwi', 'skyscanner', 'flightapi']
+
+  return {
+    tier: 'live',
+    allowedSources: sources,
+    maxResults: 20,
+    cacheTtlMs: 15 * 60 * 1000, // 15 minutes (live offers expire)
+    showLivePriceCta: false,
+  }
 }
 
 /**
@@ -49,9 +62,26 @@ const LIVE_CONFIG: TieredSearchConfig = {
  * Tier 2 (Live): User clicks "Get Live Price", "Book Now", or "Verify Deal"
  *   → Kiwi live → Amadeus → Duffel (counted API calls)
  *   → Shows "$XXX live" with expiry countdown
+ *
+ * STEALTH MODE: Duffel is excluded from live tier sources.
+ * All searches use sandbox/test tokens only.
  */
 export function getSearchTier(intent: 'browse' | 'live'): TieredSearchConfig {
-  return intent === 'live' ? LIVE_CONFIG : BROWSE_CONFIG
+  return intent === 'live' ? buildLiveConfig() : BROWSE_CONFIG
+}
+
+/**
+ * Get the Duffel configuration for API calls.
+ * In stealth mode: always sandbox token, logged warning.
+ */
+export function getDuffelConfig(): { token: string | undefined; isSandbox: boolean } {
+  if (STEALTH_MODE) {
+    console.log('[SearchGate] Stealth mode: Duffel using sandbox token only')
+  }
+  return {
+    token: getDuffelToken(),
+    isSandbox: DUFFEL_SANDBOX,
+  }
 }
 
 /**
@@ -62,7 +92,7 @@ export function isCacheValid(
   fetchedAt: number,
   tier: SearchTier
 ): boolean {
-  const config = tier === 'live' ? LIVE_CONFIG : BROWSE_CONFIG
+  const config = tier === 'live' ? buildLiveConfig() : BROWSE_CONFIG
   return (Date.now() - fetchedAt) < config.cacheTtlMs
 }
 

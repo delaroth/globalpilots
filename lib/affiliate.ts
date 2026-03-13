@@ -5,11 +5,13 @@
 // Phase 4:   Returns managed-package actions (bundled mystery packages)
 
 import type { FlightOffer, FlightSource } from '@/lib/flight-providers/types'
+import { STEALTH_MODE, canEarnCommissions, canProcessPayments, logStealthBlock } from '@/lib/stealth'
 
 export type AffiliateProgram = 'aviasales' | 'agoda' | 'getyourguide' | 'klook' | 'kiwi' | 'wayaway' | 'jetradar'
 
 // ─── Feature Flags ───
-// Flip to true when each program/capability is approved
+// Flip to true when each program/capability is approved.
+// In STEALTH_MODE, affiliate flags are force-disabled regardless of these values.
 export const AFFILIATE_FLAGS = {
   agoda: false,
   getyourguide: false,
@@ -20,10 +22,19 @@ export const AFFILIATE_FLAGS = {
 }
 
 export const BOOKING_FLAGS = {
-  /** Phase 2: Enable Duffel direct booking flow */
+  /** Phase 2: Enable Duffel direct booking flow (blocked in stealth mode) */
   duffelDirectBook: false,
-  /** Phase 4: Enable managed mystery package purchases */
+  /** Phase 4: Enable managed mystery package purchases (blocked in stealth mode) */
   managedPackages: false,
+}
+
+/**
+ * Check if a given affiliate flag is truly active.
+ * In stealth mode: ALL affiliate flags return false — no commissions earned.
+ */
+function isAffiliateActive(flag: keyof typeof AFFILIATE_FLAGS): boolean {
+  if (!canEarnCommissions()) return false
+  return AFFILIATE_FLAGS[flag]
 }
 
 const MARKER = '708764'
@@ -65,23 +76,73 @@ export interface ManagedPackageAction {
   label: string
 }
 
+/** Returned in stealth mode instead of real booking/affiliate actions */
+export interface SandboxAction {
+  type: 'sandbox-demo'
+  intendedAction: 'affiliate-redirect' | 'direct-book' | 'managed-package'
+  intendedUrl?: string
+  provider: string
+  label: string
+  message: string
+}
+
+export type SafeBookingAction = BookingAction | SandboxAction
+
 /**
  * Resolve the correct booking action for a FlightOffer.
  *
- * Decision tree:
+ * STEALTH MODE GUARD:
+ * When STEALTH_MODE is active, ALL actions are intercepted:
+ * - direct-book → sandbox-demo (no real payments)
+ * - affiliate-redirect → sandbox-demo (no real commissions)
+ * The intended action is logged and preserved in intendedAction/intendedUrl
+ * so the Bulgaria migration just requires flipping the env var.
+ *
+ * LIVE MODE decision tree:
  * 1. If source is 'duffel' + has offerId + duffelDirectBook flag → direct-book
- * 2. If source is 'kiwi' + kiwi affiliate flag → kiwi affiliate URL
- * 3. Default → Aviasales affiliate redirect
+ * 2. Default → affiliate redirect via appropriate network
  *
  * The frontend renders different UIs per type:
  * - affiliate-redirect: opens URL in new tab ("Search Flights →")
  * - direct-book: shows payment form ("Book Now — $XXX")
  * - managed-package: shows bundle checkout ("Book Package — $XXX")
+ * - sandbox-demo: shows DemoBookingModal with sandbox warning
  */
-export function resolveBookingAction(offer: FlightOffer): BookingAction {
+export function resolveBookingAction(offer: FlightOffer): SafeBookingAction {
+  // ─── STEALTH MODE: Intercept ALL booking actions ───
+  if (STEALTH_MODE) {
+    // Determine what the action WOULD be in live mode
+    const wouldBeDirect = BOOKING_FLAGS.duffelDirectBook && offer.source === 'duffel' && offer.offerId
+
+    if (wouldBeDirect) {
+      logStealthBlock('direct-book', `Duffel offer ${offer.offerId} — $${offer.price}`)
+      return {
+        type: 'sandbox-demo',
+        intendedAction: 'direct-book',
+        provider: 'duffel',
+        label: 'Booking Preview (Demo)',
+        message: 'This is a development preview. Real booking via Duffel is disabled in Sandbox Mode.',
+      }
+    }
+
+    // Affiliate redirect — neutralize the tracking
+    logStealthBlock('affiliate-redirect', `${offer.source} → ${offer.bookingUrl?.slice(0, 60)}...`)
+    return {
+      type: 'sandbox-demo',
+      intendedAction: 'affiliate-redirect',
+      intendedUrl: offer.bookingUrl,
+      provider: offer.source,
+      label: 'Search Flights (Demo)',
+      message: 'Live affiliate links are disabled in this build. This is a development preview.',
+    }
+  }
+
+  // ─── LIVE MODE: Real booking actions ───
+
   // Phase 2: Duffel direct booking
   if (
     BOOKING_FLAGS.duffelDirectBook &&
+    canProcessPayments() &&
     offer.source === 'duffel' &&
     offer.offerId
   ) {
@@ -112,7 +173,18 @@ export function resolveHotelBookingAction(params: {
   cityName: string
   checkIn: string
   nights: number
-}): BookingAction {
+}): SafeBookingAction {
+  if (STEALTH_MODE) {
+    logStealthBlock('hotel-affiliate', `${params.cityName} ${params.nights}n`)
+    return {
+      type: 'sandbox-demo',
+      intendedAction: 'affiliate-redirect',
+      intendedUrl: buildHotelLink(params.cityName, params.checkIn, params.nights),
+      provider: 'agoda',
+      label: 'Search Hotels (Demo)',
+      message: 'Live hotel affiliate links are disabled in this build.',
+    }
+  }
   return {
     type: 'affiliate-redirect',
     url: buildHotelLink(params.cityName, params.checkIn, params.nights),
@@ -124,7 +196,18 @@ export function resolveHotelBookingAction(params: {
 /**
  * Resolve booking action for activities.
  */
-export function resolveActivityBookingAction(cityName: string): BookingAction {
+export function resolveActivityBookingAction(cityName: string): SafeBookingAction {
+  if (STEALTH_MODE) {
+    logStealthBlock('activity-affiliate', cityName)
+    return {
+      type: 'sandbox-demo',
+      intendedAction: 'affiliate-redirect',
+      intendedUrl: buildActivitiesLink(cityName),
+      provider: 'getyourguide',
+      label: 'Find Activities (Demo)',
+      message: 'Live activity affiliate links are disabled in this build.',
+    }
+  }
   return {
     type: 'affiliate-redirect',
     url: buildActivitiesLink(cityName),
@@ -154,15 +237,15 @@ export function buildFlightLinkForSource(
   returnDate?: string
 ): string {
   // Kiwi affiliate
-  if (source === 'kiwi' && AFFILIATE_FLAGS.kiwi) {
+  if (source === 'kiwi' && isAffiliateActive('kiwi')) {
     return buildKiwiFlightLink(origin, dest, date)
   }
   // WayAway affiliate (if approved — offers cashback)
-  if (AFFILIATE_FLAGS.wayaway && process.env.WAYAWAY_PARTNER_ID) {
+  if (isAffiliateActive('wayaway') && process.env.WAYAWAY_PARTNER_ID) {
     return buildWayAwayLink(origin, dest, date, returnDate)
   }
   // JetRadar affiliate (alternative to Aviasales, same parent company)
-  if (AFFILIATE_FLAGS.jetradar && process.env.JETRADAR_MARKER) {
+  if (isAffiliateActive('jetradar') && process.env.JETRADAR_MARKER) {
     return buildJetRadarLink(origin, dest, date, returnDate)
   }
   // Default: Aviasales via TravelPayouts
@@ -172,6 +255,9 @@ export function buildFlightLinkForSource(
 /**
  * Build Aviasales affiliate flight link (default)
  * date = YYYY-MM-DD, converts to DDMM internally
+ *
+ * STEALTH MODE: Returns the raw Aviasales search URL without tp.media
+ * affiliate wrapping — no tracking, no commissions, just the search page.
  */
 export function buildFlightLink(origin: string, dest: string, date: string, returnDate?: string): string {
   const formatDate = (dateStr: string) => {
@@ -186,11 +272,17 @@ export function buildFlightLink(origin: string, dest: string, date: string, retu
   const searchPath = `${origin}${departFormatted}${dest}${returnFormatted}1`
   const aviasalesUrl = `https://www.aviasales.com/search/${searchPath}`
 
+  // Stealth mode: return raw search URL — no affiliate wrapper
+  if (!canEarnCommissions()) {
+    return aviasalesUrl
+  }
+
   return `https://tp.media/r?campaign_id=${CAMPAIGN_ID}&marker=${MARKER}&p=4114&sub_id=${SUB_ID}&trs=${TRS}&u=${encodeURIComponent(aviasalesUrl)}`
 }
 
 /**
  * Build Agoda hotel deep link
+ * STEALTH: No affiliate cid appended — clean search URL only
  */
 export function buildHotelLink(cityName: string, checkIn: string, nights: number = 3): string {
   const checkInDate = new Date(checkIn)
@@ -201,7 +293,8 @@ export function buildHotelLink(cityName: string, checkIn: string, nights: number
 
   let url = `https://www.agoda.com/search?city=${encodeURIComponent(cityName)}&checkIn=${formatDate(checkInDate)}&checkOut=${formatDate(checkOutDate)}&adults=1`
 
-  if (AFFILIATE_FLAGS.agoda && process.env.AGODA_AFFILIATE_ID) {
+  // Only append affiliate tracking when commissions are allowed
+  if (isAffiliateActive('agoda') && process.env.AGODA_AFFILIATE_ID) {
     url += `&cid=${process.env.AGODA_AFFILIATE_ID}`
   }
 
@@ -210,12 +303,14 @@ export function buildHotelLink(cityName: string, checkIn: string, nights: number
 
 /**
  * Build GetYourGuide activities deep link
+ * STEALTH: No partner_id appended — clean search URL only
  */
 export function buildActivitiesLink(cityName: string): string {
   const slug = cityName.toLowerCase().replace(/\s+/g, '-')
   let url = `https://www.getyourguide.com/${slug}/`
 
-  if (AFFILIATE_FLAGS.getyourguide && process.env.GETYOURGUIDE_PARTNER_ID) {
+  // Only append affiliate tracking when commissions are allowed
+  if (isAffiliateActive('getyourguide') && process.env.GETYOURGUIDE_PARTNER_ID) {
     url += `?partner_id=${process.env.GETYOURGUIDE_PARTNER_ID}`
   }
 
@@ -224,9 +319,10 @@ export function buildActivitiesLink(cityName: string): string {
 
 /**
  * Build Kiwi flight deep link
+ * STEALTH: Falls back to raw Aviasales search (no affiliate wrapper)
  */
 export function buildKiwiFlightLink(origin: string, dest: string, date: string): string {
-  if (AFFILIATE_FLAGS.kiwi && process.env.KIWI_API_KEY) {
+  if (isAffiliateActive('kiwi') && process.env.KIWI_API_KEY) {
     const formatDate = (dateStr: string) => {
       const d = new Date(dateStr)
       const day = String(d.getDate()).padStart(2, '0')
@@ -275,7 +371,7 @@ export function buildBookingBundle(params: {
 }): { flightUrl: string; hotelUrl: string; activitiesUrl: string } {
   const { origin, destination, cityName, departDate, nights = 3 } = params
 
-  const flightUrl = AFFILIATE_FLAGS.kiwi
+  const flightUrl = isAffiliateActive('kiwi')
     ? buildKiwiFlightLink(origin, destination, departDate)
     : buildFlightLink(origin, destination, departDate)
 
@@ -293,5 +389,9 @@ export function generateAffiliateLink(params: FlightParams): string {
 }
 
 export function generateCustomAffiliateLink(destinationUrl: string): string {
+  // Stealth: return the raw URL without affiliate wrapping
+  if (!canEarnCommissions()) {
+    return destinationUrl
+  }
   return `https://tp.media/r?campaign_id=${CAMPAIGN_ID}&marker=${MARKER}&p=4114&sub_id=${SUB_ID}&trs=${TRS}&u=${encodeURIComponent(destinationUrl)}`
 }

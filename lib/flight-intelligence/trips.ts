@@ -1,12 +1,41 @@
 // ─── Trip & Package Data Model ───
 // Treats every trip as a collection of segments (flight, hotel, activity, transport).
-// Today: stores segment metadata + affiliate links.
+// Today: stores segment metadata + affiliate links as "Saved Itineraries."
 // Phase 4: each segment becomes a bookable service ID with provider references.
+//
+// STEALTH MODE GUARD:
+// - Trips cannot progress beyond 'planned' status (no 'booked', 'quoted', 'confirmed')
+// - No orders, invoices, or price-locked commitments
+// - All data is stored as conceptual itineraries, not financial records
+
+import { STEALTH_MODE, isStatusAllowed, logStealthBlock } from '@/lib/stealth'
 
 export type SegmentType = 'flight' | 'hotel' | 'activity' | 'transport'
 export type SegmentStatus = 'planned' | 'booked' | 'confirmed' | 'cancelled'
 export type TripStatus = 'draft' | 'planned' | 'quoted' | 'booked' | 'completed' | 'cancelled'
 export type TripType = 'mystery' | 'multi-city' | 'layover' | 'search' | 'custom'
+
+/**
+ * Safely set trip status with stealth mode enforcement.
+ * In stealth mode: clamps status to 'planned' maximum, logs the block.
+ */
+export function safeTripStatus(desired: TripStatus): TripStatus {
+  if (isStatusAllowed(desired)) return desired
+  logStealthBlock('trip-status', `Cannot set status to '${desired}' in sandbox mode — clamped to 'planned'`)
+  return 'planned'
+}
+
+/**
+ * Safely set segment status with stealth mode enforcement.
+ */
+export function safeSegmentStatus(desired: SegmentStatus): SegmentStatus {
+  if (!STEALTH_MODE) return desired
+  if (desired === 'booked' || desired === 'confirmed') {
+    logStealthBlock('segment-status', `Cannot set status to '${desired}' in sandbox mode — clamped to 'planned'`)
+    return 'planned'
+  }
+  return desired
+}
 
 export interface TripSegment {
   id: string

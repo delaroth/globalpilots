@@ -19,17 +19,18 @@ export type { MergedOffer, AlternativePrice } from './merge'
 export { stitchItinerary, layoverRouteToStitchedItinerary } from './stopover'
 export type { StitchedItinerary, ConnectionInfo, ItineraryType } from './stopover'
 
-// 2-tier search gating
-export { getSearchTier, isCacheValid, annotateForUI, shouldShowLivePriceBanner } from './search-gate'
+// 2-tier search gating (with Duffel sandbox enforcement)
+export { getSearchTier, getDuffelConfig, isCacheValid, annotateForUI, shouldShowLivePriceBanner } from './search-gate'
 export type { SearchTier, TieredSearchConfig, AnnotatedOffer, UIAnnotation } from './search-gate'
 
 // Metadata enrichment (Phase 4 placeholder)
 export { enrichOffers, enrichSegment, calculateReliabilityScore } from './enrichment'
 export type { AircraftSpec, OnTimePerformance, GateStatus, EnrichedOffer, EnrichedSegment } from './enrichment'
 
-// Trip & package data model
+// Trip & package data model (with stealth status guards)
 export {
   buildMysteryTrip, buildMultiCityTrip, buildLayoverTrip,
+  safeTripStatus, safeSegmentStatus,
 } from './trips'
 export type {
   Trip, TripSegment, TripStatus, TripType, SegmentType, SegmentStatus,
