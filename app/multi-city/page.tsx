@@ -33,6 +33,21 @@ const vibeOptions = [
   { emoji: '\u{1F333}', label: 'Nature', value: 'Nature' },
 ]
 
+const accommodationLevels = [
+  { label: 'Hostel', value: 'hostel', icon: '\u{1F3D5}\u{FE0F}', desc: '$10-30/night', maxPerNight: 30 },
+  { label: 'Budget', value: 'budget', icon: '\u{1F3E0}', desc: '$30-60/night', maxPerNight: 60 },
+  { label: 'Mid-Range', value: 'mid-range', icon: '\u{1F3E8}', desc: '$60-120/night', maxPerNight: 120 },
+  { label: 'Upscale', value: 'upscale', icon: '\u{1F3E9}', desc: '$120-250/night', maxPerNight: 250 },
+  { label: 'Luxury', value: 'luxury', icon: '\u{2728}', desc: '$250+/night', maxPerNight: 500 },
+]
+
+const budgetPriorities = [
+  { label: 'Fly Further', value: 'flights', desc: 'Explore distant destinations', split: { flights: 50, hotels: 25, activities: 25 } },
+  { label: 'Balanced', value: 'balanced', desc: 'Even split across everything', split: { flights: 35, hotels: 35, activities: 30 } },
+  { label: 'Better Stays', value: 'hotels', desc: 'Nicer accommodation', split: { flights: 20, hotels: 50, activities: 30 } },
+  { label: 'More Experiences', value: 'activities', desc: 'Tours, food, nightlife', split: { flights: 25, hotels: 25, activities: 50 } },
+]
+
 const loadingMessages = [
   'Planning your adventure...',
   'Picking the best cities...',
@@ -83,6 +98,8 @@ function MultiCityContent() {
   const [numCities, setNumCities] = useState(3)
   const [region, setRegion] = useState('Any')
   const [selectedVibes, setSelectedVibes] = useState<string[]>([])
+  const [accommodationLevel, setAccommodationLevel] = useState('mid-range')
+  const [budgetPriority, setBudgetPriority] = useState('balanced')
 
   const [step, setStep] = useState<'form' | 'loading' | 'results'>('form')
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0)
@@ -165,6 +182,8 @@ function MultiCityContent() {
           vibe: selectedVibes.length > 0 ? selectedVibes : undefined,
           departureDate: departureMode === 'exact' ? departureDate : undefined,
           departureTimeframe: departureMode === 'flexible' ? departureTimeframe : undefined,
+          accommodationLevel,
+          budgetPriority,
         }),
       })
 
@@ -332,6 +351,55 @@ function MultiCityContent() {
                   />
                 </div>
                 <p className="text-sm text-gray-500 mt-1">Covers all flights + daily expenses across all cities</p>
+              </div>
+
+              {/* Accommodation Level */}
+              <div>
+                <label className="block text-lg font-semibold text-navy mb-3">
+                  Accommodation level
+                </label>
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                  {accommodationLevels.map((level) => (
+                    <button
+                      key={level.value}
+                      type="button"
+                      onClick={() => setAccommodationLevel(level.value)}
+                      className={`flex flex-col items-center py-3 px-2 rounded-xl font-medium text-sm transition-all transform hover:scale-105 ${
+                        accommodationLevel === level.value
+                          ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue-dark'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <span className="text-lg mb-1">{level.icon}</span>
+                      <span className="font-semibold">{level.label}</span>
+                      <span className={`text-xs mt-0.5 ${accommodationLevel === level.value ? 'text-navy/70' : 'text-gray-400'}`}>{level.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Budget Priority */}
+              <div>
+                <label className="block text-lg font-semibold text-navy mb-3">
+                  Budget priority
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {budgetPriorities.map((priority) => (
+                    <button
+                      key={priority.value}
+                      type="button"
+                      onClick={() => setBudgetPriority(priority.value)}
+                      className={`flex flex-col items-center py-3 px-2 rounded-xl font-medium text-sm transition-all transform hover:scale-105 ${
+                        budgetPriority === priority.value
+                          ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue-dark'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <span className="font-semibold">{priority.label}</span>
+                      <span className={`text-xs mt-0.5 ${budgetPriority === priority.value ? 'text-navy/70' : 'text-gray-400'}`}>{priority.desc}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Trip Length Slider — non-linear: 5-365 days */}

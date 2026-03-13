@@ -21,6 +21,8 @@ interface MysteryRequest {
   packageComponents?: PackageComponents
   email?: string
   exclude?: string[]
+  accommodationLevel?: string
+  budgetPriority?: string
 }
 
 function calculateFlexibleDateRange(timeframe: string): { dateFrom: string; dateTo: string } {
@@ -181,6 +183,8 @@ export async function POST(request: NextRequest) {
       )
     }
     const { origin, budget, vibes, dates, tripDuration = 3, packageComponents, email, exclude = [] } = body
+    const accommodationLevel = body.accommodationLevel || 'mid-range'
+    const budgetPriority = body.budgetPriority || 'balanced'
 
     if (!origin || !budget || !vibes || vibes.length === 0) {
       return NextResponse.json(
@@ -212,12 +216,29 @@ export async function POST(request: NextRequest) {
 
     const allocation = calculateBudgetAllocation(budget, tripDuration, components)
     const budgetTier = getBudgetTier(budget, tripDuration)
+
+    // Override allocation based on user's budget priority
+    const prioritySplits: Record<string, { flights: number; hotels: number; activities: number }> = {
+      'flights': { flights: 50, hotels: 25, activities: 25 },
+      'balanced': { flights: 35, hotels: 35, activities: 30 },
+      'hotels': { flights: 20, hotels: 50, activities: 30 },
+      'activities': { flights: 25, hotels: 25, activities: 50 },
+    }
+    const userSplit = prioritySplits[budgetPriority] || prioritySplits['balanced']
+    const usableBudget = budget - allocation.buffer
+    if (components.includeFlight) allocation.flight = Math.floor(usableBudget * userSplit.flights / 100)
+    if (components.includeHotel) {
+      allocation.hotel_total = Math.floor(usableBudget * userSplit.hotels / 100)
+      allocation.hotel_per_night = Math.floor(allocation.hotel_total / tripDuration)
+    }
+    allocation.activities = Math.floor(usableBudget * userSplit.activities / 100)
+
     const allocationText = formatAllocationForAI(allocation, tripDuration)
 
     console.log('[AI-Mystery] Budget allocation:', allocationText)
 
     // Check cache (include exclude list to avoid serving cached excluded destinations)
-    const cacheKey = `mystery:${origin}:${budget}:${vibes.join(',')}:${dates}:${tripDuration}:${JSON.stringify(components)}:${exclude.sort().join(',')}`
+    const cacheKey = `mystery:${origin}:${budget}:${vibes.join(',')}:${dates}:${tripDuration}:${JSON.stringify(components)}:${exclude.sort().join(',')}:${accommodationLevel}:${budgetPriority}`
     const cached = getCached<MysteryResponse>(cacheKey)
     if (cached) {
       console.log('[AI-Mystery] Cache hit')
@@ -251,11 +272,12 @@ export async function POST(request: NextRequest) {
           kiwiDateTo = new Date(new Date(departDate).getTime() + 30 * 86400000).toISOString().split('T')[0]
         }
 
+        const maxFlightPrice = Math.floor(budget * (userSplit.flights / 100))
         const kiwiResults = await searchKiwiInspiration({
           origin,
           dateFrom: kiwiDateFrom,
           dateTo: kiwiDateTo,
-          maxPrice: Math.floor(budget * 0.45),
+          maxPrice: maxFlightPrice,
         })
 
         priceInfo = kiwiResults.map(r => ({
@@ -279,8 +301,8 @@ export async function POST(request: NextRequest) {
           const pricesData = await pricesResponse.json()
           const destinations = pricesData.data || []
 
-          // Apply budget filter: flight ≤ 45% of total budget
-          const maxFlightPrice = budget * 0.45
+          // Apply budget filter based on user's budget priority split
+          const maxFlightPrice = budget * (userSplit.flights / 100)
           priceInfo = destinations
             .filter((d: any) => d.value <= maxFlightPrice)
             .slice(0, 20)
@@ -301,7 +323,7 @@ export async function POST(request: NextRequest) {
       priceIsEstimate = true
       const region = getOriginRegion(origin)
       const fallbacks = FALLBACK_DESTINATIONS[region] || FALLBACK_DESTINATIONS['SE Asia']
-      const maxFlightPrice = budget * 0.45
+      const maxFlightPrice = budget * (userSplit.flights / 100)
 
       priceInfo = fallbacks
         .filter(f => f.priceRange[0] <= maxFlightPrice)
@@ -342,6 +364,17 @@ export async function POST(request: NextRequest) {
       ? `\nThe user has flexible dates within the range ${flexibleRange.dateFrom} to ${flexibleRange.dateTo} (timeframe: ${flexibleTimeframe}). Suggest the optimal departure and return dates within this range for the destination you pick, considering weather, events, and best value. Include "suggestedDepartureDate" and "suggestedReturnDate" (YYYY-MM-DD format) in your response.`
       : ''
 
+    const accomDescriptions: Record<string, string> = {
+      'hostel': 'hostels, guesthouses, or very budget accommodation ($10-30/night)',
+      'budget': 'budget hotels or Airbnbs ($30-60/night)',
+      'mid-range': 'comfortable mid-range hotels ($60-120/night)',
+      'upscale': 'upscale hotels with good amenities ($120-250/night)',
+      'luxury': 'luxury or boutique hotels ($250+/night)',
+    }
+    const accomMaxPerNight: Record<string, number> = {
+      'hostel': 30, 'budget': 60, 'mid-range': 120, 'upscale': 250, 'luxury': 500
+    }
+
     const userPrompt = `Given:
 - Total Budget: ${budget} USD for ${tripDuration} days
 - Budget Tier: ${budgetTier}
@@ -351,6 +384,9 @@ export async function POST(request: NextRequest) {
 - Vibes: ${vibes.join(', ')}
 - Package includes: ${components.includeFlight ? 'Flight' : ''} ${components.includeHotel ? 'Hotel' : ''} ${components.includeItinerary ? 'Itinerary' : ''} ${components.includeTransportation ? 'Transport' : ''}
 - Available destinations with flight prices: ${JSON.stringify(priceInfo)}${estimateNote}${excludeNote}${flexibleDateNote}
+- Accommodation level: ${accomDescriptions[accommodationLevel] || 'mid-range hotels'}
+- Hotel per night MUST NOT exceed $${accomMaxPerNight[accommodationLevel] || 120}
+- Budget priority: "${budgetPriority}" — ${budgetPriority === 'flights' ? 'User wants to fly FURTHER to more interesting/distant destinations. Pick faraway destinations, not nearby ones.' : budgetPriority === 'hotels' ? 'User wants nicer accommodation. Closer destinations are fine if the hotel is great.' : budgetPriority === 'activities' ? 'User wants rich experiences. Pick destinations known for food, culture, tours.' : 'Balance distance, accommodation, and experiences.'}
 
 CRITICAL BUDGET RULES:
 1. Flight cost MUST be <= $${allocation.flight}

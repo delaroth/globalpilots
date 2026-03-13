@@ -23,6 +23,21 @@ const timeframeOptions = [
   { label: 'Anytime', value: 'anytime' },
 ]
 
+const accommodationLevels = [
+  { label: 'Hostel', value: 'hostel', icon: '🏕️', desc: '$10-30/night', maxPerNight: 30 },
+  { label: 'Budget', value: 'budget', icon: '🏠', desc: '$30-60/night', maxPerNight: 60 },
+  { label: 'Mid-Range', value: 'mid-range', icon: '🏨', desc: '$60-120/night', maxPerNight: 120 },
+  { label: 'Upscale', value: 'upscale', icon: '🏩', desc: '$120-250/night', maxPerNight: 250 },
+  { label: 'Luxury', value: 'luxury', icon: '✨', desc: '$250+/night', maxPerNight: 500 },
+]
+
+const budgetPriorities = [
+  { label: 'Fly Further', value: 'flights', desc: 'Explore distant destinations', split: { flights: 50, hotels: 25, activities: 25 } },
+  { label: 'Balanced', value: 'balanced', desc: 'Even split across everything', split: { flights: 35, hotels: 35, activities: 30 } },
+  { label: 'Better Stays', value: 'hotels', desc: 'Nicer accommodation', split: { flights: 20, hotels: 50, activities: 30 } },
+  { label: 'More Experiences', value: 'activities', desc: 'Tours, food, nightlife', split: { flights: 25, hotels: 25, activities: 50 } },
+]
+
 const travellerTypes = ['Solo', 'Couple', 'Group']
 
 const quickThemes = [
@@ -80,6 +95,8 @@ export default function MysteryPage() {
     includeTransportation: false,
   })
   const [emailForUpdates, setEmailForUpdates] = useState('')
+  const [accommodationLevel, setAccommodationLevel] = useState('mid-range')
+  const [budgetPriority, setBudgetPriority] = useState('balanced')
 
   // Scroll to error when it appears
   useEffect(() => {
@@ -218,6 +235,8 @@ export default function MysteryPage() {
           packageComponents,
           email: emailForUpdates || undefined,
           exclude: excludeListRef.current.length > 0 ? excludeListRef.current : undefined,
+          accommodationLevel,
+          budgetPriority,
         }),
       })
 
@@ -390,6 +409,55 @@ export default function MysteryPage() {
                 <p className="text-sm text-gray-600 mt-1">
                   Total budget for flights + accommodation + activities
                 </p>
+              </div>
+
+              {/* Accommodation Level */}
+              <div className="mb-6">
+                <label className="block text-lg font-semibold text-navy mb-3">
+                  What kind of stays? 🛏️
+                </label>
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                  {accommodationLevels.map((level) => (
+                    <button
+                      key={level.value}
+                      type="button"
+                      onClick={() => setAccommodationLevel(level.value)}
+                      className={`py-3 px-2 rounded-lg font-medium transition-all text-center ${
+                        accommodationLevel === level.value
+                          ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue/50'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      <div className="text-xl mb-1">{level.icon}</div>
+                      <div className="text-sm font-semibold">{level.label}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{level.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Budget Priority */}
+              <div className="mb-6">
+                <label className="block text-lg font-semibold text-navy mb-3">
+                  Where should we focus your budget? 🎯
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {budgetPriorities.map((priority) => (
+                    <button
+                      key={priority.value}
+                      type="button"
+                      onClick={() => setBudgetPriority(priority.value)}
+                      className={`py-3 px-4 rounded-lg font-medium transition-all text-left ${
+                        budgetPriority === priority.value
+                          ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue/50'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      <div className="text-sm font-semibold">{priority.label}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{priority.desc}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Departure City */}

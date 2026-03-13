@@ -15,6 +15,8 @@ interface MultiCityRequest {
   vibe?: string[]
   departureDate?: string
   departureTimeframe?: string
+  accommodationLevel?: string
+  budgetPriority?: string
 }
 
 interface CityStop {
@@ -57,6 +59,8 @@ export async function POST(request: NextRequest) {
       )
     }
     const { origin, totalBudget, totalDays, numCities, region, vibe, departureDate, departureTimeframe } = body
+    const accommodationLevel = body.accommodationLevel || 'mid-range'
+    const budgetPriority = body.budgetPriority || 'balanced'
 
     // Validation
     if (!origin || !totalBudget || !totalDays || !numCities) {
@@ -95,7 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check cache (1 hour TTL)
-    const cacheKey = `multi-city:${origin}:${totalBudget}:${totalDays}:${numCities}:${region || 'any'}:${(vibe || []).sort().join(',')}:${departureDate || ''}:${departureTimeframe || ''}`
+    const cacheKey = `multi-city:${origin}:${totalBudget}:${totalDays}:${numCities}:${region || 'any'}:${(vibe || []).sort().join(',')}:${departureDate || ''}:${departureTimeframe || ''}:${accommodationLevel}:${budgetPriority}`
     const cached = getCached<MultiCityResponse>(cacheKey)
     if (cached) {
       console.log('[Multi-City] Cache hit')
@@ -145,6 +149,28 @@ export async function POST(request: NextRequest) {
 - Budget allocation: approximately 40% for all flights, 60% for daily costs.`
     }
 
+    // Accommodation constraint
+    const accomMaxPerNight: Record<string, number> = {
+      'hostel': 30, 'budget': 60, 'mid-range': 120, 'upscale': 250, 'luxury': 500
+    }
+    const accomDescriptions: Record<string, string> = {
+      'hostel': 'hostels, guesthouses, or very budget accommodation ($10-30/night)',
+      'budget': 'budget hotels or Airbnbs ($30-60/night)',
+      'mid-range': 'comfortable mid-range hotels ($60-120/night)',
+      'upscale': 'upscale hotels with good amenities ($120-250/night)',
+      'luxury': 'luxury or boutique hotels ($250+/night)',
+    }
+
+    // Budget split from priority
+    const prioritySplits: Record<string, { flights: number; hotels: number; activities: number }> = {
+      'flights': { flights: 50, hotels: 25, activities: 25 },
+      'balanced': { flights: 35, hotels: 35, activities: 30 },
+      'hotels': { flights: 20, hotels: 50, activities: 30 },
+      'activities': { flights: 25, hotels: 25, activities: 50 },
+    }
+    const split = prioritySplits[budgetPriority] || prioritySplits['balanced']
+    const maxNightly = accomMaxPerNight[accommodationLevel] || 120
+
     const userPrompt = `Plan a ${numCities}-city trip starting and ending at ${origin} with these constraints:
 - Total budget: $${totalBudget} USD (covers all flights between cities + daily expenses)
 - Total duration: ${totalDays} days
@@ -163,6 +189,9 @@ ${paceGuidance}
 7. Choose cities that are geographically logical together — no zigzagging across continents
 8. Each city should offer a different experience or highlight
 9. Total of all flight costs + (dailyCost * days for each city) MUST NOT exceed $${totalBudget}
+10. Accommodation level: ${accomDescriptions[accommodationLevel] || 'mid-range hotels'}. The estimatedDailyCost should reflect this — hotel portion MUST NOT exceed $${maxNightly}/night.
+11. Budget priority: Allocate approximately ${split.flights}% of total budget to flights, ${split.hotels}% to accommodation, and ${split.activities}% to activities/food/transport.
+12. With "${budgetPriority}" priority: ${budgetPriority === 'flights' ? 'Prioritize reaching interesting faraway destinations even if accommodation is simpler.' : budgetPriority === 'hotels' ? 'Prioritize comfortable stays, even if that means closer destinations.' : budgetPriority === 'activities' ? 'Prioritize destinations with rich experiences, tours, and food scenes.' : 'Balance flight distance, accommodation quality, and activities evenly.'}
 
 Return this EXACT JSON structure (no wrapping, no markdown):
 {
