@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Free Travel Planning Tools — 5 Smart Tools | GlobePilot',
+  title: 'Free Travel Planning Tools | GlobePilot',
   description:
-    'Explore 5 free travel planning tools: Mystery Vacation Generator, Layover Explorer, Multi-City Planner, Smart Flight Search, and Trip Cost Calculator.',
+    'Explore free travel planning tools: Mystery Vacation Generator, Multi-City Planner, Trip Cost Calculator, and more.',
   keywords: [
     'free travel planning tools',
     'budget travel calculator',
@@ -17,14 +17,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Free Travel Planning Tools | GlobePilot',
     description:
-      'Explore 5 free AI-powered travel tools to plan your perfect budget adventure.',
+      'Free AI-powered travel tools to plan your perfect budget adventure.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Free Travel Planning Tools | GlobePilot',
     description:
-      'Explore 5 free AI-powered travel tools to plan your perfect budget adventure.',
+      'Free AI-powered travel tools to plan your perfect budget adventure.',
   },
 }
 
@@ -32,8 +32,8 @@ const toolsJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
   name: 'GlobePilot Free Travel Planning Tools',
-  description: '5 free AI-powered tools to help budget travellers plan their next adventure.',
-  numberOfItems: 5,
+  description: 'Free AI-powered tools to help budget travellers plan their next adventure.',
+  numberOfItems: 3,
   itemListElement: [
     {
       '@type': 'ListItem',

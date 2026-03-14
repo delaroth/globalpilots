@@ -37,50 +37,50 @@ export default function Home() {
               </span>
             </Link>
 
-            <Link href="/explore" className="group relative bg-gradient-to-br from-emerald-600/30 to-teal-600/30 backdrop-blur-sm rounded-2xl p-8 border border-emerald-400/30 hover:border-emerald-400/60 hover:shadow-2xl transition-all transform hover:scale-[1.03] text-left">
-              <div className="text-5xl mb-4">🌍</div>
-              <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-emerald-300 transition">Layover Explorer</h2>
+            <Link href="/multi-city" className="group relative bg-gradient-to-br from-amber-600/30 to-orange-600/30 backdrop-blur-sm rounded-2xl p-8 border border-amber-400/30 hover:border-amber-400/60 hover:shadow-2xl transition-all transform hover:scale-[1.03] text-left">
+              <div className="text-5xl mb-4">🗺️</div>
+              <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-amber-300 transition">Multi-City Trip Planner</h2>
               <p className="text-skyblue-light text-sm mb-6">
-                Turn your connection into a mini-trip. We compare direct flights vs. stopover routes to find hidden savings.
+                Plan an optimized multi-stop adventure across 2-5 cities. AI handles route planning, budget allocation, and flight connections.
               </p>
-              <span className="inline-flex items-center text-emerald-300 font-semibold text-sm group-hover:translate-x-1 transition-transform">
-                Explore Routes →
+              <span className="inline-flex items-center text-amber-300 font-semibold text-sm group-hover:translate-x-1 transition-transform">
+                Plan My Trip →
               </span>
             </Link>
           </div>
 
-          {/* Multi-City Feature Card */}
-          <div className="mt-8">
-            <Link href="/multi-city" className="group relative bg-gradient-to-br from-amber-600/30 to-orange-600/30 backdrop-blur-sm rounded-2xl p-8 border border-amber-400/30 hover:border-amber-400/60 hover:shadow-2xl transition-all transform hover:scale-[1.02] text-left block">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <div className="text-4xl mb-3">🗺️</div>
-                  <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-amber-300 transition">Multi-City Trip Planner</h2>
-                  <p className="text-skyblue-light text-sm">
-                    Plan an optimized multi-stop adventure across 2-5 cities. AI handles route planning, budget allocation, and flight connections.
-                  </p>
-                </div>
-                <span className="inline-flex items-center text-amber-300 font-semibold text-sm group-hover:translate-x-1 transition-transform whitespace-nowrap">
-                  Plan My Trip →
-                </span>
-              </div>
+          {/* Trip Cost Calculator */}
+          <div className="grid grid-cols-1 gap-4 mt-6 max-w-md mx-auto">
+            <Link href="/trip-cost" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
+              <div className="text-3xl mb-2">&#x1F4CA;</div>
+              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-skyblue transition">Trip Cost Calculator</h3>
+              <p className="text-skyblue-light text-xs">Estimate total trip costs for 60+ cities with daily breakdowns</p>
             </Link>
           </div>
 
-          {/* Secondary Feature Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-            <Link href="/search" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
-              <div className="text-3xl mb-2">✈️</div>
-              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-skyblue transition">Search Flights</h3>
-              <p className="text-skyblue-light text-xs">Exact dates, monthly calendar, flexible days, or search to &quot;Anywhere&quot;</p>
-            </Link>
-
-<Link href="/trip-cost" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
-              <div className="text-3xl mb-2">&#x1F4CA;</div>
-              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-skyblue transition">Trip Costs</h3>
-              <p className="text-skyblue-light text-xs">Estimate total trip costs for 60+ cities with daily breakdowns</p>
-            </Link>
-
+          {/* Labs — features that need real-time data */}
+          <div className="mt-12">
+            <p className="text-xs uppercase tracking-widest text-white/30 text-center mb-4">Labs — coming soon with live pricing</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+              <Link href="/search" className="group bg-white/[0.03] backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-skyblue/30 transition-all text-left">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">✈️</span>
+                  <div>
+                    <h3 className="text-sm font-medium text-white/60 group-hover:text-white/80 transition">Flight Search</h3>
+                    <p className="text-xs text-white/30">Cached estimates &middot; best with live API</p>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/explore" className="group bg-white/[0.03] backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-skyblue/30 transition-all text-left">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🌍</span>
+                  <div>
+                    <h3 className="text-sm font-medium text-white/60 group-hover:text-white/80 transition">Layover Explorer</h3>
+                    <p className="text-xs text-white/30">Stopover routes &middot; best with live API</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
           </div>
         </div>
       </section>

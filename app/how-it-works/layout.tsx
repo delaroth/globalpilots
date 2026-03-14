@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'How It Works — Find Cheap Flights & Plan Trips | GlobePilot',
   description:
-    'Learn how GlobePilot helps you find cheap flights, hack layovers, plan multi-city trips, and discover budget destinations with 5 free AI-powered travel tools.',
+    'Learn how GlobePilot helps you plan multi-city trips, discover budget destinations, and estimate trip costs with free AI-powered travel tools.',
   keywords: [
     'how to find cheap flights',
     'layover hack flights',
@@ -53,7 +53,7 @@ const faqJsonLd = {
       name: 'Is GlobePilot free to use?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Yes, all 5 GlobePilot tools are completely free to use with no sign-up required. This includes Mystery Vacation, Layover Explorer, Multi-City Planner, Smart Flight Search, and Trip Cost Calculator.',
+        text: 'Yes, all GlobePilot tools are completely free to use with no sign-up required. This includes Mystery Vacation, Multi-City Planner, and Trip Cost Calculator.',
       },
     },
     {

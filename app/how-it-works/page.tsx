@@ -27,28 +27,6 @@ const features = [
   },
   {
     step: 2,
-    title: 'Layover Explorer',
-    subtitle: 'Turn Connections Into Mini-Trips',
-    href: '/explore',
-    description:
-      'Why fly direct when you can explore a bonus city? We compare direct flights against multi-city stopover routes through major hub airports — often saving you money.',
-    howItWorks: [
-      'Enter your origin and destination',
-      'We scan hub airports for stopover opportunities',
-      'Compare direct vs. stopover prices side by side',
-      'Book the stopover route and enjoy a bonus city',
-    ],
-    gradient: 'from-emerald-600/20 to-teal-600/20',
-    border: 'border-emerald-400/30',
-    accent: 'text-emerald-300',
-    mockupBg: 'bg-gradient-to-br from-emerald-900/50 to-teal-900/50',
-    mockupContent: {
-      label: 'Route Comparison',
-      items: ['Direct: NYC to Tokyo — $920', 'Via Seoul: NYC-Seoul-Tokyo — $780', 'You save: $140 + bonus city!'],
-    },
-  },
-  {
-    step: 3,
     title: 'Multi-City Trip Planner',
     subtitle: 'AI-Optimized Multi-Stop Adventures',
     href: '/multi-city',
@@ -70,29 +48,7 @@ const features = [
     },
   },
   {
-    step: 4,
-    title: 'Smart Flight Search',
-    subtitle: 'Flexible Dates, Better Prices',
-    href: '/search',
-    description:
-      'Search flights three ways: pick exact dates, browse a monthly calendar to spot the cheapest days, or use flexible day-of-week mode to find patterns in pricing.',
-    howItWorks: [
-      'Enter your origin and destination',
-      'Choose exact dates, calendar view, or flexible mode',
-      'Calendar highlights the cheapest days to fly',
-      'Click any date to see full flight options and book',
-    ],
-    gradient: 'from-blue-600/20 to-cyan-600/20',
-    border: 'border-blue-400/30',
-    accent: 'text-blue-300',
-    mockupBg: 'bg-gradient-to-br from-blue-900/50 to-cyan-900/50',
-    mockupContent: {
-      label: 'Calendar View',
-      items: ['Mon: $245  Tue: $198  Wed: $180', 'Thu: $210  Fri: $320  Sat: $350', 'Cheapest: Wednesday!'],
-    },
-  },
-  {
-    step: 5,
+    step: 3,
     title: 'Trip Cost Calculator',
     subtitle: 'Know Before You Go',
     href: '/trip-cost',
@@ -126,7 +82,7 @@ const faqs = [
   },
   {
     q: 'Is GlobePilot really free?',
-    a: 'Yes! All 5 tools are completely free to use. No sign-up, no subscription, no hidden fees. We earn a small commission when you book through our partner links, which keeps everything free for you.',
+    a: 'Yes! All tools are completely free to use. No sign-up, no subscription, no hidden fees. We earn a small commission when you book through our partner links, which keeps everything free for you.',
   },
   {
     q: 'How does the Mystery Vacation work?',
@@ -157,7 +113,7 @@ export default function HowItWorksPage() {
               Works
             </h1>
             <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
-              5 free tools that help budget travellers find cheap flights,
+              3 core tools that help budget travellers find cheap flights,
               discover destinations, and plan unforgettable adventures. Here is
               exactly how each one works.
             </p>
@@ -175,7 +131,7 @@ export default function HowItWorksPage() {
                 {/* Text Side */}
                 <div className="flex-1 space-y-4">
                   <div className={`text-sm font-semibold ${feature.accent} uppercase tracking-wider`}>
-                    Tool {feature.step} of 5
+                    Tool {feature.step} of 3
                   </div>
                   <h2 className="text-3xl font-bold text-white">
                     {feature.title}

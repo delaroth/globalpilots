@@ -10,9 +10,9 @@ export default function Navigation() {
 
   const links = [
     { href: '/mystery', label: 'Mystery Vacation' },
-    { href: '/explore', label: 'Layover Explorer' },
     { href: '/multi-city', label: 'Multi-City' },
-    { href: '/search', label: 'Search Flights' },
+    { href: '/trip-cost', label: 'Trip Costs' },
+    { href: '/tools', label: 'All Tools' },
   ]
 
   return (

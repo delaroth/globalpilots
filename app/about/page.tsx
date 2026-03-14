@@ -14,30 +14,12 @@ const tools = [
   },
   {
     emoji: '🗺️',
-    name: 'Layover Explorer',
-    href: '/explore',
-    description:
-      'Turn boring connections into mini-adventures. Find creative layover routes and explore new cities along the way.',
-    gradient: 'from-blue-600/30 to-cyan-600/30',
-    border: 'border-blue-400/30 hover:border-blue-400/60',
-  },
-  {
-    emoji: '🌍',
     name: 'Multi-City Planner',
     href: '/multi-city',
     description:
       'Plan complex routes across multiple destinations. See total costs, optimal ordering, and build your dream itinerary.',
-    gradient: 'from-emerald-600/30 to-teal-600/30',
-    border: 'border-emerald-400/30 hover:border-emerald-400/60',
-  },
-  {
-    emoji: '🔍',
-    name: 'Smart Flight Search',
-    href: '/search',
-    description:
-      'Search flights with flexible dates, or set destination to "Anywhere" to find the cheapest places to fly from your airport.',
-    gradient: 'from-orange-600/30 to-amber-600/30',
-    border: 'border-orange-400/30 hover:border-orange-400/60',
+    gradient: 'from-amber-600/30 to-orange-600/30',
+    border: 'border-amber-400/30 hover:border-amber-400/60',
   },
   {
     emoji: '🧮',
@@ -55,7 +37,7 @@ const steps = [
     number: '1',
     title: 'Pick a Tool',
     description:
-      'Choose from 5 smart travel tools designed for different planning needs. Whether you know exactly where you want to go or need inspiration, we have you covered.',
+      'Choose from our smart travel tools designed for different planning needs. Whether you know exactly where you want to go or need inspiration, we have you covered.',
   },
   {
     number: '2',
@@ -95,7 +77,7 @@ export default function AboutPage() {
       <section className="px-6 py-16">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-4">
-            5 Tools. One Mission.
+            3 Tools. One Mission.
           </h2>
           <p className="text-skyblue-light text-center mb-12 max-w-xl mx-auto">
             Every tool is designed to save you money and spark your sense of adventure.
