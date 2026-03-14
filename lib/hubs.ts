@@ -23,6 +23,16 @@ export const majorHubs = [
   { code: 'ATL', city: 'Atlanta', region: 'North America' },
 ]
 
+export interface SideQuestInfo {
+  verdict: 'free-vacation' | 'worth-it' | 'splurge' | 'skip'
+  pitch: string
+  netValue: number
+  dailyCost: number
+  experienceCost: number
+  layoverDays: number
+  breakdown?: { hotel: number; food: number; transport: number; activities: number }
+}
+
 export interface LayoverRoute {
   hub: typeof majorHubs[0]
   leg1Price: number
@@ -30,6 +40,7 @@ export interface LayoverRoute {
   totalPrice: number
   savings: number
   savingsPercent: number
+  sideQuest?: SideQuestInfo
 }
 
 /**

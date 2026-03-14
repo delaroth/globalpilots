@@ -2,7 +2,7 @@
 
 interface ConfidenceBadgeProps {
   score: number         // 0.0 to 1.0
-  label: string         // "Live Price", "Recent Price", "Estimated", "Guide Price"
+  label: string         // "Verified Price", "Recent Estimate", "Estimated", "Guide Price"
   badgeColor: 'green' | 'blue' | 'amber' | 'gray'
   showScore?: boolean   // If true, show the numeric score (e.g., "0.92") — for debug only
   size?: 'sm' | 'md'   // default 'sm'
@@ -75,7 +75,7 @@ interface PriceWithConfidenceProps {
   price: number
   pricePrefix: string       // "$", "~$", "From ~$"
   confidence: ConfidenceBadgeProps
-  actionLabel: string       // "Book Now", "Check Live Price", etc.
+  actionLabel: string       // "Book Now", "Check on Aviasales", etc.
   onAction?: () => void     // Click handler for the action button
   showAction?: boolean      // Whether to show the action button
 }

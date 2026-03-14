@@ -20,7 +20,7 @@ export interface TieredSearchConfig {
   maxResults: number
   /** Cache TTL in ms for this tier */
   cacheTtlMs: number
-  /** Whether to show "Get Live Price" CTA */
+  /** Whether to show "Check on Aviasales" CTA */
   showLivePriceCta: boolean
 }
 
@@ -56,12 +56,12 @@ function buildLiveConfig(): TieredSearchConfig {
  * Determine which search tier to use based on user intent.
  *
  * Tier 1 (Browse): Page load, slider changes, discovery mode
- *   → TravelPayouts cached + Kiwi inspiration (near-zero cost)
- *   → Shows "~$XXX estimated" with "Get Live Price" button
+ *   → TravelPayouts cached (near-zero cost)
+ *   → Shows "~$XXX estimated" with "Check on Aviasales" button
  *
- * Tier 2 (Live): User clicks "Get Live Price", "Book Now", or "Verify Deal"
- *   → Kiwi live → Amadeus → Duffel (counted API calls)
- *   → Shows "$XXX live" with expiry countdown
+ * Tier 2 (Live): User clicks "Check on Aviasales" or explicit live search
+ *   → Kiwi live → FlightAPI → Duffel (counted API calls)
+ *   → Shows "~$XXX" with booking redirect
  *
  * STEALTH MODE: Duffel is excluded from live tier sources.
  * All searches use sandbox/test tokens only.
@@ -145,7 +145,7 @@ export interface AnnotatedOffer extends FlightOffer {
 }
 
 /**
- * Helper: determine if a set of offers warrants showing a "Get Live Price" banner.
+ * Helper: determine if a set of offers warrants showing a "Check on Aviasales" banner.
  * Returns true if ALL offers are below the live confidence threshold.
  */
 export function shouldShowLivePriceBanner(offers: FlightOffer[]): boolean {

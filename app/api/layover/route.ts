@@ -4,6 +4,8 @@ import { searchKiwiMultiCity, isKiwiAvailable } from '@/lib/kiwi'
 import { getCheapestRoutePrice } from '@/lib/flight-providers'
 import { getSearchTier } from '@/lib/flight-intelligence'
 import type { SearchTier } from '@/lib/flight-intelligence'
+import { calculateSideQuestValue, type SideQuestCandidate } from '@/lib/flight-intelligence/side-quest'
+import type { BudgetTier } from '@/lib/destination-costs'
 
 export const dynamic = 'force-dynamic'
 
@@ -119,11 +121,38 @@ async function fetchMultiProviderRoutes(origin: string, destination: string, sea
   return { directPrice, hubRoutes, priceSource }
 }
 
+/**
+ * Enrich hub routes with Side Quest value data when direct price is available.
+ * Returns routes with optional sideQuest field containing verdict, pitch, costs.
+ */
+function enrichWithSideQuest(
+  hubRoutes: HubRoute[],
+  directPrice: number | null,
+  budgetTier: BudgetTier,
+  layoverDays: number
+): (HubRoute & { sideQuest?: SideQuestCandidate })[] {
+  if (directPrice === null) return hubRoutes
+  return hubRoutes.map(route => {
+    const sq = calculateSideQuestValue({
+      hub: route.hub,
+      hubCity: route.hubCity,
+      directPrice,
+      leg1Price: route.leg1Price,
+      leg2Price: route.leg2Price,
+      layoverDays,
+      budgetTier,
+    })
+    return sq ? { ...route, sideQuest: sq } : route
+  })
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const origin = searchParams.get('origin')
   const destination = searchParams.get('destination')
   const departDate = searchParams.get('depart_date')
+  const budgetTier = (searchParams.get('budget') || 'mid') as BudgetTier
+  const layoverDays = parseInt(searchParams.get('layover_days') || '2', 10)
 
   const tierParam = searchParams.get('tier') as SearchTier | null
   const tier: SearchTier = tierParam === 'live' ? 'live' : 'browse'
@@ -168,7 +197,7 @@ export async function GET(request: NextRequest) {
 
     // ═══════════════════════════════════════════════════════════════════
     // Tier 2 (Live) — full Kiwi multi-city → multi-provider fallback
-    // Triggered explicitly by user action (e.g. "Get Live Price" button)
+    // Triggered explicitly by user action (e.g. "Check on Aviasales" button)
     // ═══════════════════════════════════════════════════════════════════
     if (tier === 'live') {
       // Try Kiwi multi-city first (real multi-leg data, includes LCCs)
@@ -208,7 +237,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Live fallback: full multi-provider chain (Kiwi → Amadeus → TravelPayouts)
+      // Live fallback: full multi-provider chain (Kiwi → FlightAPI → TravelPayouts)
       console.log('[Layover API] [live] Using multi-provider price lookup')
       const { directPrice, hubRoutes, priceSource } = await fetchMultiProviderRoutes(origin, destination, searchDate)
 
@@ -239,12 +268,15 @@ export async function GET(request: NextRequest) {
       : priceSource === 'unknown' ? 'estimated' as const
       : 'cached' as const
 
+    // Enrich with Side Quest value calculations
+    const enrichedRoutes = enrichWithSideQuest(hubRoutes, directPrice, budgetTier, layoverDays)
+
     console.log(`[Layover API] [browse] Found ${hubRoutes.length} stopover routes (source: ${priceSource}, confidence: ${confidence})`)
 
     return NextResponse.json({
       directPrice,
-      layoverRoutes: hubRoutes,
-      bestLayover: hubRoutes.length > 0 ? hubRoutes[0] : null,
+      layoverRoutes: enrichedRoutes,
+      bestLayover: enrichedRoutes.length > 0 ? enrichedRoutes[0] : null,
       priceSource,
       searchTier: 'browse' as const,
       fetchedAt: Date.now(),

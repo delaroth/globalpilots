@@ -44,7 +44,7 @@ function ExplorePageContent() {
   const [error, setError] = useState('')
   const [directPrice, setDirectPrice] = useState<number | null>(null)
   const [layoverRoutes, setLayoverRoutes] = useState<LayoverRoute[]>([])
-  const [priceSource, setPriceSource] = useState<'amadeus-live' | 'travelpayouts-cached' | 'kiwi-live'>('travelpayouts-cached')
+  const [priceSource, setPriceSource] = useState<'travelpayouts-cached' | 'kiwi-live' | 'flightapi-live'>('travelpayouts-cached')
   const [searched, setSearched] = useState(false)
 
   const today = new Date().toISOString().split('T')[0]
@@ -82,6 +82,15 @@ function ExplorePageContent() {
             totalPrice: route.totalPrice,
             savings: route.savings ?? null,
             savingsPercent: route.savingsPercent ?? null,
+            sideQuest: route.sideQuest ? {
+              verdict: route.sideQuest.verdict,
+              pitch: route.sideQuest.pitch,
+              netValue: route.sideQuest.netValue,
+              dailyCost: route.sideQuest.dailyCost,
+              experienceCost: route.sideQuest.experienceCost,
+              layoverDays: route.sideQuest.layoverDays,
+              breakdown: route.sideQuest.breakdown,
+            } : undefined,
           }
         }).filter(Boolean)
         setLayoverRoutes(routes)

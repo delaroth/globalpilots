@@ -4,7 +4,7 @@
 //
 // Credit Management Strategy:
 // - Credits are precious (30 free, then $49/mo for 30k)
-// - Only use FlightAPI for Tier 2 "Live" searches (user explicitly clicks "Get Live Price")
+// - Only use FlightAPI for Tier 2 searches (user explicitly triggers a price check)
 // - Never use for browse/discovery (that's TravelPayouts' job)
 // - Track remaining credits and auto-disable when exhausted
 // - Fall back to Kiwi → TravelPayouts when credits are gone

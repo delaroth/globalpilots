@@ -75,18 +75,6 @@ const tools = [
     accent: 'text-indigo-300',
     keywords: 'budget travel calculator, trip cost estimator, daily travel costs',
   },
-  {
-    title: 'Price Alerts',
-    emoji: '\uD83D\uDD14',
-    href: '/alerts',
-    description:
-      'Set up alerts for routes you care about and get notified when prices drop. Never miss a deal on your dream destination again.',
-    cta: 'Set Alerts',
-    gradient: 'from-rose-600/30 to-red-600/30',
-    border: 'border-rose-400/30 hover:border-rose-400/60',
-    accent: 'text-rose-300',
-    keywords: 'flight price alerts, fare drop notifications, cheap flight alerts',
-  },
 ]
 
 export default function ToolsPage() {
@@ -103,7 +91,7 @@ export default function ToolsPage() {
               <span className="text-skyblue">Tools</span>
             </h1>
             <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
-              7 smart tools to help you discover destinations, find creative
+              6 smart tools to help you discover destinations, find creative
               routes, estimate costs, and book your next adventure — all
               completely free.
             </p>

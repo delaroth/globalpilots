@@ -87,11 +87,6 @@ export default function Home() {
               <p className="text-skyblue-light text-xs">Estimate total trip costs for 60+ cities with daily breakdowns</p>
             </Link>
 
-            <Link href="/alerts" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
-              <div className="text-3xl mb-2">🔔</div>
-              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-skyblue transition">Price Alerts</h3>
-              <p className="text-skyblue-light text-xs">Get notified when prices drop on routes you care about</p>
-            </Link>
           </div>
         </div>
       </section>

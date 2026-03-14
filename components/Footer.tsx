@@ -11,7 +11,6 @@ export default function Footer() {
     { href: '/search', label: 'Smart Flight Search' },
     { href: '/discover', label: 'Cheapest Destinations' },
     { href: '/trip-cost', label: 'Trip Cost Calculator' },
-    { href: '/alerts', label: 'Price Alerts' },
   ]
 
   return (

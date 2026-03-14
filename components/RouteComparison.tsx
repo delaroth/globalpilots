@@ -1,8 +1,9 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { generateAffiliateLink } from '@/lib/affiliate'
+import { resolveFlightBooking } from '@/lib/booking-redirect'
 import { LayoverRoute } from '@/lib/hubs'
+import BookingLinks from '@/components/BookingLinks'
 
 // Lazy load CityGuide — only rendered when user clicks "What to do in X?"
 const CityGuide = dynamic(() => import('@/components/CityGuide'), {
@@ -20,7 +21,7 @@ interface RouteComparisonProps {
   departDate: string
   directPrice: number | null
   layoverRoutes: LayoverRoute[]
-  priceSource?: 'amadeus-live' | 'travelpayouts-cached' | 'kiwi-live'
+  priceSource?: 'travelpayouts-cached' | 'kiwi-live' | 'flightapi-live'
 }
 
 // Fun taglines for layover cities
@@ -48,24 +49,15 @@ export default function RouteComparison({
   layoverRoutes,
   priceSource = 'travelpayouts-cached',
 }: RouteComparisonProps) {
-  const isLive = priceSource === 'amadeus-live' || priceSource === 'kiwi-live'
-  const priceLabel = isLive ? 'Live Price' : 'Estimated Price'
+  const priceLabel = 'Estimated Price'
   const handleBookDirect = () => {
-    const affiliateLink = generateAffiliateLink({
-      origin,
-      destination,
-      departDate,
-    })
-    window.open(affiliateLink, '_blank')
+    const { action } = resolveFlightBooking({ origin, destination, departDate, price: directPrice ?? undefined })
+    if (action.type === 'affiliate-redirect') window.open(action.url, '_blank')
   }
 
-  const handleBookLeg = (legOrigin: string, legDestination: string) => {
-    const affiliateLink = generateAffiliateLink({
-      origin: legOrigin,
-      destination: legDestination,
-      departDate,
-    })
-    window.open(affiliateLink, '_blank')
+  const handleBookLeg = (legOrigin: string, legDestination: string, price?: number) => {
+    const { action } = resolveFlightBooking({ origin: legOrigin, destination: legDestination, departDate, price })
+    if (action.type === 'affiliate-redirect') window.open(action.url, '_blank')
   }
 
   // Check if any routes have savings
@@ -93,7 +85,7 @@ export default function RouteComparison({
               Found {layoverRoutes.length} Stopover Route{layoverRoutes.length !== 1 ? 's' : ''}
             </h2>
             <p className="text-xl">
-              Direct flight: {isLive ? '' : '~'}${directPrice} - Compare with stopovers below
+              Direct flight: ~${directPrice} - Compare with stopovers below
             </p>
           </div>
         )
@@ -138,15 +130,15 @@ export default function RouteComparison({
               {/* Price */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6 text-center">
                 <p className="text-sm text-gray-600 mb-1">{priceLabel}</p>
-                <p className="text-4xl font-bold text-gray-700">{isLive ? '' : '~'}${directPrice}</p>
-                {!isLive && <p className="text-xs text-gray-400 mt-1">Cached estimate — actual price may differ</p>}
+                <p className="text-4xl font-bold text-gray-700">~${directPrice}</p>
+                <p className="text-xs text-gray-400 mt-1">Cached estimate — actual price may differ</p>
               </div>
 
               <button
                 onClick={handleBookDirect}
                 className="w-full bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
               >
-                {isLive ? 'Book Direct Flight' : 'Search Direct Flight'}
+                Check on Aviasales
               </button>
             </div>
           </div>
@@ -240,7 +232,7 @@ export default function RouteComparison({
                       {priceLabel}
                     </p>
                     <p className={`text-3xl font-bold ${hasSavings ? 'text-green-600' : 'text-blue-600'}`}>
-                      {isLive ? '' : '~'}${Math.round(route.totalPrice)}
+                      ~${Math.round(route.totalPrice)}
                     </p>
                     {hasSavings && (
                       <p className="text-xs text-green-700 mt-1 font-semibold">
@@ -249,18 +241,41 @@ export default function RouteComparison({
                     )}
                   </div>
 
-                  {/* Tagline */}
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-3 text-xs text-center">
-                    <p className="text-yellow-800">
-                      ⭐ <strong>Stopover in {route.hub.city}</strong><br />
-                      {tagline}
-                    </p>
-                  </div>
+                  {/* Side Quest Value */}
+                  {route.sideQuest ? (
+                    <div className={`rounded-lg p-2 mb-3 text-xs text-center border ${
+                      route.sideQuest.verdict === 'free-vacation' ? 'bg-green-50 border-green-300' :
+                      route.sideQuest.verdict === 'worth-it' ? 'bg-blue-50 border-blue-300' :
+                      route.sideQuest.verdict === 'splurge' ? 'bg-amber-50 border-amber-300' :
+                      'bg-gray-50 border-gray-300'
+                    }`}>
+                      <p className={`font-semibold ${
+                        route.sideQuest.verdict === 'free-vacation' ? 'text-green-700' :
+                        route.sideQuest.verdict === 'worth-it' ? 'text-blue-700' :
+                        route.sideQuest.verdict === 'splurge' ? 'text-amber-700' :
+                        'text-gray-600'
+                      }`}>
+                        {route.sideQuest.verdict === 'free-vacation' && 'Free Vacation!'}
+                        {route.sideQuest.verdict === 'worth-it' && 'Worth It'}
+                        {route.sideQuest.verdict === 'splurge' && 'Splurge'}
+                        {route.sideQuest.verdict === 'skip' && 'Skip'}
+                      </p>
+                      <p className="text-gray-600 mt-0.5">{route.sideQuest.pitch}</p>
+                      <p className="text-gray-400 mt-0.5">~${route.sideQuest.dailyCost}/day · {route.sideQuest.layoverDays} days</p>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 mb-3 text-xs text-center">
+                      <p className="text-yellow-800">
+                        ⭐ <strong>Stopover in {route.hub.city}</strong><br />
+                        {tagline}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Booking Buttons */}
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      onClick={() => handleBookLeg(origin, route.hub.code)}
+                      onClick={() => handleBookLeg(origin, route.hub.code, route.leg1Price)}
                       className={`${
                         hasSavings ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
                       } text-white font-semibold py-2 px-3 rounded-lg transition text-xs shadow-md hover:shadow-lg`}
@@ -268,7 +283,7 @@ export default function RouteComparison({
                       Search Leg 1
                     </button>
                     <button
-                      onClick={() => handleBookLeg(route.hub.code, destination)}
+                      onClick={() => handleBookLeg(route.hub.code, destination, route.leg2Price)}
                       className={`${
                         hasSavings ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'
                       } text-white font-semibold py-2 px-3 rounded-lg transition text-xs shadow-md hover:shadow-lg`}
@@ -276,6 +291,15 @@ export default function RouteComparison({
                       Search Leg 2
                     </button>
                   </div>
+
+                  {/* Hotel + Activity Links */}
+                  <BookingLinks
+                    cityName={route.hub.city}
+                    iata={route.hub.code}
+                    checkIn={departDate}
+                    nights={route.sideQuest?.layoverDays || 2}
+                    maxHotelPerNight={route.sideQuest?.breakdown?.hotel}
+                  />
 
                   {/* AI City Guide */}
                   <CityGuide city={route.hub.city} hubCode={route.hub.code} />
@@ -293,11 +317,9 @@ export default function RouteComparison({
           Sometimes booking two separate flights with a stopover in a major hub city {directPrice !== null ? 'is cheaper than flying direct' : 'can save you money'}.
           Use the layover as a chance to explore a bonus destination for a couple days - essentially getting two trips for {directPrice !== null ? 'less than the price of one' : 'the price of one'}!
         </p>
-        {!isLive && (
-          <p className="text-skyblue-light/60 text-xs mt-3">
-            Prices shown are cached estimates and may differ from live booking prices. Click &quot;Search&quot; to see current prices.
-          </p>
-        )}
+        <p className="text-skyblue-light/60 text-xs mt-3">
+          Prices shown are cached estimates and may differ from booking prices. Click &quot;Search&quot; to see current prices on Aviasales.
+        </p>
       </div>
     </div>
   )

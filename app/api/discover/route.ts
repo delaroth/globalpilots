@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
             results,
             count: results.length,
             priceSource: 'kiwi-live',
-            priceNote: 'Live prices from Kiwi.com — click to book.',
+            priceNote: 'Prices from Kiwi.com — click to check and book.',
           })
         }
 
@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
       results,
       count: results.length,
       priceSource: 'travelpayouts-cached',
-      priceNote: 'Prices are cached estimates. Click to see live prices.',
+      priceNote: 'Prices are cached estimates. Click to check current prices on Aviasales.',
     })
   } catch (err) {
     console.error('[Discover API] Error:', err)

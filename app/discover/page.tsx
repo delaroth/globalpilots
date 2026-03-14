@@ -10,6 +10,7 @@ import { buildFlightLink } from '@/lib/affiliate'
 import { saveRecentSearch } from '@/lib/recent-searches'
 import RecentSearches from '@/components/RecentSearches'
 import DestinationImage from '@/components/DestinationImage'
+import BookingLinks from '@/components/BookingLinks'
 
 interface DiscoverResult {
   destination: string
@@ -135,7 +136,7 @@ export default function DiscoverPage() {
             {results.length > 0 ? (
               <>
                 <p className="text-skyblue-light/60 text-xs text-center mb-6">
-                  Prices are cached estimates — click to see live prices on Aviasales
+                  Prices are cached estimates — click to check current prices on Aviasales
                 </p>
                 <div className="space-y-4">
                   {results.map((r, i) => (
@@ -177,11 +178,11 @@ export default function DiscoverPage() {
                             <p className={`text-3xl font-bold ${i === 0 ? 'text-green-600' : 'text-navy'}`}>
                               ${r.price}
                             </p>
-                            <p className="text-skyblue text-xs font-medium mt-1">Search live price &rarr;</p>
+                            <p className="text-skyblue text-xs font-medium mt-1">Check on Aviasales &rarr;</p>
                           </div>
                         </div>
                       </button>
-                      <div className="flex items-center gap-4 px-5 pb-3 pt-0">
+                      <div className="flex items-center gap-4 px-5 pb-2 pt-0">
                         <Link
                           href={`/trip-cost?destination=${encodeURIComponent(r.destination)}`}
                           className="text-xs text-gray-400 hover:text-skyblue transition"
@@ -194,6 +195,14 @@ export default function DiscoverPage() {
                         >
                           Layover routes
                         </Link>
+                      </div>
+                      <div className="px-5 pb-3">
+                        <BookingLinks
+                          cityName={r.city}
+                          iata={r.destination}
+                          checkIn={r.departDate}
+                          nights={3}
+                        />
                       </div>
                     </div>
                   ))}
@@ -223,7 +232,7 @@ export default function DiscoverPage() {
               <div className="text-5xl mb-4">🌍</div>
               <h3 className="text-white font-semibold text-lg mb-2">Don&apos;t know where to go?</h3>
               <p className="text-skyblue-light text-sm">
-                Enter your departure airport and a travel date. We&apos;ll find the 5 cheapest destinations you can fly to — then click any result to see live prices and book.
+                Enter your departure airport and a travel date. We&apos;ll find the 5 cheapest destinations you can fly to — then click any result to check prices and book on Aviasales.
               </p>
             </div>
           </div>

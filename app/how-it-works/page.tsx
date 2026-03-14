@@ -135,28 +135,6 @@ const features = [
       items: ['Hotel: $15/day  Food: $10/day', 'Transport: $5/day  Activities: $8/day', 'Total: ~$38/day'],
     },
   },
-  {
-    step: 7,
-    title: 'Price Alerts',
-    subtitle: 'Never Miss a Deal',
-    href: '/alerts',
-    description:
-      'Set alerts for routes you care about. We monitor prices and notify you when fares drop on your dream destinations so you can book at the perfect time.',
-    howItWorks: [
-      'Enter the route you want to track',
-      'Set your target price (optional)',
-      'We monitor fares daily',
-      'Get notified when prices drop',
-    ],
-    gradient: 'from-rose-600/20 to-red-600/20',
-    border: 'border-rose-400/30',
-    accent: 'text-rose-300',
-    mockupBg: 'bg-gradient-to-br from-rose-900/50 to-red-900/50',
-    mockupContent: {
-      label: 'Your Alerts',
-      items: ['NYC > Bali: watching...', 'LAX > Tokyo: Price dropped $120!', 'SFO > London: at target price!'],
-    },
-  },
 ]
 
 const faqs = [
@@ -170,7 +148,7 @@ const faqs = [
   },
   {
     q: 'Is GlobePilot really free?',
-    a: 'Yes! All 7 tools are completely free to use. No sign-up, no subscription, no hidden fees. We earn a small commission when you book through our partner links, which keeps everything free for you.',
+    a: 'Yes! All 6 tools are completely free to use. No sign-up, no subscription, no hidden fees. We earn a small commission when you book through our partner links, which keeps everything free for you.',
   },
   {
     q: 'How does the Mystery Vacation work?',
@@ -201,7 +179,7 @@ export default function HowItWorksPage() {
               Works
             </h1>
             <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
-              7 free tools that help budget travellers find cheap flights,
+              6 free tools that help budget travellers find cheap flights,
               discover destinations, and plan unforgettable adventures. Here is
               exactly how each one works.
             </p>
@@ -219,7 +197,7 @@ export default function HowItWorksPage() {
                 {/* Text Side */}
                 <div className="flex-1 space-y-4">
                   <div className={`text-sm font-semibold ${feature.accent} uppercase tracking-wider`}>
-                    Tool {feature.step} of 7
+                    Tool {feature.step} of 6
                   </div>
                   <h2 className="text-3xl font-bold text-white">
                     {feature.title}

@@ -91,16 +91,16 @@ export function calculateConfidence(input: ConfidenceInput): ConfidenceResult {
 
   if (score >= 0.80) {
     tier = 'live'
-    label = 'Live Price'
-    pricePrefix = '$'
+    label = 'Verified Price'
+    pricePrefix = '~$'
     shouldRefetch = false
     actionLabel = 'Book Now'
   } else if (score >= 0.50) {
     tier = 'cached'
-    label = 'Recent Price'
+    label = 'Recent Estimate'
     pricePrefix = '~$'
-    shouldRefetch = true  // Prompt live re-fetch but still show cached data
-    actionLabel = 'Check Live Price'
+    shouldRefetch = true
+    actionLabel = 'Check on Aviasales'
   } else if (score >= 0.25) {
     tier = 'estimated'
     label = 'Estimated'

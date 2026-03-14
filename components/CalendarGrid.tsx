@@ -156,7 +156,7 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
           {monthNames[monthNum - 1]} {year} - {origin} to {destination}
         </h2>
         <p className="text-skyblue-light/70 text-xs text-center mb-6">
-          Prices are cached estimates — click a day to see live prices on Aviasales
+          Prices are cached estimates — click a day to check current prices on Aviasales
         </p>
 
         {/* Price legend */}

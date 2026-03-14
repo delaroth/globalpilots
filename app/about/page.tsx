@@ -57,15 +57,6 @@ const tools = [
     gradient: 'from-indigo-600/30 to-violet-600/30',
     border: 'border-indigo-400/30 hover:border-indigo-400/60',
   },
-  {
-    emoji: '🔔',
-    name: 'Price Alerts',
-    href: '/alerts',
-    description:
-      'Track fares and get notified when prices drop on your favourite routes. Never miss a deal again.',
-    gradient: 'from-rose-600/30 to-red-600/30',
-    border: 'border-rose-400/30 hover:border-rose-400/60',
-  },
 ]
 
 const steps = [
@@ -73,7 +64,7 @@ const steps = [
     number: '1',
     title: 'Pick a Tool',
     description:
-      'Choose from 7 smart travel tools designed for different planning needs. Whether you know exactly where you want to go or need inspiration, we have you covered.',
+      'Choose from 6 smart travel tools designed for different planning needs. Whether you know exactly where you want to go or need inspiration, we have you covered.',
   },
   {
     number: '2',
@@ -113,7 +104,7 @@ export default function AboutPage() {
       <section className="px-6 py-16">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-4">
-            7 Tools. One Mission.
+            6 Tools. One Mission.
           </h2>
           <p className="text-skyblue-light text-center mb-12 max-w-xl mx-auto">
             Every tool is designed to save you money and spark your sense of adventure.

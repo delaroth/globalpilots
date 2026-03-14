@@ -1,8 +1,9 @@
 'use client'
 
-import { generateAffiliateLink } from '@/lib/affiliate'
+import { resolveFlightBooking } from '@/lib/booking-redirect'
 import { majorAirports } from '@/lib/geolocation'
 import DestinationImage from '@/components/DestinationImage'
+import BookingLinks from '@/components/BookingLinks'
 
 interface DestinationCardProps {
   destination: string
@@ -35,13 +36,14 @@ export default function DestinationCard({
   distance,
 }: DestinationCardProps) {
   const handleBookClick = () => {
-    const affiliateLink = generateAffiliateLink({
+    const { action } = resolveFlightBooking({
       origin,
       destination: destinationCode,
       departDate,
       returnDate,
+      price,
     })
-    window.open(affiliateLink, '_blank')
+    if (action.type === 'affiliate-redirect') window.open(action.url, '_blank')
   }
 
   // Calculate days away (parse as UTC to avoid timezone issues)
@@ -99,8 +101,16 @@ export default function DestinationCard({
           onClick={handleBookClick}
           className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg transform active:scale-95"
         >
-          Search Live Prices
+          Check on Aviasales
         </button>
+
+        {/* Hotel + Activity Links */}
+        <BookingLinks
+          cityName={getCityName(destinationCode)}
+          iata={destinationCode}
+          checkIn={departDate}
+          nights={Math.ceil((new Date(returnDate).getTime() - new Date(departDate).getTime()) / 86400000) || 3}
+        />
       </div>
     </div>
   )

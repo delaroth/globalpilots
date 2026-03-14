@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'About GlobePilot | How It Works',
   description:
-    'Discover how GlobePilot helps budget travellers plan adventures with 7 smart tools: Mystery Vacation, Layover Explorer, Multi-City Planner, Smart Flight Search, and more.',
+    'Discover how GlobePilot helps budget travellers plan adventures with 6 smart tools: Mystery Vacation, Layover Explorer, Multi-City Planner, Smart Flight Search, and more.',
   keywords: [
     'about GlobePilot',
     'budget travel tools',
@@ -14,12 +14,11 @@ export const metadata: Metadata = {
     'flight search',
     'cheapest destinations',
     'trip cost calculator',
-    'price alerts',
   ],
   openGraph: {
     title: 'About GlobePilot | How It Works',
     description:
-      'Budget in. Adventure out. Discover how GlobePilot helps budget travellers plan adventures with 7 smart travel tools.',
+      'Budget in. Adventure out. Discover how GlobePilot helps budget travellers plan adventures with 6 smart travel tools.',
     type: 'website',
   },
 }
