@@ -303,7 +303,7 @@ export function buildHotelLink(
 
   const formatDate = (d: Date) => d.toISOString().split('T')[0]
 
-  let url = `https://www.agoda.com/search?city=${encodeURIComponent(cityName)}&checkIn=${formatDate(checkInDate)}&checkOut=${formatDate(checkOutDate)}&adults=1`
+  let url = `https://www.agoda.com/search?textToSearch=${encodeURIComponent(cityName)}&checkIn=${formatDate(checkInDate)}&checkOut=${formatDate(checkOutDate)}&adults=1`
 
   // Budget constraints — align hotel search with Side Quest math
   if (options?.maxPricePerNight) {
@@ -326,12 +326,11 @@ export function buildHotelLink(
  * STEALTH: No partner_id appended — clean search URL only
  */
 export function buildActivitiesLink(cityName: string): string {
-  const slug = cityName.toLowerCase().replace(/\s+/g, '-')
-  let url = `https://www.getyourguide.com/${slug}/`
+  let url = `https://www.getyourguide.com/s/?q=${encodeURIComponent(cityName)}&searchSource=1`
 
   // Only append affiliate tracking when commissions are allowed
   if (isAffiliateActive('getyourguide') && process.env.GETYOURGUIDE_PARTNER_ID) {
-    url += `?partner_id=${process.env.GETYOURGUIDE_PARTNER_ID}`
+    url += `&partner_id=${process.env.GETYOURGUIDE_PARTNER_ID}`
   }
 
   return url
@@ -388,14 +387,18 @@ export function buildBookingBundle(params: {
   cityName: string
   departDate: string
   nights?: number
+  maxHotelPerNight?: number
 }): { flightUrl: string; hotelUrl: string; activitiesUrl: string } {
-  const { origin, destination, cityName, departDate, nights = 3 } = params
+  const { origin, destination, cityName, departDate, nights = 3, maxHotelPerNight } = params
 
   const flightUrl = isAffiliateActive('kiwi')
     ? buildKiwiFlightLink(origin, destination, departDate)
     : buildFlightLink(origin, destination, departDate)
 
-  const hotelUrl = buildHotelLink(cityName, departDate, nights)
+  const hotelUrl = buildHotelLink(cityName, departDate, nights, {
+    maxPricePerNight: maxHotelPerNight,
+    sortByPrice: !!maxHotelPerNight,
+  })
   const activitiesUrl = buildActivitiesLink(cityName)
 
   return { flightUrl, hotelUrl, activitiesUrl }

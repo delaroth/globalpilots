@@ -68,12 +68,15 @@ interface Destination {
   blog_post_slug?: string
   itinerary?: { day: number; activities: string[] }[]
   bestTimeToGo?: string
+  suggestedDepartureDate?: string
+  suggestedReturnDate?: string
 }
 
 interface MysteryRevealProps {
   destination: Destination
   origin: string
   departDate: string
+  tripDuration?: number
   onShowAnother: () => void
   onReroll?: () => void
   rerollCount?: number
@@ -88,6 +91,7 @@ export default function MysteryReveal({
   onReroll,
   rerollCount = 0,
   maxRerolls = 3,
+  tripDuration = 3,
 }: MysteryRevealProps) {
   const [revealed, setRevealed] = useState(false)
   const bookingRef = useRef<HTMLDivElement>(null)
@@ -98,6 +102,19 @@ export default function MysteryReveal({
   const iata = destination.city_code_IATA || destination.iata || ''
   const flightPrice = destination.indicativeFlightPrice || destination.estimated_flight_cost
   const isEstimate = destination.priceIsEstimate
+
+  // Compute effective travel dates
+  const effectiveDepartDate = destination.suggestedDepartureDate || departDate
+  const effectiveReturnDate = (() => {
+    if (destination.suggestedReturnDate) return destination.suggestedReturnDate
+    const d = new Date(effectiveDepartDate + 'T00:00:00')
+    d.setDate(d.getDate() + tripDuration)
+    return d.toISOString().split('T')[0]
+  })()
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  }
 
   // Dynamically import destination-costs to avoid bundling ~60KB of data on the mystery page
   const [costData, setCostData] = useState<DestinationCost | undefined>(undefined)
@@ -113,8 +130,11 @@ export default function MysteryReveal({
     origin,
     destination: iata,
     cityName: destination.destination,
-    departDate,
-    nights: 3,
+    departDate: effectiveDepartDate,
+    nights: tripDuration,
+    maxHotelPerNight: destination.budget_breakdown?.hotel_per_night
+      || destination.estimated_hotel_per_night
+      || undefined,
   })
 
   const handleReveal = () => {
@@ -216,6 +236,9 @@ export default function MysteryReveal({
                 {destination.destination}
               </h2>
               <p className="text-xl text-skyblue-light">{destination.country}</p>
+              <p className="text-sm text-white/80 mt-1">
+                {formatDate(effectiveDepartDate)} &rarr; {formatDate(effectiveReturnDate)} &middot; {tripDuration} nights
+              </p>
             </div>
           </div>
 
@@ -537,7 +560,7 @@ export default function MysteryReveal({
               >
                 Book Flights (~${isEstimate ? `${flightPrice} est.` : flightPrice})
                 <span className="block text-sm font-normal mt-1 opacity-90">
-                  {AFFILIATE_FLAGS.kiwi ? 'Book on Kiwi' : 'Book on Aviasales'}
+                  {formatDate(effectiveDepartDate)} &middot; {AFFILIATE_FLAGS.kiwi ? 'Book on Kiwi' : 'Book on Aviasales'}
                 </span>
               </a>
 
@@ -550,7 +573,7 @@ export default function MysteryReveal({
               >
                 Find Hotels (~${destination.estimated_hotel_per_night}/night)
                 <span className="block text-sm font-normal mt-1 opacity-90">
-                  Search on Agoda
+                  {formatDate(effectiveDepartDate)} &ndash; {formatDate(effectiveReturnDate)} &middot; Search on Agoda
                 </span>
               </a>
 

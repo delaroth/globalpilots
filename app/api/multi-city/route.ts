@@ -30,13 +30,15 @@ interface CityStop {
   estimatedFlightCost: number
   estimatedDailyCost: number
   highlights: string[]
+  arriveDate?: string  // YYYY-MM-DD
+  departDate?: string  // YYYY-MM-DD
 }
 
 interface MultiCityResponse {
   cities: CityStop[]
   totalEstimatedCost: number
   route: string
-  bookingLinks: { from: string; to: string; label: string; url: string }[]
+  bookingLinks: { from: string; to: string; label: string; url: string; date: string }[]
   reasoning: string
   /** Whether flight prices are from live data or AI estimates */
   pricesAreReal: boolean
@@ -431,20 +433,23 @@ Return this EXACT JSON structure (no wrapping, no markdown):
       startDate.setDate(startDate.getDate() + 14)
     }
 
-    const bookingLinks: { from: string; to: string; label: string; url: string }[] = []
+    const bookingLinks: { from: string; to: string; label: string; url: string; date: string }[] = []
     let currentDate = new Date(startDate)
 
     // First leg: origin to first city
     if (aiResult.cities.length > 0) {
       const firstCity = aiResult.cities[0]
       const dateStr = currentDate.toISOString().split('T')[0]
+      firstCity.arriveDate = dateStr
       bookingLinks.push({
         from: origin,
         to: firstCity.code,
         label: `${origin} → ${firstCity.code} (${firstCity.name})`,
         url: buildFlightLink(origin, firstCity.code, dateStr),
+        date: dateStr,
       })
       currentDate.setDate(currentDate.getDate() + firstCity.days)
+      firstCity.departDate = currentDate.toISOString().split('T')[0]
     }
 
     // Intermediate legs
@@ -452,13 +457,16 @@ Return this EXACT JSON structure (no wrapping, no markdown):
       const fromCity = aiResult.cities[i - 1]
       const toCity = aiResult.cities[i]
       const dateStr = currentDate.toISOString().split('T')[0]
+      toCity.arriveDate = dateStr
       bookingLinks.push({
         from: fromCity.code,
         to: toCity.code,
         label: `${fromCity.code} (${fromCity.name}) → ${toCity.code} (${toCity.name})`,
         url: buildFlightLink(fromCity.code, toCity.code, dateStr),
+        date: dateStr,
       })
       currentDate.setDate(currentDate.getDate() + toCity.days)
+      toCity.departDate = currentDate.toISOString().split('T')[0]
     }
 
     // Return leg: last city back to origin
@@ -470,6 +478,7 @@ Return this EXACT JSON structure (no wrapping, no markdown):
         to: origin,
         label: `${lastCity.code} (${lastCity.name}) → ${origin} (Return)`,
         url: buildFlightLink(lastCity.code, origin, dateStr),
+        date: dateStr,
       })
     }
 

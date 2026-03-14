@@ -12,11 +12,10 @@ const SE_ASIA_IATA = [
  * When AFFILIATE_FLAGS.getyourguide = true: appends ?partner_id={GYG_PARTNER_ID}
  */
 export function buildGetYourGuideUrl(cityName: string): string {
-  const slug = cityName.toLowerCase().replace(/\s+/g, '-')
-  let url = `https://www.getyourguide.com/${slug}/`
+  let url = `https://www.getyourguide.com/s/?q=${encodeURIComponent(cityName)}&searchSource=1`
 
   if (AFFILIATE_FLAGS.getyourguide && process.env.GETYOURGUIDE_PARTNER_ID) {
-    url += `?partner_id=${process.env.GETYOURGUIDE_PARTNER_ID}`
+    url += `&partner_id=${process.env.GETYOURGUIDE_PARTNER_ID}`
   }
 
   return url

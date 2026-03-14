@@ -66,6 +66,8 @@ interface CityStop {
   estimatedFlightCost: number
   estimatedDailyCost: number
   highlights: string[]
+  arriveDate?: string
+  departDate?: string
 }
 
 interface BookingLink {
@@ -73,6 +75,7 @@ interface BookingLink {
   to: string
   label: string
   url: string
+  date?: string
 }
 
 interface TripResult {
@@ -652,6 +655,10 @@ function MultiCityContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {result.cities.map((city, idx) => {
                   const cityTotal = city.estimatedFlightCost + (city.estimatedDailyCost * city.days)
+                  const formatShortDate = (d: string) => {
+                    const date = new Date(d + 'T00:00:00')
+                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  }
                   const gradients = [
                     'from-amber-500/20 to-orange-500/20 border-amber-400/30 hover:border-amber-400/60',
                     'from-emerald-500/20 to-teal-500/20 border-emerald-400/30 hover:border-emerald-400/60',
@@ -683,6 +690,15 @@ function MultiCityContent() {
                           <span className="text-white font-bold text-sm">{city.days} days</span>
                         </div>
                       </div>
+
+                      {/* Dates */}
+                      {city.arriveDate && city.departDate && (
+                        <div className="flex items-center gap-2 mb-4 text-xs text-skyblue-light/80">
+                          <span>{formatShortDate(city.arriveDate)}</span>
+                          <span className="text-white/30">&rarr;</span>
+                          <span>{formatShortDate(city.departDate)}</span>
+                        </div>
+                      )}
 
                       {/* Cost breakdown */}
                       <div className="space-y-2 mb-4">
@@ -768,7 +784,10 @@ function MultiCityContent() {
                       </div>
                       <div>
                         <span className="text-white font-medium text-sm">{link.label}</span>
-                        <span className="block text-skyblue-light text-xs">Leg {idx + 1} of {result.bookingLinks.length}</span>
+                        <span className="block text-skyblue-light text-xs">
+                          Leg {idx + 1} of {result.bookingLinks.length}
+                          {link.date && ` · ${new Date(link.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                        </span>
                       </div>
                     </div>
                     <span className="text-amber-400 font-semibold text-sm group-hover:translate-x-1 transition-transform whitespace-nowrap ml-4">

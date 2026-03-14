@@ -776,6 +776,7 @@ export default function MysteryPage() {
               destination={destination}
               origin={origin}
               departDate={departDate}
+              tripDuration={tripDuration}
               onShowAnother={handleShowAnother}
               onReroll={handleReroll}
               rerollCount={rerollCount}

@@ -14,7 +14,7 @@ export function buildAgodaUrl(params: {
 }): string {
   const { cityName, checkIn, checkOut, adults = 1 } = params
 
-  let url = `https://www.agoda.com/search?city=${encodeURIComponent(cityName)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`
+  let url = `https://www.agoda.com/search?textToSearch=${encodeURIComponent(cityName)}&checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`
 
   if (AFFILIATE_FLAGS.agoda && process.env.AGODA_AFFILIATE_ID) {
     url += `&cid=${process.env.AGODA_AFFILIATE_ID}`
