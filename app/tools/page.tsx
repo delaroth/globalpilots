@@ -8,22 +8,11 @@ const tools = [
     emoji: '\u2728',
     href: '/mystery',
     description:
-      'Set your budget and let AI surprise you with the perfect destination. Get a complete trip plan with flights, hotels, and activities — all within your budget.',
+      'Set your budget and let AI surprise you with the perfect destination — plan single or multi-city trips. Get a complete trip plan with flights, hotels, and activities — all within your budget.',
     cta: 'Surprise Me',
     gradient: 'from-purple-600/30 to-pink-600/30',
     border: 'border-purple-400/30 hover:border-purple-400/60',
     accent: 'text-purple-300',
-  },
-  {
-    title: 'Multi-City Trip Planner',
-    emoji: '\uD83D\uDDFA\uFE0F',
-    href: '/multi-city',
-    description:
-      'Plan an optimized multi-stop adventure across 2-5 cities. AI handles route planning, budget allocation, and flight connections so you can focus on the fun.',
-    cta: 'Plan My Trip',
-    gradient: 'from-amber-600/30 to-orange-600/30',
-    border: 'border-amber-400/30 hover:border-amber-400/60',
-    accent: 'text-amber-300',
   },
   {
     title: 'Trip Cost Calculator',
@@ -77,7 +66,7 @@ export default function ToolsPage() {
           </div>
 
           {/* Main Tools Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {tools.map((tool) => (
               <Link
                 key={tool.href}

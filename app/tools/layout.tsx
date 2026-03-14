@@ -3,14 +3,14 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Free Travel Planning Tools | GlobePilot',
   description:
-    'Explore free travel planning tools: Mystery Vacation Generator, Multi-City Planner, Trip Cost Calculator, and more.',
+    'Explore free travel planning tools: Mystery Vacation (single or multi-city), Trip Cost Calculator, and more.',
   keywords: [
     'free travel planning tools',
     'budget travel calculator',
     'mystery vacation generator',
     'flight search tools',
     'layover explorer',
-    'multi-city planner',
+    'multi-city trip planner',
     'trip cost calculator',
     'cheapest destinations',
   ],
@@ -33,7 +33,7 @@ const toolsJsonLd = {
   '@type': 'ItemList',
   name: 'GlobePilot Free Travel Planning Tools',
   description: 'Free AI-powered tools to help you plan your next adventure.',
-  numberOfItems: 3,
+  numberOfItems: 4,
   itemListElement: [
     {
       '@type': 'ListItem',
@@ -50,18 +50,12 @@ const toolsJsonLd = {
     {
       '@type': 'ListItem',
       position: 3,
-      name: 'Multi-City Trip Planner',
-      url: 'https://globepilots.com/multi-city',
-    },
-    {
-      '@type': 'ListItem',
-      position: 4,
       name: 'Smart Flight Search',
       url: 'https://globepilots.com/search',
     },
     {
       '@type': 'ListItem',
-      position: 5,
+      position: 4,
       name: 'Trip Cost Calculator',
       url: 'https://globepilots.com/trip-cost',
     },

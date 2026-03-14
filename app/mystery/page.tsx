@@ -5,6 +5,8 @@ import Link from 'next/link'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 import MysteryLoading from '@/components/MysteryLoading'
 import MysteryReveal from '@/components/MysteryReveal'
+import MultiCityResults from '@/components/MultiCityResults'
+import type { TripResult } from '@/components/MultiCityResults'
 import { searchAirports, majorAirports } from '@/lib/geolocation'
 
 const vibeOptions = [
@@ -48,6 +50,15 @@ const quickThemes = [
   { emoji: '🎒', label: 'Budget Backpacker', vibes: [], budgetMin: '300', budgetMax: '500', color: 'from-yellow-400 to-amber-500' },
 ]
 
+const regionOptions = [
+  { label: 'Any Region', value: 'Any' },
+  { label: 'Southeast Asia', value: 'Southeast Asia' },
+  { label: 'East Asia', value: 'East Asia' },
+  { label: 'Europe', value: 'Europe' },
+  { label: 'Middle East', value: 'Middle East' },
+  { label: 'Americas', value: 'Americas' },
+]
+
 const MAX_REROLLS = 3
 
 export default function MysteryPage() {
@@ -81,6 +92,11 @@ export default function MysteryPage() {
   const [rerollCount, setRerollCount] = useState(0)
   const [activeTheme, setActiveTheme] = useState<string | null>(null)
 
+  // Multi-city state
+  const [numCities, setNumCities] = useState(1)
+  const [region, setRegion] = useState('Any')
+  const [multiCityResult, setMultiCityResult] = useState<TripResult | null>(null)
+
   // Keep ref in sync with state
   useEffect(() => {
     excludeListRef.current = excludeList
@@ -97,6 +113,16 @@ export default function MysteryPage() {
   const [emailForUpdates, setEmailForUpdates] = useState('')
   const [accommodationLevel, setAccommodationLevel] = useState('mid-range')
   const [budgetPriority, setBudgetPriority] = useState('balanced')
+
+  // Adjust trip duration when numCities changes
+  useEffect(() => {
+    if (numCities === 1) {
+      setTripDuration(prev => Math.min(prev, 14))
+    } else {
+      const minDays = Math.max(5, numCities * 2)
+      setTripDuration(prev => Math.max(prev, minDays))
+    }
+  }, [numCities])
 
   // Scroll to error when it appears
   useEffect(() => {
@@ -175,8 +201,9 @@ export default function MysteryPage() {
       return
     }
 
-    if (parseFloat(budget) < 100) {
-      const errorMsg = 'Please enter a budget of at least $100 for a realistic trip!'
+    const minBudget = numCities > 1 ? 200 : 100
+    if (parseFloat(budget) < minBudget) {
+      const errorMsg = `Please enter a budget of at least $${minBudget}!`
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
       setIsSubmitting(false)
@@ -214,9 +241,52 @@ export default function MysteryPage() {
       }
     }
 
-    console.log('[Mystery] ✅ All validations passed! Starting search with:', { origin: resolvedOrigin, budget, vibes: selectedVibes, departDate })
+    console.log('[Mystery] ✅ All validations passed! Starting search with:', { origin: resolvedOrigin, budget, vibes: selectedVibes, departDate, numCities })
     setStep('loading')
 
+    // ─── Multi-city mystery flow ───
+    if (numCities > 1) {
+      try {
+        const response = await fetch('/api/multi-city', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            origin: resolvedOrigin,
+            totalBudget: parseFloat(budget),
+            totalDays: tripDuration,
+            numCities,
+            region: region !== 'Any' ? region : undefined,
+            vibe: selectedVibes.length > 0 ? selectedVibes : undefined,
+            departureDate: dateMode === 'specific' ? departDate : undefined,
+            departureTimeframe: dateMode === 'flexible' ? timeframe : undefined,
+            accommodationLevel,
+            budgetPriority,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+          throw new Error(errorData.error || `Request failed (HTTP ${response.status})`)
+        }
+
+        const data: TripResult = await response.json()
+        if (!data.cities || data.cities.length === 0) {
+          throw new Error('No cities returned. Try adjusting your budget or preferences.')
+        }
+
+        setMultiCityResult(data)
+        setStep('reveal')
+        setIsSubmitting(false)
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+        setError(errorMsg)
+        setStep('form')
+        setIsSubmitting(false)
+      }
+      return
+    }
+
+    // ─── Single-city mystery flow ───
     try {
       console.log('[Mystery] 🚀 Making API call to /api/ai-mystery...')
       const response = await fetch('/api/ai-mystery', {
@@ -305,6 +375,7 @@ export default function MysteryPage() {
   const handleReset = () => {
     setStep('form')
     setDestination(null)
+    setMultiCityResult(null)
     setError('')
     setExcludeList([])
     excludeListRef.current = []
@@ -383,6 +454,34 @@ export default function MysteryPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
+              {/* Number of Destinations */}
+              <div className="mb-6">
+                <label className="block text-lg font-semibold text-navy mb-3">
+                  How many destinations? 🗺️
+                </label>
+                <div className="grid grid-cols-5 gap-3">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setNumCities(n)}
+                      className={`py-3 rounded-lg font-bold text-lg transition-all ${
+                        numCities === n
+                          ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue/50'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  {numCities === 1
+                    ? 'AI will surprise you with one perfect destination'
+                    : `AI will plan a ${numCities}-city mystery route for you`}
+                </p>
+              </div>
+
               {/* Budget */}
               <div className="mb-6">
                 <label htmlFor="budget" className="block text-lg font-semibold text-navy mb-2">
@@ -407,7 +506,9 @@ export default function MysteryPage() {
                   />
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  Total budget for flights + accommodation + activities
+                  {numCities === 1
+                    ? 'Total budget for flights + accommodation + activities'
+                    : `Total budget for all ${numCities} cities — flights + daily expenses`}
                 </p>
               </div>
 
@@ -576,28 +677,49 @@ export default function MysteryPage() {
                 </div>
               </div>
 
-              {/* Traveller Type */}
-              <div className="mb-6">
-                <label className="block text-lg font-semibold text-navy mb-3">
-                  Travelling as... 👥
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {travellerTypes.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setTravellerType(type)}
-                      className={`py-3 rounded-lg font-medium transition-all ${
-                        travellerType === type
-                          ? 'bg-skyblue text-navy shadow-lg'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+              {/* Region — multi-city only */}
+              {numCities > 1 && (
+                <div className="mb-6">
+                  <label htmlFor="region" className="block text-lg font-semibold text-navy mb-2">
+                    Region preference 🌍
+                  </label>
+                  <select
+                    id="region"
+                    value={region}
+                    onChange={(e) => setRegion(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy bg-white"
+                  >
+                    {regionOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
                 </div>
-              </div>
+              )}
+
+              {/* Traveller Type — single city only */}
+              {numCities === 1 && (
+                <div className="mb-6">
+                  <label className="block text-lg font-semibold text-navy mb-3">
+                    Travelling as... 👥
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {travellerTypes.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setTravellerType(type)}
+                        className={`py-3 rounded-lg font-medium transition-all ${
+                          travellerType === type
+                            ? 'bg-skyblue text-navy shadow-lg'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Trip Duration */}
               <div className="mb-6">
@@ -606,20 +728,20 @@ export default function MysteryPage() {
                 </label>
                 <input
                   type="range"
-                  min="3"
-                  max="14"
+                  min={numCities === 1 ? 3 : Math.max(5, numCities * 2)}
+                  max={numCities === 1 ? 14 : 60}
                   value={tripDuration}
                   onChange={(e) => setTripDuration(parseInt(e.target.value))}
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
                 />
                 <div className="flex justify-between text-sm text-gray-600 mt-1">
-                  <span>3 days</span>
-                  <span>14 days</span>
+                  <span>{numCities === 1 ? 3 : Math.max(5, numCities * 2)} days</span>
+                  <span>{numCities === 1 ? 14 : 60} days</span>
                 </div>
               </div>
 
-              {/* Package Components */}
-              <div className="mb-6">
+              {/* Package Components — single city only */}
+              {numCities === 1 && (<div className="mb-6">
                 <label className="block text-lg font-semibold text-navy mb-3">
                   What should we include? 📦
                 </label>
@@ -669,25 +791,27 @@ export default function MysteryPage() {
                     </span>
                   </label>
                 </div>
-              </div>
+              </div>)}
 
-              {/* Email Capture */}
-              <div className="mb-8">
-                <label htmlFor="email" className="block text-lg font-semibold text-navy mb-2">
-                  Email (optional) 📧
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={emailForUpdates}
-                  onChange={(e) => setEmailForUpdates(e.target.value)}
-                  placeholder="your@email.com"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
-                />
-                <p className="text-sm text-gray-600 mt-1">
-                  Get your trip details and travel tips via email
-                </p>
-              </div>
+              {/* Email Capture — single city only */}
+              {numCities === 1 && (
+                <div className="mb-8">
+                  <label htmlFor="email" className="block text-lg font-semibold text-navy mb-2">
+                    Email (optional) 📧
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={emailForUpdates}
+                    onChange={(e) => setEmailForUpdates(e.target.value)}
+                    placeholder="your@email.com"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Get your trip details and travel tips via email
+                  </p>
+                </div>
+              )}
 
               {/* Error Message - Always visible when present */}
               {error && (
@@ -721,8 +845,10 @@ export default function MysteryPage() {
                     <div className="inline-block w-6 h-6 border-3 border-navy border-t-transparent rounded-full animate-spin"></div>
                     <span>Finding your perfect destination...</span>
                   </>
-                ) : (
+                ) : numCities === 1 ? (
                   <>✨ Surprise Me! ✨</>
+                ) : (
+                  <>🗺️ Plan My Mystery Route</>
                 )}
               </button>
             </form>
@@ -744,10 +870,14 @@ export default function MysteryPage() {
                 <div className="text-center mb-8">
                   <div className="text-7xl mb-6 animate-spin-slow inline-block">🌍</div>
                   <h2 className="text-3xl font-bold text-white mb-3">
-                    Our AI is finding your perfect destination...
+                    {numCities === 1
+                      ? 'Our AI is finding your perfect destination...'
+                      : `AI is planning your ${numCities}-city mystery route...`}
                   </h2>
                   <p className="text-skyblue-light text-lg">
-                    Searching flights, hotels, and creating your custom itinerary
+                    {numCities === 1
+                      ? 'Searching flights, hotels, and creating your custom itinerary'
+                      : 'Optimizing your route, checking flights, and calculating budgets'}
                   </p>
                 </div>
                 <MysteryLoading />
@@ -769,8 +899,21 @@ export default function MysteryPage() {
           </div>
         )}
 
-        {/* Step 3: Reveal */}
-        {step === 'reveal' && destination && destination.destination && destination.city_code_IATA && (
+        {/* Step 3: Multi-city results */}
+        {step === 'reveal' && numCities > 1 && multiCityResult && (
+          <div ref={revealRef}>
+            <MultiCityResults
+              result={multiCityResult}
+              origin={origin}
+              totalBudget={budget}
+              totalDays={tripDuration}
+              onStartOver={handleReset}
+            />
+          </div>
+        )}
+
+        {/* Step 3: Single-city reveal */}
+        {step === 'reveal' && numCities === 1 && destination && destination.destination && destination.city_code_IATA && (
           <div ref={revealRef}>
             <MysteryReveal
               destination={destination}
@@ -793,8 +936,8 @@ export default function MysteryPage() {
           </div>
         )}
 
-        {/* Error State: If step is reveal but destination is invalid */}
-        {step === 'reveal' && (!destination || !destination.destination || !destination.city_code_IATA) && (
+        {/* Error State: If step is reveal but destination is invalid (single-city only) */}
+        {step === 'reveal' && numCities === 1 && (!destination || !destination.destination || !destination.city_code_IATA) && (
           <div className="max-w-3xl mx-auto">
             <div className="bg-red-50 border-2 border-red-500 rounded-2xl p-8 shadow-2xl text-center">
               <div className="text-6xl mb-4">😕</div>

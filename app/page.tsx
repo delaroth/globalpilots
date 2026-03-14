@@ -24,27 +24,16 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Two Hero Feature Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+          {/* Hero Feature Card */}
+          <div className="grid grid-cols-1 gap-6 mt-12 max-w-xl mx-auto">
             <Link href="/mystery" className="group relative bg-gradient-to-br from-purple-600/30 to-pink-600/30 backdrop-blur-sm rounded-2xl p-8 border border-purple-400/30 hover:border-purple-400/60 hover:shadow-2xl transition-all transform hover:scale-[1.03] text-left">
               <div className="text-5xl mb-4">✨</div>
               <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-purple-300 transition">Mystery Vacation</h2>
               <p className="text-skyblue-light text-sm mb-6">
-                Set your budget and let AI surprise you with the perfect destination. Includes flights, hotels, and activities.
+                Set your budget and let AI surprise you with the perfect destination — single city or multi-city. Includes flights, hotels, and activities.
               </p>
               <span className="inline-flex items-center text-purple-300 font-semibold text-sm group-hover:translate-x-1 transition-transform">
                 Surprise Me →
-              </span>
-            </Link>
-
-            <Link href="/multi-city" className="group relative bg-gradient-to-br from-amber-600/30 to-orange-600/30 backdrop-blur-sm rounded-2xl p-8 border border-amber-400/30 hover:border-amber-400/60 hover:shadow-2xl transition-all transform hover:scale-[1.03] text-left">
-              <div className="text-5xl mb-4">🗺️</div>
-              <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-amber-300 transition">Multi-City Trip Planner</h2>
-              <p className="text-skyblue-light text-sm mb-6">
-                Plan an optimized multi-stop adventure across 2-5 cities. AI handles route planning, budget allocation, and flight connections.
-              </p>
-              <span className="inline-flex items-center text-amber-300 font-semibold text-sm group-hover:translate-x-1 transition-transform">
-                Plan My Trip →
               </span>
             </Link>
           </div>

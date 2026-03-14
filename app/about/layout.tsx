@@ -3,14 +3,14 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'About GlobePilot | How It Works',
   description:
-    'Discover how GlobePilot helps travellers plan adventures with any budget: Mystery Vacation, Multi-City Planner, Trip Cost Calculator, and more.',
+    'Discover how GlobePilot helps travellers plan adventures with any budget: Mystery Vacation (single or multi-city), Trip Cost Calculator, and more.',
   keywords: [
     'about GlobePilot',
     'budget travel tools',
     'how it works',
     'mystery vacation',
     'layover explorer',
-    'multi-city planner',
+    'multi-city trip planner',
     'flight search',
     'cheapest destinations',
     'trip cost calculator',

@@ -6,15 +6,15 @@ const features = [
   {
     step: 1,
     title: 'Mystery Vacation',
-    subtitle: 'Let AI Surprise You',
+    subtitle: 'Plan Single or Multi-City Trips with AI',
     href: '/mystery',
     description:
-      'Set your budget, departure airport, and travel vibes. Our AI analyzes real flight data and destination costs to craft a surprise vacation that fits your budget perfectly.',
+      'Set your budget, departure airport, and travel vibes. Our AI analyzes real flight data and destination costs to craft a surprise vacation that fits your budget — whether it is a single-city getaway or an optimized multi-stop adventure across 2-5 cities.',
     howItWorks: [
       'Enter your budget and departure airport',
       'Choose your travel style: beach, culture, adventure, or party',
-      'AI finds the best destination match with flights, hotels, and activities',
-      'Reveal your mystery destination and book instantly',
+      'AI finds the best destination match — single city or multi-city route',
+      'Get a complete trip plan with flights, hotels, and activities',
     ],
     gradient: 'from-purple-600/20 to-pink-600/20',
     border: 'border-purple-400/30',
@@ -27,28 +27,6 @@ const features = [
   },
   {
     step: 2,
-    title: 'Multi-City Trip Planner',
-    subtitle: 'AI-Optimized Multi-Stop Adventures',
-    href: '/multi-city',
-    description:
-      'Planning a trip across multiple cities? Let AI optimize your route order, allocate your budget based on local costs, and find the best flight connections between stops.',
-    howItWorks: [
-      'Set your total budget and travel dates',
-      'Add 2-5 destination cities',
-      'AI optimizes route order for cheapest flights',
-      'Get a full itinerary with budget breakdown per city',
-    ],
-    gradient: 'from-amber-600/20 to-orange-600/20',
-    border: 'border-amber-400/30',
-    accent: 'text-amber-300',
-    mockupBg: 'bg-gradient-to-br from-amber-900/50 to-orange-900/50',
-    mockupContent: {
-      label: 'Your Route',
-      items: ['London > Paris > Barcelona > Rome', 'Total: $1,200 for 14 days', 'Optimized route saves $340'],
-    },
-  },
-  {
-    step: 3,
     title: 'Trip Cost Calculator',
     subtitle: 'Know Before You Go',
     href: '/trip-cost',
@@ -90,7 +68,7 @@ const faqs = [
   },
   {
     q: 'How can I plan a multi-city trip on a budget?',
-    a: "Use our Multi-City Trip Planner. Set your total budget and add 2-5 cities. AI optimizes the route order for the cheapest flights, allocates your budget based on each city's costs, and finds the best connections between stops.",
+    a: "Use our Mystery Vacation tool — it supports multi-city trips. Set your total budget and add 2-5 cities. AI optimizes the route order for the cheapest flights, allocates your budget based on each city's costs, and finds the best connections between stops.",
   },
   {
     q: 'How accurate are the prices?',
@@ -113,7 +91,7 @@ export default function HowItWorksPage() {
               Works
             </h1>
             <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
-              3 core tools that help you plan trips,
+              2 core tools that help you plan trips,
               discover destinations, and plan unforgettable adventures. Here is
               exactly how each one works.
             </p>
@@ -131,7 +109,7 @@ export default function HowItWorksPage() {
                 {/* Text Side */}
                 <div className="flex-1 space-y-4">
                   <div className={`text-sm font-semibold ${feature.accent} uppercase tracking-wider`}>
-                    Tool {feature.step} of 3
+                    Tool {feature.step} of 2
                   </div>
                   <h2 className="text-3xl font-bold text-white">
                     {feature.title}

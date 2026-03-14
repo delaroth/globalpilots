@@ -599,7 +599,7 @@ function TripCostContent() {
                   </Link>
                 )}
                 <Link
-                  href="/multi-city"
+                  href="/mystery"
                   className="text-sm text-skyblue-light/70 hover:text-skyblue transition"
                 >
                   Plan a multi-city trip

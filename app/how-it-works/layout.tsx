@@ -53,7 +53,7 @@ const faqJsonLd = {
       name: 'Is GlobePilot free to use?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Yes, all GlobePilot tools are completely free to use with no sign-up required. This includes Mystery Vacation, Multi-City Planner, and Trip Cost Calculator.',
+        text: 'Yes, all GlobePilot tools are completely free to use with no sign-up required. This includes Mystery Vacation (single or multi-city) and Trip Cost Calculator.',
       },
     },
     {
@@ -69,7 +69,7 @@ const faqJsonLd = {
       name: 'How can I plan a multi-city trip on a budget?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Use GlobePilot\'s Multi-City Trip Planner to set your total budget and select 2-5 cities. AI optimizes your route order for the cheapest flights, allocates your budget across cities based on local costs, and finds the best connections between stops.',
+        text: 'Use GlobePilot\'s Mystery Vacation tool — it supports multi-city trips. Set your total budget and select 2-5 cities. AI optimizes your route order for the cheapest flights, allocates your budget across cities based on local costs, and finds the best connections between stops.',
       },
     },
     {

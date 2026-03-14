@@ -247,7 +247,7 @@ The Angkor pass is the biggest single expense in any SE Asia backpacking trip, a
 <p>An open-jaw ticket flies you into one city and out of another. For long-haul flights, this is usually just $20-50 more than a round-trip -- sometimes even cheaper. Book your intercontinental flights as open-jaw, then fill in the gaps with local budget airlines or buses.</p>
 
 <h2>Step 3: Use Budget Airlines for Hops</h2>
-<p>Within Southeast Asia, AirAsia, VietJet, Scoot, and Lion Air connect major cities for $15-50 one-way. In Europe, Ryanair and Wizz Air do the same. The trick: book these hops separately from your main ticket. Our <a href="/multi-city">Multi-City Planner</a> searches all these carriers simultaneously.</p>
+<p>Within Southeast Asia, AirAsia, VietJet, Scoot, and Lion Air connect major cities for $15-50 one-way. In Europe, Ryanair and Wizz Air do the same. The trick: book these hops separately from your main ticket. Our <a href="/mystery">Mystery Vacation planner</a> supports multi-city routes and searches all these carriers simultaneously.</p>
 
 <h2>Step 4: Build a Logical Route</h2>
 <p>Backtracking kills budgets. Plot your cities on a map and create a route that moves in one direction. Going Bangkok → Hanoi → Bali → Chiang Mai means expensive backtracking. Going Bangkok → Chiang Mai → Hanoi → HCMC → Bali flows naturally and costs less.</p>
@@ -277,7 +277,7 @@ The Angkor pass is the biggest single expense in any SE Asia backpacking trip, a
 </ul>
 
 <h2>Start Planning</h2>
-<p>Our <a href="/multi-city">Multi-City Trip Planner</a> lets you input all your stops and finds the cheapest flight combination. It's the tool built for exactly this kind of trip -- no more juggling 15 browser tabs of one-way flights.</p>
+<p>Our <a href="/mystery">Mystery Vacation planner</a> supports multi-city routes -- input all your stops and it finds the cheapest flight combination. No more juggling 15 browser tabs of one-way flights.</p>
 `
   },
   {
@@ -375,13 +375,13 @@ The Angkor pass is the biggest single expense in any SE Asia backpacking trip, a
 <p>The "book 6 weeks in advance" rule is a rough average, not a law. For budget airlines in Southeast Asia, last-minute can be dirt cheap if they haven't filled the plane. For premium airlines on popular routes, 2-3 months ahead tends to be the sweet spot. Avoid booking more than 6 months out -- airlines inflate early-booking prices because they know you'll pay a premium for certainty.</p>
 
 <h2>Strategy 8: Use Multi-City Routing</h2>
-<p>Don't automatically book round-trips. If you're visiting a region, fly into one city and out of another. A BKK-open-jaw (fly into Bangkok, out of HCMC) is often cheaper than BKK round-trip, and you skip an expensive backtrack flight. Our <a href="/multi-city">Multi-City Planner</a> finds the cheapest combination across all your stops.</p>
+<p>Don't automatically book round-trips. If you're visiting a region, fly into one city and out of another. A BKK-open-jaw (fly into Bangkok, out of HCMC) is often cheaper than BKK round-trip, and you skip an expensive backtrack flight. Our <a href="/mystery">Mystery Vacation planner</a> supports multi-city routes and finds the cheapest combination across all your stops.</p>
 
 <h2>Strategy 9: Follow the Deals, Not the Hype</h2>
 <p>Instagram-famous destinations are expensive because everyone's going there at the same time. The best deals are to places that aren't trending. Use our <a href="/discover">Discover tool</a> to find where fares are unusually low right now -- those are the real opportunities.</p>
 
 <h2>Strategy 10: Stack Strategies</h2>
-<p>The travelers who find the cheapest flights combine multiple tactics. Flexible destination + flexible dates + one-way tickets + nearby airports = fares that seem too good to be true. Every tool on GlobePilot is designed to help you stack these strategies: <a href="/discover">Discover</a> for destinations, <a href="/search">Search</a> for dates, <a href="/multi-city">Multi-City</a> for complex routes, <a href="/explore">Explore</a> for layovers, and <a href="/mystery">Mystery</a> when you want maximum flexibility.</p>
+<p>The travelers who find the cheapest flights combine multiple tactics. Flexible destination + flexible dates + one-way tickets + nearby airports = fares that seem too good to be true. Every tool on GlobePilot is designed to help you stack these strategies: <a href="/discover">Discover</a> for destinations, <a href="/search">Search</a> for dates, <a href="/mystery">Mystery Vacation</a> for single or multi-city trips, <a href="/explore">Explore</a> for layovers, and more.</p>
 
 <h2>The Bottom Line</h2>
 <p>Cheap flights reward the flexible and the prepared. The more constraints you remove -- fixed dates, fixed destinations, fixed airlines -- the more the prices drop. Start with what matters to you (budget, travel style, approximate dates) and let the tools find where the value is.</p>

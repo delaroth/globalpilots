@@ -8,18 +8,9 @@ const tools = [
     name: 'Mystery Vacation',
     href: '/mystery',
     description:
-      'Set your budget and let AI surprise you with a destination you never knew you wanted to visit. Perfect for spontaneous travellers.',
+      'Set your budget and let AI surprise you with a destination — plan single or multi-city trips. Perfect for spontaneous travellers.',
     gradient: 'from-purple-600/30 to-pink-600/30',
     border: 'border-purple-400/30 hover:border-purple-400/60',
-  },
-  {
-    emoji: '🗺️',
-    name: 'Multi-City Planner',
-    href: '/multi-city',
-    description:
-      'Plan complex routes across multiple destinations. See total costs, optimal ordering, and build your dream itinerary.',
-    gradient: 'from-amber-600/30 to-orange-600/30',
-    border: 'border-amber-400/30 hover:border-amber-400/60',
   },
   {
     emoji: '🧮',
@@ -77,13 +68,13 @@ export default function AboutPage() {
       <section className="px-6 py-16">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-4">
-            3 Tools. One Mission.
+            2 Tools. One Mission.
           </h2>
           <p className="text-skyblue-light text-center mb-12 max-w-xl mx-auto">
             Every tool is designed to save you money and spark your sense of adventure.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {tools.map((tool) => (
               <Link
                 key={tool.href}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 
-type WhatNextContext = 'mystery' | 'search' | 'explore' | 'multi-city' | 'trip-cost'
+type WhatNextContext = 'mystery' | 'search' | 'explore' | 'trip-cost'
 
 interface WhatNextProps {
   origin?: string
@@ -77,7 +77,7 @@ function buildSuggestions({
       emoji: '🌐',
       title: 'Plan multi-city',
       description: 'String together multiple destinations',
-      href: '/multi-city',
+      href: '/mystery',
     })
   }
 
@@ -95,7 +95,7 @@ function buildSuggestions({
         emoji: '🌐',
         title: `Plan multi-city from ${origin}`,
         description: 'Add more stops to your trip',
-        href: '/multi-city',
+        href: '/mystery',
       })
     }
     suggestions.push({
@@ -103,21 +103,6 @@ function buildSuggestions({
       title: 'Search direct flights',
       description: 'Compare dates and carriers',
       href: `/search${origin && destination ? `?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}` : ''}`,
-    })
-  }
-
-  if (context === 'multi-city') {
-    suggestions.push({
-      emoji: '💰',
-      title: 'Check costs per city',
-      description: 'See daily budgets for each stop',
-      href: '/trip-cost',
-    })
-    suggestions.push({
-      emoji: '🎲',
-      title: 'Mystery vacation',
-      description: 'Let us surprise you instead',
-      href: '/mystery',
     })
   }
 
