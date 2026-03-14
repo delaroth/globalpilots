@@ -8,6 +8,7 @@ import MysteryReveal from '@/components/MysteryReveal'
 import MultiCityResults from '@/components/MultiCityResults'
 import type { TripResult } from '@/components/MultiCityResults'
 import { searchAirports, majorAirports } from '@/lib/geolocation'
+import SocialProof from '@/components/SocialProof'
 
 const vibeOptions = [
   { emoji: '🏖', label: 'Beach', value: 'beach' },
@@ -421,6 +422,9 @@ export default function MysteryPage() {
           <p className="text-xl text-skyblue-light">
             Let AI surprise you with the perfect destination
           </p>
+          <div className="mt-4">
+            <SocialProof />
+          </div>
         </div>
 
         {/* Step 1: Form */}
