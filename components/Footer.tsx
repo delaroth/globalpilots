@@ -28,7 +28,7 @@ export default function Footer() {
               Budget in. Adventure out.
             </p>
             <p className="text-skyblue-light/70 text-xs">
-              AI-powered budget travel planning that finds the best flight deals for your next adventure.
+              AI-powered travel planning that helps you plan your next adventure with any budget.
             </p>
           </div>
 
@@ -99,7 +99,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-skyblue/20 pt-8 text-center">
           <p className="text-skyblue-light text-sm">
-            &copy; {currentYear} GlobePilot. Built with ❤️ for budget travellers.
+            &copy; {currentYear} GlobePilot. Built with ❤️ for travellers.
           </p>
           <p className="text-skyblue-light/70 text-xs mt-2">
             Powered by TravelPayouts & DeepSeek AI

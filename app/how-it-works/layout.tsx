@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'How It Works — Find Cheap Flights & Plan Trips | GlobePilot',
+  title: 'How It Works — Plan Trips & Find Flights | GlobePilot',
   description:
     'Learn how GlobePilot helps you plan multi-city trips, discover budget destinations, and estimate trip costs with free AI-powered travel tools.',
   keywords: [
@@ -17,14 +17,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'How It Works | GlobePilot',
     description:
-      'Discover how GlobePilot helps you find cheap flights, hack layovers, and plan budget adventures with AI.',
+      'Discover how GlobePilot helps you plan trips, find flights, and explore destinations with AI.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'How It Works | GlobePilot',
     description:
-      'Learn how to find cheap flights, hack layovers, and plan budget trips with GlobePilot.',
+      'Learn how to plan trips, find flights, and explore destinations with GlobePilot.',
   },
 }
 

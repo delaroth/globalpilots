@@ -17,14 +17,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Free Travel Planning Tools | GlobePilot',
     description:
-      'Free AI-powered travel tools to plan your perfect budget adventure.',
+      'Free AI-powered travel tools to plan your perfect adventure.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Free Travel Planning Tools | GlobePilot',
     description:
-      'Free AI-powered travel tools to plan your perfect budget adventure.',
+      'Free AI-powered travel tools to plan your perfect adventure.',
   },
 }
 
@@ -32,7 +32,7 @@ const toolsJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
   name: 'GlobePilot Free Travel Planning Tools',
-  description: 'Free AI-powered tools to help budget travellers plan their next adventure.',
+  description: 'Free AI-powered tools to help you plan your next adventure.',
   numberOfItems: 3,
   itemListElement: [
     {

@@ -68,7 +68,7 @@ export default function AboutPage() {
             Adventure out.
           </h1>
           <p className="text-xl md:text-2xl text-skyblue-light max-w-2xl mx-auto leading-relaxed">
-            GlobePilot is a suite of AI-powered travel tools built for budget-conscious adventurers. We help you discover destinations, find creative routes, and plan trips that fit your wallet.
+            GlobePilot is a suite of AI-powered travel tools built for adventurers. We help you discover destinations, find creative routes, and plan trips that fit any budget.
           </p>
         </div>
       </section>

@@ -43,7 +43,7 @@ const websiteJsonLd = {
   '@type': 'WebSite',
   name: 'GlobePilot',
   url: 'https://globepilots.com',
-  description: 'Budget in. Adventure out. Smart travel tools for budget travellers.',
+  description: 'Budget in. Adventure out. Smart travel tools that help you plan adventures with any budget.',
   potentialAction: {
     '@type': 'SearchAction',
     target: {

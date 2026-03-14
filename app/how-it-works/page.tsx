@@ -113,7 +113,7 @@ export default function HowItWorksPage() {
               Works
             </h1>
             <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
-              3 core tools that help budget travellers find cheap flights,
+              3 core tools that help you plan trips,
               discover destinations, and plan unforgettable adventures. Here is
               exactly how each one works.
             </p>
