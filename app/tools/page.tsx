@@ -44,24 +44,12 @@ const tools = [
     emoji: '\u2708\uFE0F',
     href: '/search',
     description:
-      'Search flights with exact dates, a monthly calendar view, or flexible day-of-week mode. Discover the cheapest days to fly and save on every trip.',
+      'Search flights with exact dates, a monthly calendar view, or flexible day-of-week mode. Set destination to "Anywhere" to find the cheapest places to fly.',
     cta: 'Search Flights',
     gradient: 'from-blue-600/30 to-cyan-600/30',
     border: 'border-blue-400/30 hover:border-blue-400/60',
     accent: 'text-blue-300',
     keywords: 'cheap flight search, flexible date flights, flight calendar',
-  },
-  {
-    title: 'Cheapest Destinations',
-    emoji: '\uD83D\uDCB0',
-    href: '/discover',
-    description:
-      'Find the 5 cheapest places to fly from your airport on any date. Browse real-time low fares and discover budget-friendly destinations you never considered.',
-    cta: 'Find Deals',
-    gradient: 'from-green-600/30 to-lime-600/30',
-    border: 'border-green-400/30 hover:border-green-400/60',
-    accent: 'text-green-300',
-    keywords: 'cheapest flights, budget destinations, low fare finder',
   },
   {
     title: 'Trip Cost Calculator',
@@ -91,7 +79,7 @@ export default function ToolsPage() {
               <span className="text-skyblue">Tools</span>
             </h1>
             <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
-              6 smart tools to help you discover destinations, find creative
+              5 smart tools to help you discover destinations, find creative
               routes, estimate costs, and book your next adventure — all
               completely free.
             </p>

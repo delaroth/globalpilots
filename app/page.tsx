@@ -68,20 +68,14 @@ export default function Home() {
           </div>
 
           {/* Secondary Feature Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
             <Link href="/search" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
               <div className="text-3xl mb-2">✈️</div>
               <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-skyblue transition">Search Flights</h3>
-              <p className="text-skyblue-light text-xs">Exact dates, monthly calendar, or flexible day-of-week search</p>
+              <p className="text-skyblue-light text-xs">Exact dates, monthly calendar, flexible days, or search to &quot;Anywhere&quot;</p>
             </Link>
 
-            <Link href="/discover" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
-              <div className="text-3xl mb-2">💰</div>
-              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-skyblue transition">Cheapest Destinations</h3>
-              <p className="text-skyblue-light text-xs">Find the 5 cheapest places to fly from your airport on any date</p>
-            </Link>
-
-            <Link href="/trip-cost" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
+<Link href="/trip-cost" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
               <div className="text-3xl mb-2">&#x1F4CA;</div>
               <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-skyblue transition">Trip Costs</h3>
               <p className="text-skyblue-light text-xs">Estimate total trip costs for 60+ cities with daily breakdowns</p>

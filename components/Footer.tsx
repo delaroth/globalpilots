@@ -9,7 +9,6 @@ export default function Footer() {
     { href: '/explore', label: 'Layover Explorer' },
     { href: '/multi-city', label: 'Multi-City Planner' },
     { href: '/search', label: 'Smart Flight Search' },
-    { href: '/discover', label: 'Cheapest Destinations' },
     { href: '/trip-cost', label: 'Trip Cost Calculator' },
   ]
 

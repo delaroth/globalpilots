@@ -13,7 +13,6 @@ export default function Navigation() {
     { href: '/explore', label: 'Layover Explorer' },
     { href: '/multi-city', label: 'Multi-City' },
     { href: '/search', label: 'Search Flights' },
-    { href: '/discover', label: 'Explore Cheap' },
   ]
 
   return (

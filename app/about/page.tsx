@@ -35,18 +35,9 @@ const tools = [
     name: 'Smart Flight Search',
     href: '/search',
     description:
-      'Search flights with flexible dates, compare prices across providers, and find the cheapest way to get where you want to go.',
+      'Search flights with flexible dates, or set destination to "Anywhere" to find the cheapest places to fly from your airport.',
     gradient: 'from-orange-600/30 to-amber-600/30',
     border: 'border-orange-400/30 hover:border-orange-400/60',
-  },
-  {
-    emoji: '💰',
-    name: 'Cheapest Destinations',
-    href: '/discover',
-    description:
-      'Enter your budget and see where you can fly. Discover affordable destinations you might never have considered.',
-    gradient: 'from-green-600/30 to-lime-600/30',
-    border: 'border-green-400/30 hover:border-green-400/60',
   },
   {
     emoji: '🧮',
@@ -64,7 +55,7 @@ const steps = [
     number: '1',
     title: 'Pick a Tool',
     description:
-      'Choose from 6 smart travel tools designed for different planning needs. Whether you know exactly where you want to go or need inspiration, we have you covered.',
+      'Choose from 5 smart travel tools designed for different planning needs. Whether you know exactly where you want to go or need inspiration, we have you covered.',
   },
   {
     number: '2',
@@ -104,7 +95,7 @@ export default function AboutPage() {
       <section className="px-6 py-16">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-4">
-            6 Tools. One Mission.
+            5 Tools. One Mission.
           </h2>
           <p className="text-skyblue-light text-center mb-12 max-w-xl mx-auto">
             Every tool is designed to save you money and spark your sense of adventure.

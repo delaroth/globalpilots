@@ -34,7 +34,7 @@ const organizationJsonLd = {
   url: 'https://globepilots.com',
   logo: 'https://globepilots.com/logo.png',
   description:
-    'AI-powered budget travel planning platform with 6 smart tools to help you discover destinations, find creative routes, and book your next adventure.',
+    'AI-powered budget travel planning platform with 5 smart tools to help you discover destinations, find creative routes, and book your next adventure.',
   sameAs: [],
 }
 

@@ -10,6 +10,7 @@ interface AirportAutocompleteProps {
   placeholder?: string
   id: string
   onSearchChange?: (text: string) => void // Optional callback for raw text input
+  allowAnywhere?: boolean // Show "Anywhere" option in dropdown
 }
 
 export default function AirportAutocomplete({
@@ -19,6 +20,7 @@ export default function AirportAutocomplete({
   placeholder = 'Search city or airport code...',
   id,
   onSearchChange,
+  allowAnywhere = false,
 }: AirportAutocompleteProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -45,10 +47,19 @@ export default function AirportAutocomplete({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const anywhereEntry = { code: 'ANYWHERE', city: 'Anywhere', country: 'Cheapest destinations' }
+
   // Improved filtering: prioritize exact IATA code matches, then partial matches
   const filteredAirports = searchQuery.trim()
     ? (() => {
         const query = searchQuery.trim().toUpperCase()
+
+        // If typing "any"/"anywhere", show the Anywhere option first
+        if (allowAnywhere && 'ANYWHERE'.startsWith(query)) {
+          const allResults = searchAirports(searchQuery).slice(0, 9)
+          return [anywhereEntry, ...allResults]
+        }
+
         const allResults = searchAirports(searchQuery)
 
         // Exact IATA code match
@@ -76,7 +87,7 @@ export default function AirportAutocomplete({
         // Return prioritized results
         return [...exactMatch, ...codeStartsWith, ...cityStartsWith, ...otherMatches].slice(0, 10)
       })()
-    : []
+    : allowAnywhere ? [anywhereEntry] : []
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -93,9 +104,13 @@ export default function AirportAutocomplete({
   // Set initial selected city name if value exists
   useEffect(() => {
     if (value && !selectedCity) {
-      const airport = majorAirports.find(a => a.code === value)
-      if (airport) {
-        setSelectedCity(airport.city)
+      if (value === 'ANYWHERE') {
+        setSelectedCity('Anywhere')
+      } else {
+        const airport = majorAirports.find(a => a.code === value)
+        if (airport) {
+          setSelectedCity(airport.city)
+        }
       }
     }
   }, [value, selectedCity])
@@ -117,7 +132,7 @@ export default function AirportAutocomplete({
     const query = searchQuery.trim().toUpperCase()
 
     // If user typed exactly 3 letters (case-insensitive)
-    if (query.length === 3) {
+    if (query.length === 3 && !(allowAnywhere && query === 'ANY')) {
       const exactMatch = majorAirports.find(a => a.code === query)
       if (exactMatch) {
         // Auto-select the exact IATA code match immediately
@@ -165,7 +180,9 @@ export default function AirportAutocomplete({
           <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 flex justify-between items-center">
             <div>
               <span className="font-semibold text-navy">{selectedCity}</span>
-              <span className="text-sm text-gray-600 ml-2">({value})</span>
+              {value !== 'ANYWHERE' && (
+                <span className="text-sm text-gray-600 ml-2">({value})</span>
+              )}
             </div>
             <button
               type="button"

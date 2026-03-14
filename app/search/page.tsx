@@ -12,7 +12,9 @@ import { resolveFlightBooking } from '@/lib/booking-redirect'
 import { saveRecentSearch } from '@/lib/recent-searches'
 import RecentSearches from '@/components/RecentSearches'
 import BookingLinks from '@/components/BookingLinks'
+import DestinationImage from '@/components/DestinationImage'
 import { majorAirports } from '@/lib/geolocation'
+import Link from 'next/link'
 
 // Lazy load CalendarGrid — only rendered after a flexible-month search completes
 const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
@@ -130,6 +132,7 @@ function SearchPageContent() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [exactDateResult, setExactDateResult] = useState<{ price: number; dayData: any; source?: string; deepLink?: string } | null>(null)
   const [weekendDeals, setWeekendDeals] = useState<WeekendDeal[]>([])
+  const [discoverResults, setDiscoverResults] = useState<{ destination: string; city: string; price: number; departDate: string; returnDate: string }[]>([])
   const [emptyRoute, setEmptyRoute] = useState(false)
   const [showPopularSuggestions, setShowPopularSuggestions] = useState(false)
 
@@ -138,17 +141,42 @@ function SearchPageContent() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    setCalendarData(null); setExactDateResult(null); setWeekendDeals([])
+    setCalendarData(null); setExactDateResult(null); setWeekendDeals([]); setDiscoverResults([])
     setError(''); setEmptyRoute(false); setShowPopularSuggestions(false)
 
     if (!origin) { setError('Please select a departure airport'); return }
-    if ((dateMode === 'exact-date' || dateMode === 'flexible-month') && !destination) {
+    if ((dateMode === 'exact-date' || dateMode === 'flexible-month') && !destination && destination !== 'ANYWHERE') {
       setError('Please select a destination for this search mode'); return
     }
-    if (destination && origin === destination) { setError('Departure and destination must be different'); return }
+    if (destination && destination !== 'ANYWHERE' && origin === destination) { setError('Departure and destination must be different'); return }
 
     setLoading(true)
     try {
+      // "Anywhere" mode — find cheapest destinations
+      if (destination === 'ANYWHERE') {
+        const dateParam = dateMode === 'exact-date' ? exactDate : `${month}-01`
+        const res = await fetch(`/api/discover?origin=${origin}&depart_date=${dateParam}&limit=5`)
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || `API error: ${res.status}`)
+        }
+        const data = await res.json()
+        const results = data.results || []
+        if (results.length === 0) {
+          setEmptyRoute(true)
+        } else {
+          setDiscoverResults(results)
+          const dateLabel = new Date(dateParam + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          saveRecentSearch({
+            origin, mode: 'discover', date: dateParam,
+            label: `${origin} → anywhere · ${dateLabel}`,
+            url: `/search?origin=${origin}&dest=ANYWHERE`,
+          })
+        }
+        setLoading(false)
+        return
+      }
+
       if (dateMode === 'flexible-month') {
         const res = await fetch(`/api/travelpayouts/calendar?origin=${origin}&destination=${destination}&depart_date=${month}`)
         if (!res.ok) throw new Error(`API error: ${res.status}`)
@@ -262,7 +290,7 @@ function SearchPageContent() {
         {/* Page header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">Smart Flight Search</h1>
-          <p className="text-xl text-skyblue-light">Search by exact dates, browse cheapest days, or pick which days you&apos;re free</p>
+          <p className="text-xl text-skyblue-light">Search by exact dates, browse cheapest days, or set destination to &quot;Anywhere&quot; to find the cheapest places to fly</p>
         </div>
 
         {/* FORM CARD */}
@@ -275,7 +303,8 @@ function SearchPageContent() {
               <AirportAutocomplete
                 id="destination" label="To"
                 value={destination} onChange={setDestination}
-                placeholder={dateMode === 'day-windows' ? 'Any destination (optional)' : 'Destination city or code...'}
+                placeholder={dateMode === 'day-windows' ? 'Any destination (optional)' : 'City, code, or "Anywhere"...'}
+                allowAnywhere
               />
             </div>
 
@@ -440,9 +469,10 @@ function SearchPageContent() {
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-skyblue"></div>
             <p className="text-white mt-4 text-lg">
-              {dateMode === 'flexible-month' && 'Loading cheapest days...'}
-              {dateMode === 'exact-date' && 'Checking flight prices...'}
-              {dateMode === 'day-windows' && `Finding ${departDay}–${returnDay} trips...`}
+              {destination === 'ANYWHERE' && 'Finding cheapest destinations...'}
+              {destination !== 'ANYWHERE' && dateMode === 'flexible-month' && 'Loading cheapest days...'}
+              {destination !== 'ANYWHERE' && dateMode === 'exact-date' && 'Checking flight prices...'}
+              {destination !== 'ANYWHERE' && dateMode === 'day-windows' && `Finding ${departDay}–${returnDay} trips...`}
             </p>
           </div>
         )}
@@ -572,6 +602,84 @@ function SearchPageContent() {
               </div>
             )}
 
+            {/* ANYWHERE: cheapest destinations */}
+            {discoverResults.length > 0 && (
+              <div className="max-w-3xl mx-auto">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    Top {discoverResults.length} Cheapest Destinations
+                  </h2>
+                  <p className="text-skyblue-light">From {origin}</p>
+                </div>
+                <p className="text-skyblue-light/60 text-xs text-center mb-6">
+                  Prices are cached estimates — click to check current prices on Aviasales
+                </p>
+                <div className="space-y-4">
+                  {discoverResults.map((r, i) => (
+                    <div key={r.destination} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all overflow-hidden">
+                      <button
+                        onClick={() => {
+                          const link = buildFlightLink(origin, r.destination, r.departDate)
+                          window.open(link, '_blank')
+                        }}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center">
+                          <div className={`w-16 h-full flex items-center justify-center text-2xl font-bold shrink-0 py-6 ${
+                            i === 0 ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            #{i + 1}
+                          </div>
+                          <div className="w-16 h-16 shrink-0 my-2 ml-3 rounded-lg overflow-hidden">
+                            <DestinationImage code={r.destination} city={r.city} height="h-full" className="w-full" />
+                          </div>
+                          <div className="flex-1 px-5 py-4">
+                            <div className="flex items-baseline gap-2">
+                              <h3 className="text-xl font-bold text-navy">{r.city}</h3>
+                              <span className="text-gray-400 text-sm">{r.destination}</span>
+                            </div>
+                            <p className="text-gray-500 text-sm mt-1">
+                              {new Date(r.departDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(r.returnDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </p>
+                          </div>
+                          <div className="text-right px-5 py-4 shrink-0">
+                            <p className="text-xs text-gray-400">from ~</p>
+                            <p className={`text-3xl font-bold ${i === 0 ? 'text-green-600' : 'text-navy'}`}>
+                              ${r.price}
+                            </p>
+                            <p className="text-skyblue text-xs font-medium mt-1">Check on Aviasales &rarr;</p>
+                          </div>
+                        </div>
+                      </button>
+                      <div className="flex items-center gap-4 px-5 pb-2 pt-0">
+                        <Link
+                          href={`/trip-cost?destination=${encodeURIComponent(r.destination)}`}
+                          className="text-xs text-gray-400 hover:text-skyblue transition"
+                        >
+                          Plan a trip
+                        </Link>
+                        <Link
+                          href={`/explore?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(r.destination)}`}
+                          className="text-xs text-gray-400 hover:text-skyblue transition"
+                        >
+                          Layover routes
+                        </Link>
+                      </div>
+                      <div className="px-5 pb-3">
+                        <BookingLinks cityName={r.city} iata={r.destination} checkIn={r.departDate} nights={3} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <WhatNext
+                  origin={origin}
+                  destination={discoverResults[0]?.destination}
+                  destinationCity={discoverResults[0]?.city}
+                  context="search"
+                />
+              </div>
+            )}
+
             {/* POPULAR SUGGESTIONS */}
             {showPopularSuggestions && (
               <div className="max-w-6xl mx-auto mt-8">
@@ -604,7 +712,7 @@ function SearchPageContent() {
             )}
 
             {/* Empty state */}
-            {!calendarData && !exactDateResult && weekendDeals.length === 0 && !emptyRoute && !error && (
+            {!calendarData && !exactDateResult && weekendDeals.length === 0 && discoverResults.length === 0 && !emptyRoute && !error && (
               <div className="max-w-3xl mx-auto mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">

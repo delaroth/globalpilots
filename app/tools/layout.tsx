@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Free Travel Planning Tools — 6 Smart Tools | GlobePilot',
+  title: 'Free Travel Planning Tools — 5 Smart Tools | GlobePilot',
   description:
-    'Explore 6 free travel planning tools: Mystery Vacation Generator, Layover Explorer, Multi-City Planner, Smart Flight Search, Budget Calculator, and more.',
+    'Explore 5 free travel planning tools: Mystery Vacation Generator, Layover Explorer, Multi-City Planner, Smart Flight Search, and Trip Cost Calculator.',
   keywords: [
     'free travel planning tools',
     'budget travel calculator',
@@ -17,14 +17,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Free Travel Planning Tools | GlobePilot',
     description:
-      'Explore 6 free AI-powered travel tools to plan your perfect budget adventure.',
+      'Explore 5 free AI-powered travel tools to plan your perfect budget adventure.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Free Travel Planning Tools | GlobePilot',
     description:
-      'Explore 6 free AI-powered travel tools to plan your perfect budget adventure.',
+      'Explore 5 free AI-powered travel tools to plan your perfect budget adventure.',
   },
 }
 
@@ -32,8 +32,8 @@ const toolsJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
   name: 'GlobePilot Free Travel Planning Tools',
-  description: '6 free AI-powered tools to help budget travellers plan their next adventure.',
-  numberOfItems: 6,
+  description: '5 free AI-powered tools to help budget travellers plan their next adventure.',
+  numberOfItems: 5,
   itemListElement: [
     {
       '@type': 'ListItem',
@@ -62,12 +62,6 @@ const toolsJsonLd = {
     {
       '@type': 'ListItem',
       position: 5,
-      name: 'Cheapest Destinations',
-      url: 'https://globepilots.com/discover',
-    },
-    {
-      '@type': 'ListItem',
-      position: 6,
       name: 'Trip Cost Calculator',
       url: 'https://globepilots.com/trip-cost',
     },

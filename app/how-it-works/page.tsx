@@ -93,28 +93,6 @@ const features = [
   },
   {
     step: 5,
-    title: 'Cheapest Destinations',
-    subtitle: 'Where Can You Fly for Less?',
-    href: '/discover',
-    description:
-      'Not sure where to go? Enter your airport and we show you the 5 cheapest destinations available right now. Discover budget-friendly places you never considered.',
-    howItWorks: [
-      'Enter your departure airport',
-      'We scan all available routes for the lowest fares',
-      'See the top 5 cheapest destinations with prices',
-      'Click to search and book the deal',
-    ],
-    gradient: 'from-green-600/20 to-lime-600/20',
-    border: 'border-green-400/30',
-    accent: 'text-green-300',
-    mockupBg: 'bg-gradient-to-br from-green-900/50 to-lime-900/50',
-    mockupContent: {
-      label: 'Cheapest from JFK',
-      items: ['1. Fort Lauderdale — $49', '2. San Juan — $89', '3. Cancun — $127'],
-    },
-  },
-  {
-    step: 6,
     title: 'Trip Cost Calculator',
     subtitle: 'Know Before You Go',
     href: '/trip-cost',
@@ -140,7 +118,7 @@ const features = [
 const faqs = [
   {
     q: 'How do I find the cheapest flights?',
-    a: "Use our Smart Flight Search with the calendar view to compare prices across different days. The monthly calendar highlights the cheapest dates in green. You can also use Cheapest Destinations to find where you can fly for the lowest fares from your airport.",
+    a: "Use our Smart Flight Search with the calendar view to compare prices across different days. The monthly calendar highlights the cheapest dates in green. You can also search with destination set to 'Anywhere' to find the cheapest places to fly from your airport.",
   },
   {
     q: 'What is a layover hack?',
@@ -148,7 +126,7 @@ const faqs = [
   },
   {
     q: 'Is GlobePilot really free?',
-    a: 'Yes! All 6 tools are completely free to use. No sign-up, no subscription, no hidden fees. We earn a small commission when you book through our partner links, which keeps everything free for you.',
+    a: 'Yes! All 5 tools are completely free to use. No sign-up, no subscription, no hidden fees. We earn a small commission when you book through our partner links, which keeps everything free for you.',
   },
   {
     q: 'How does the Mystery Vacation work?',
@@ -179,7 +157,7 @@ export default function HowItWorksPage() {
               Works
             </h1>
             <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
-              6 free tools that help budget travellers find cheap flights,
+              5 free tools that help budget travellers find cheap flights,
               discover destinations, and plan unforgettable adventures. Here is
               exactly how each one works.
             </p>
@@ -197,7 +175,7 @@ export default function HowItWorksPage() {
                 {/* Text Side */}
                 <div className="flex-1 space-y-4">
                   <div className={`text-sm font-semibold ${feature.accent} uppercase tracking-wider`}>
-                    Tool {feature.step} of 6
+                    Tool {feature.step} of 5
                   </div>
                   <h2 className="text-3xl font-bold text-white">
                     {feature.title}
