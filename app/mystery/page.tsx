@@ -98,6 +98,10 @@ export default function MysteryPage() {
   const [region, setRegion] = useState('Any')
   const [multiCityResult, setMultiCityResult] = useState<TripResult | null>(null)
 
+  // Theme notification
+  const [themeNotification, setThemeNotification] = useState<string | null>(null)
+  const originSectionRef = useRef<HTMLDivElement>(null)
+
   // Keep ref in sync with state
   useEffect(() => {
     excludeListRef.current = excludeList
@@ -141,6 +145,25 @@ export default function MysteryPage() {
       }, 100)
     }
   }, [step, destination])
+
+  // Pre-fill origin from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !origin) {
+      const raw = localStorage.getItem('gp_origin')
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw)
+          if (parsed && parsed.code) {
+            setOrigin(parsed.code)
+          }
+        } catch {
+          // Legacy format: plain string
+          setOrigin(raw)
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleVibeToggle = (vibe: string) => {
     if (error) setError('') // Clear error when user interacts
@@ -382,6 +405,7 @@ export default function MysteryPage() {
     excludeListRef.current = []
     setRerollCount(0)
     setActiveTheme(null)
+    setThemeNotification(null)
   }
 
   const handleThemeSelect = (theme: typeof quickThemes[number]) => {
@@ -389,11 +413,50 @@ export default function MysteryPage() {
     if (theme.vibes.length > 0) {
       setSelectedVibes(theme.vibes)
     }
-    // Pre-fill budget as the midpoint of the range
-    const midBudget = Math.round((parseInt(theme.budgetMin) + parseInt(theme.budgetMax)) / 2)
-    setBudget(String(midBudget))
+
+    // Pre-fill budget to budgetMax
+    setBudget(theme.budgetMax)
+
+    // Set accommodation level based on budget range
+    const maxBudget = parseInt(theme.budgetMax)
+    if (maxBudget < 500) {
+      setAccommodationLevel('budget')
+    } else if (maxBudget <= 800) {
+      setAccommodationLevel('mid-range')
+    } else {
+      setAccommodationLevel('upscale')
+    }
+
+    // Set trip duration per theme
+    const durationMap: Record<string, number> = {
+      'Beach Escape': 5,
+      'City Culture': 4,
+      'Adventure Trip': 7,
+      'Foodie Tour': 4,
+      'Budget Backpacker': 7,
+    }
+    setTripDuration(durationMap[theme.label] || 5)
+
+    // Set budget priority per theme
+    const priorityMap: Record<string, string> = {
+      'Beach Escape': 'hotels',
+      'City Culture': 'balanced',
+      'Adventure Trip': 'flights',
+      'Foodie Tour': 'activities',
+      'Budget Backpacker': 'balanced',
+    }
+    setBudgetPriority(priorityMap[theme.label] || 'balanced')
+
     setActiveTheme(theme.label)
     setError('')
+
+    // Show dismissable notification
+    setThemeNotification(`Form pre-filled from ${theme.label} theme`)
+
+    // Smooth-scroll to origin/departure section
+    setTimeout(() => {
+      originSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
   }
 
   return (
@@ -456,6 +519,23 @@ export default function MysteryPage() {
                 </p>
               )}
             </div>
+
+            {/* Theme auto-fill notification */}
+            {themeNotification && (
+              <div className="mb-4 bg-skyblue/10 border border-skyblue/30 rounded-lg px-4 py-3 flex items-center justify-between animate-fade-in">
+                <p className="text-skyblue-light text-sm font-medium">
+                  {themeNotification}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setThemeNotification(null)}
+                  className="text-skyblue-light/70 hover:text-white ml-4 text-lg leading-none"
+                  aria-label="Dismiss notification"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
               {/* Number of Destinations */}
@@ -566,7 +646,7 @@ export default function MysteryPage() {
               </div>
 
               {/* Departure City */}
-              <div className="mb-6">
+              <div className="mb-6" ref={originSectionRef}>
                 <label htmlFor="origin" className="block text-lg font-semibold text-navy mb-2">
                   Where are you flying from? ✈️
                 </label>
@@ -577,6 +657,7 @@ export default function MysteryPage() {
                   onChange={setOrigin}
                   onSearchChange={setOriginInputText} // Track raw text input
                   placeholder="Search your departure city..."
+                  persistKey="origin"
                 />
               </div>
 
@@ -836,6 +917,13 @@ export default function MysteryPage() {
                 .animate-shake {
                   animation: shake 0.5s ease-in-out;
                 }
+                @keyframes fade-in {
+                  from { opacity: 0; transform: translateY(-8px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in {
+                  animation: fade-in 0.3s ease-out;
+                }
               `}</style>
 
               {/* Submit Button */}
@@ -884,7 +972,13 @@ export default function MysteryPage() {
                       : 'Optimizing your route, checking flights, and calculating budgets'}
                   </p>
                 </div>
-                <MysteryLoading />
+                <MysteryLoading
+                  budget={budget}
+                  origin={origin}
+                  vibes={selectedVibes}
+                  numCities={numCities}
+                  tripDuration={tripDuration}
+                />
               </div>
             </div>
             <style jsx>{`

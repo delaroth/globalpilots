@@ -11,6 +11,7 @@ interface AirportAutocompleteProps {
   id: string
   onSearchChange?: (text: string) => void // Optional callback for raw text input
   allowAnywhere?: boolean // Show "Anywhere" option in dropdown
+  persistKey?: string // localStorage key suffix for persistence (e.g. 'origin')
 }
 
 export default function AirportAutocomplete({
@@ -21,6 +22,7 @@ export default function AirportAutocomplete({
   id,
   onSearchChange,
   allowAnywhere = false,
+  persistKey,
 }: AirportAutocompleteProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
@@ -28,20 +30,36 @@ export default function AirportAutocomplete({
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const isOriginField = id.toLowerCase().includes('origin')
+  const storageKey = persistKey ? `gp_${persistKey}` : (isOriginField ? 'gp_origin' : null)
 
-  // Persist origin airport to localStorage for cross-page auto-fill
-  const saveOriginToStorage = (code: string) => {
-    if (isOriginField && code && typeof window !== 'undefined') {
-      localStorage.setItem('globepilot_origin', code)
+  // Persist airport to localStorage
+  const saveToStorage = (code: string, city: string) => {
+    if (storageKey && code && typeof window !== 'undefined') {
+      localStorage.setItem(storageKey, JSON.stringify({ code, name: city }))
     }
   }
 
-  // On mount, auto-fill origin from localStorage if value is empty
+  const clearStorage = () => {
+    if (storageKey && typeof window !== 'undefined') {
+      localStorage.removeItem(storageKey)
+    }
+  }
+
+  // On mount, auto-fill from localStorage if value is empty
   useEffect(() => {
-    if (isOriginField && !value && typeof window !== 'undefined') {
-      const saved = localStorage.getItem('globepilot_origin')
-      if (saved) {
-        onChange(saved)
+    if (storageKey && !value && typeof window !== 'undefined') {
+      const raw = localStorage.getItem(storageKey)
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw)
+          if (parsed && parsed.code) {
+            onChange(parsed.code)
+            if (parsed.name) setSelectedCity(parsed.name)
+          }
+        } catch {
+          // Legacy format: plain string code
+          onChange(raw)
+        }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -117,7 +135,7 @@ export default function AirportAutocomplete({
 
   const handleSelect = (code: string, city: string) => {
     onChange(code)
-    saveOriginToStorage(code)
+    saveToStorage(code, city)
     setSelectedCity(city)
     setSearchQuery('')
     setShowDropdown(false)
@@ -137,13 +155,46 @@ export default function AirportAutocomplete({
       if (exactMatch) {
         // Auto-select the exact IATA code match immediately
         onChange(exactMatch.code)
-        saveOriginToStorage(exactMatch.code)
+        saveToStorage(exactMatch.code, exactMatch.city)
         setSelectedCity(exactMatch.city)
         setSearchQuery('')
         setShowDropdown(false)
       }
     }
   }, [searchQuery, onChange])
+
+  // Auto-select on blur: if exactly one match or exact text match, pick it
+  const handleBlur = () => {
+    // Small delay to allow click events on dropdown items to fire first
+    setTimeout(() => {
+      if (!searchQuery.trim()) return
+
+      const query = searchQuery.trim()
+      const results = searchAirports(query)
+
+      if (results.length === 1) {
+        handleSelect(results[0].code, results[0].city)
+        return
+      }
+
+      // Check for exact match on name or code (case-insensitive)
+      const exactByCode = results.find(
+        (a) => a.code.toLowerCase() === query.toLowerCase()
+      )
+      if (exactByCode) {
+        handleSelect(exactByCode.code, exactByCode.city)
+        return
+      }
+
+      const exactByCity = results.find(
+        (a) => a.city.toLowerCase() === query.toLowerCase()
+      )
+      if (exactByCity) {
+        handleSelect(exactByCity.code, exactByCity.city)
+        return
+      }
+    }, 200)
+  }
 
   // Handle Enter key
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -189,9 +240,11 @@ export default function AirportAutocomplete({
               onClick={() => {
                 setSelectedCity('')
                 onChange('')
+                clearStorage()
                 setShowDropdown(true)
               }}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-500 hover:text-gray-700 w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200 transition"
+              aria-label="Clear airport selection"
             >
               ✕
             </button>
@@ -211,6 +264,7 @@ export default function AirportAutocomplete({
             }}
             onKeyDown={handleKeyDown}
             onFocus={() => setShowDropdown(true)}
+            onBlur={handleBlur}
             placeholder={placeholder}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
             autoComplete="off"
