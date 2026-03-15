@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 import CurrencySelector from '@/components/CurrencySelector'
 import { useCurrency } from '@/hooks/useCurrency'
-import MysteryReveal from '@/components/MysteryReveal'
 import MultiCityResults from '@/components/MultiCityResults'
 import type { TripResult } from '@/components/MultiCityResults'
 import { searchAirports } from '@/lib/geolocation'
@@ -14,6 +13,7 @@ import PassportButton from '@/components/PassportButton'
 import TripHistory from '@/components/TripHistory'
 import CompareReveals from '@/components/CompareReveals'
 import type { SavedTrip } from '@/lib/trip-history'
+import { useMystery } from '@/components/MysteryContext'
 
 const vibeOptions = [
   { emoji: '\u{1F3D6}', label: 'Beach', value: 'beach' },
@@ -65,10 +65,7 @@ const regionOptions = [
   { label: 'Americas', value: 'Americas' },
 ]
 
-const MAX_REROLLS = 3
-
 export default function MysteryPage() {
-  // Default date to 2 weeks from now
   const getTwoWeeksFromNow = () => {
     const date = new Date()
     date.setDate(date.getDate() + 14)
@@ -76,58 +73,39 @@ export default function MysteryPage() {
   }
 
   const currency = useCurrency()
+  const mystery = useMystery()
 
-  // New simplified search state: idle | searching | quick-ready | ready
-  const [searchState, setSearchState] = useState<'idle' | 'searching' | 'quick-ready' | 'ready'>('idle')
+  // Form state
   const [budget, setBudget] = useState('')
   const [origin, setOrigin] = useState('')
-  const [originInputText, setOriginInputText] = useState('') // Track raw input text
+  const [originInputText, setOriginInputText] = useState('')
   const [departDate, setDepartDate] = useState(getTwoWeeksFromNow())
   const [flexibleDates, setFlexibleDates] = useState(false)
   const [dateMode, setDateMode] = useState<'specific' | 'flexible'>('specific')
   const [timeframe, setTimeframe] = useState('next-3-months')
   const [selectedVibes, setSelectedVibes] = useState<string[]>([])
   const [travellerType, setTravellerType] = useState('Solo')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [destination, setDestination] = useState<any>(null)
   const [error, setError] = useState('')
   const errorRef = useRef<HTMLDivElement>(null)
-  const resultsRef = useRef<HTMLDivElement>(null)
-
-  // Re-roll state
-  const [excludeList, setExcludeList] = useState<string[]>([])
-  const excludeListRef = useRef<string[]>([])
-  const [rerollCount, setRerollCount] = useState(0)
-  const [activeTheme, setActiveTheme] = useState<string | null>(null)
 
   // Multi-city state
   const [numCities, setNumCities] = useState(1)
   const [region, setRegion] = useState('Any')
   const [multiCityResult, setMultiCityResult] = useState<TripResult | null>(null)
+  const [multiCitySearching, setMultiCitySearching] = useState(false)
+  const multiCityAbortRef = useRef<AbortController | null>(null)
+  const resultsRef = useRef<HTMLDivElement>(null)
 
   // Trip history & compare
   const [tripHistoryOpen, setTripHistoryOpen] = useState(false)
   const [compareTrips, setCompareTrips] = useState<SavedTrip[] | null>(null)
 
-  // Theme notification
+  // Theme state
+  const [activeTheme, setActiveTheme] = useState<string | null>(null)
   const [themeNotification, setThemeNotification] = useState<string | null>(null)
   const originSectionRef = useRef<HTMLDivElement>(null)
 
-  // Two-phase reveal: quick data (destination name/price) arrives fast, AI details stream in later
-  const [detailsLoading, setDetailsLoading] = useState(false)
-
-  // Abort controller for cancellation
-  const abortControllerRef = useRef<AbortController | null>(null)
-
-  // Notification bar dismissed state
-  const [notificationDismissed, setNotificationDismissed] = useState(false)
-
-  // Keep ref in sync with state
-  useEffect(() => {
-    excludeListRef.current = excludeList
-  }, [excludeList])
-
-  // NEW: Package builder state
+  // Package builder state
   const [tripDuration, setTripDuration] = useState(3)
   const [packageComponents, setPackageComponents] = useState({
     includeFlight: true,
@@ -140,6 +118,12 @@ export default function MysteryPage() {
   const [budgetPriority, setBudgetPriority] = useState('balanced')
   const [showAdvancedBudget, setShowAdvancedBudget] = useState(false)
   const [customSplit, setCustomSplit] = useState({ flights: 35, hotels: 35, activities: 30 })
+
+  // Whether a single-city mystery search is active (from context)
+  const isSingleCitySearching = mystery.isVisible && numCities === 1
+
+  // Overall "searching" indicator for the form
+  const isSearching = isSingleCitySearching || multiCitySearching
 
   // Adjust trip duration when numCities changes
   useEffect(() => {
@@ -169,7 +153,6 @@ export default function MysteryPage() {
             setOrigin(parsed.code)
           }
         } catch {
-          // Legacy format: plain string
           setOrigin(raw)
         }
       }
@@ -177,12 +160,8 @@ export default function MysteryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const scrollToResults = useCallback(() => {
-    resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
-
   const handleVibeToggle = (vibe: string) => {
-    if (error) setError('') // Clear error when user interacts
+    if (error) setError('')
     if (selectedVibes.includes(vibe)) {
       setSelectedVibes(selectedVibes.filter((v) => v !== vibe))
     } else {
@@ -191,16 +170,16 @@ export default function MysteryPage() {
   }
 
   const handleCancel = () => {
-    // Abort any in-flight requests
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      abortControllerRef.current = null
+    if (numCities > 1) {
+      if (multiCityAbortRef.current) {
+        multiCityAbortRef.current.abort()
+        multiCityAbortRef.current = null
+      }
+      setMultiCitySearching(false)
+      setMultiCityResult(null)
+    } else {
+      mystery.dismiss()
     }
-    setSearchState('idle')
-    setDestination(null)
-    setMultiCityResult(null)
-    setDetailsLoading(false)
-    setNotificationDismissed(false)
     setError('')
   }
 
@@ -208,30 +187,23 @@ export default function MysteryPage() {
     e.preventDefault()
     console.log('[Mystery] Form submitted - starting validation...')
     setError('')
-    setNotificationDismissed(false)
 
     // Auto-resolve origin if user typed text but didn't select from dropdown
     let resolvedOrigin = origin
     if (!origin && originInputText.trim()) {
       console.log('[Mystery] Attempting to auto-resolve origin from text:', originInputText)
-
-      // Try to find exact city name match
       const normalizedInput = originInputText.trim()
       const matches = searchAirports(normalizedInput)
 
       if (matches.length > 0) {
-        // Check for exact city name match (case-insensitive)
         const exactMatch = matches.find(a =>
           a.city.toLowerCase() === normalizedInput.toLowerCase()
         )
 
         if (exactMatch) {
           resolvedOrigin = exactMatch.code
-          console.log('[Mystery] Auto-resolved "' + originInputText + '" to ' + resolvedOrigin)
         } else if (matches.length === 1) {
-          // Only one match, use it
           resolvedOrigin = matches[0].code
-          console.log('[Mystery] Auto-resolved "' + originInputText + '" to ' + resolvedOrigin + ' (single match)')
         }
       }
     }
@@ -241,63 +213,49 @@ export default function MysteryPage() {
       const errorMsg = originInputText.trim()
         ? 'Please select a city from the dropdown suggestions. Multiple cities match your search - click one to confirm.'
         : 'Please select your departure city!'
-      console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
       return
     }
 
     if (!budget || parseFloat(budget) <= 0) {
-      const errorMsg = 'Please enter a budget greater than $0!'
-      console.error('[Mystery] Validation failed:', errorMsg)
-      setError(errorMsg)
+      setError('Please enter a budget greater than $0!')
       return
     }
 
     const minBudget = numCities > 1 ? 200 : 100
     if (parseFloat(budget) < minBudget) {
-      const errorMsg = `Please enter a budget of at least $${minBudget}!`
-      console.error('[Mystery] Validation failed:', errorMsg)
-      setError(errorMsg)
+      setError(`Please enter a budget of at least $${minBudget}!`)
       return
     }
 
     if (selectedVibes.length === 0) {
-      const errorMsg = 'Please select at least one vibe!'
-      console.error('[Mystery] Validation failed:', errorMsg)
-      setError(errorMsg)
+      setError('Please select at least one vibe!')
       return
     }
 
     if (dateMode === 'specific') {
       if (!departDate) {
-        const errorMsg = 'Please select a departure date!'
-        console.error('[Mystery] Validation failed:', errorMsg)
-        setError(errorMsg)
+        setError('Please select a departure date!')
         return
       }
-
-      // Validate date is not in the past
       const selectedDate = new Date(departDate)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-
       if (selectedDate < today) {
-        const errorMsg = 'Please select a future date! Time travel tickets are unfortunately not available yet. \u{1F570}\uFE0F'
-        console.error('[Mystery] Validation failed:', errorMsg)
-        setError(errorMsg)
+        setError('Please select a future date! Time travel tickets are unfortunately not available yet. \u{1F570}\uFE0F')
         return
       }
     }
 
-    console.log('[Mystery] All validations passed! Starting search with:', { origin: resolvedOrigin, budget, vibes: selectedVibes, departDate, numCities })
+    console.log('[Mystery] All validations passed!')
 
-    // Create a new abort controller for this request
-    const abortController = new AbortController()
-    abortControllerRef.current = abortController
-
-    // --- Multi-city mystery flow ---
+    // --- Multi-city mystery flow (stays in-page) ---
     if (numCities > 1) {
-      setSearchState('searching')
+      const abortController = new AbortController()
+      multiCityAbortRef.current = abortController
+      setMultiCitySearching(true)
+      setMultiCityResult(null)
+
       try {
         const response = await fetch('/api/multi-city', {
           method: 'POST',
@@ -329,30 +287,25 @@ export default function MysteryPage() {
         }
 
         setMultiCityResult(data)
-        setSearchState('ready')
-        // Auto-scroll to results
+        setMultiCitySearching(false)
         setTimeout(() => {
           resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }, 100)
       } catch (err) {
-        if ((err as Error).name === 'AbortError') return // User cancelled
+        if ((err as Error).name === 'AbortError') return
         const errorMsg = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
         setError(errorMsg)
-        setSearchState('idle')
+        setMultiCitySearching(false)
       }
       return
     }
 
-    // --- Single-city mystery flow (two-phase: quick pick + AI details) ---
-    setSearchState('searching')
-    setDestination(null)
-    setDetailsLoading(false)
-
+    // --- Single-city mystery flow: delegate to global MysteryContext ---
     const requestDates = dateMode === 'specific'
       ? `${departDate}${flexibleDates ? ' (flexible \u00B13 days)' : ''}`
       : `flexible:${timeframe}`
 
-    const requestBody = {
+    mystery.startSearch({
       origin: resolvedOrigin,
       budget: currency.toUSD(parseFloat(budget)),
       vibes: selectedVibes,
@@ -360,243 +313,24 @@ export default function MysteryPage() {
       tripDuration,
       packageComponents,
       email: emailForUpdates || undefined,
-      exclude: excludeListRef.current.length > 0 ? excludeListRef.current : undefined,
       accommodationLevel,
       budgetPriority,
       customSplit: showAdvancedBudget ? customSplit : undefined,
-    }
-
-    // Phase 1: Quick pick (fast -- only calls SerpApi Explore, no AI)
-    console.log('[Mystery] Phase 1: Making quick-pick API call...')
-    fetch('/api/ai-mystery/quick', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: abortController.signal,
-      body: JSON.stringify(requestBody),
     })
-      .then(async (response) => {
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
-          throw new Error(errorData.error || `Quick pick failed (HTTP ${response.status})`)
-        }
-        const quickData = await response.json()
-        console.log('[Mystery] Phase 1 response:', JSON.stringify({
-          destination: quickData.destination,
-          iata: quickData.city_code_IATA,
-          price: quickData.estimated_flight_cost,
-          cacheHit: quickData._cacheHit,
-          hasFields: !!quickData.destination && !!quickData.city_code_IATA
-        }))
-
-        if (!quickData.destination || !quickData.city_code_IATA) {
-          throw new Error(`Invalid quick pick response: destination=${quickData.destination}, iata=${quickData.city_code_IATA}`)
-        }
-
-        // If this was a full cache hit, we have everything -- skip phase 2
-        if (quickData._cacheHit) {
-          console.log('[Mystery] Full cache hit -- skipping Phase 2')
-          setDestination(quickData)
-          setSearchState('ready')
-          setTimeout(() => {
-            resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }, 100)
-          return
-        }
-
-        // Build a partial destination object with what we know from quick pick
-        const partialDestination = {
-          destination: quickData.destination,
-          country: quickData.country,
-          iata: quickData.iata,
-          city_code_IATA: quickData.city_code_IATA,
-          estimated_flight_cost: quickData.estimated_flight_cost,
-          indicativeFlightPrice: quickData.indicativeFlightPrice,
-          estimated_hotel_per_night: quickData.estimated_hotel_per_night,
-          priceIsLive: quickData.priceIsLive,
-          priceIsEstimate: quickData.priceIsEstimate,
-          googleFlightsPrice: quickData.googleFlightsPrice,
-          googleFlightsAirlines: quickData.googleFlightsAirlines,
-          googleFlightsStops: quickData.googleFlightsStops,
-          suggestedDepartureDate: quickData.suggestedDepartureDate,
-          suggestedReturnDate: quickData.suggestedReturnDate,
-          // Placeholder fields -- will be filled by Phase 2
-          whyThisPlace: '',
-          why_its_perfect: '',
-          itinerary: [],
-          bestTimeToGo: '',
-          localTip: '',
-          insider_tip: '',
-          best_local_food: [],
-          day1: [],
-          day2: [],
-          day3: [],
-          budgetBreakdown: {
-            flights: quickData.estimated_flight_cost,
-            hotel: quickData.estimated_hotel_per_night * tripDuration,
-            activities: 0,
-            food: 0,
-            total: quickData.estimated_flight_cost + quickData.estimated_hotel_per_night * tripDuration,
-          },
-        }
-
-        // Reveal immediately with partial data
-        setDestination(partialDestination)
-        setSearchState('quick-ready')
-
-        // Phase 2: Fire AI details in the background
-        console.log('[Mystery] Phase 2: Fetching AI details for', quickData.destination, '...')
-        setDetailsLoading(true)
-
-        fetch('/api/ai-mystery/details', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: abortController.signal,
-          body: JSON.stringify({
-            destination: quickData.destination,
-            country: quickData.country,
-            iata: quickData.iata,
-            origin: resolvedOrigin,
-            budget: currency.toUSD(parseFloat(budget)),
-            vibes: selectedVibes,
-            dates: requestDates,
-            tripDuration,
-            flightPrice: quickData.estimated_flight_cost,
-            accommodationLevel,
-            budgetPriority,
-            customSplit: showAdvancedBudget ? customSplit : undefined,
-            packageComponents,
-            hotelEstimate: quickData.estimated_hotel_per_night,
-          }),
-        })
-          .then(async (detailsResponse) => {
-            if (!detailsResponse.ok) {
-              console.warn('[Mystery] Phase 2 failed, continuing with partial data')
-              setDetailsLoading(false)
-              setSearchState('ready')
-              return
-            }
-            const detailsData = await detailsResponse.json()
-            console.log('[Mystery] Phase 2 success: AI details received')
-
-            // Merge AI details into the destination object
-            setDestination((prev: any) => {
-              if (!prev) return prev
-              return {
-                ...prev,
-                ...detailsData,
-                // Keep the quick-pick values for these fields (more accurate)
-                destination: prev.destination,
-                country: prev.country,
-                iata: prev.iata,
-                city_code_IATA: prev.city_code_IATA,
-                estimated_flight_cost: prev.estimated_flight_cost,
-                indicativeFlightPrice: prev.indicativeFlightPrice,
-                estimated_hotel_per_night: prev.estimated_hotel_per_night,
-                priceIsLive: prev.priceIsLive,
-                priceIsEstimate: prev.priceIsEstimate,
-                googleFlightsPrice: prev.googleFlightsPrice,
-                googleFlightsAirlines: prev.googleFlightsAirlines,
-                googleFlightsStops: prev.googleFlightsStops,
-                suggestedDepartureDate: prev.suggestedDepartureDate,
-                suggestedReturnDate: prev.suggestedReturnDate,
-              }
-            })
-            setDetailsLoading(false)
-            setSearchState('ready')
-          })
-          .catch((err) => {
-            if ((err as Error).name === 'AbortError') return
-            console.warn('[Mystery] Phase 2 error (non-fatal):', err)
-            setDetailsLoading(false)
-            setSearchState('ready')
-          })
-      })
-      .catch((err) => {
-        if ((err as Error).name === 'AbortError') return // User cancelled
-
-        // Phase 1 failed -- fall back to original single-API endpoint
-        console.warn('[Mystery] Quick pick failed, falling back to full API:', err.message, err.stack)
-
-        fetch('/api/ai-mystery', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: abortController.signal,
-          body: JSON.stringify(requestBody),
-        })
-          .then(async (response) => {
-            if (!response.ok) {
-              const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
-              throw new Error(errorData.error || `Failed to generate destination (HTTP ${response.status})`)
-            }
-            const data = await response.json()
-            console.log('[Mystery] Fallback API success:', data.destination)
-
-            if (data.error) throw new Error(data.error)
-            if (!data.destination || !data.city_code_IATA) throw new Error('Invalid response from server.')
-
-            setDestination(data)
-            setSearchState('ready')
-            setTimeout(() => {
-              resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }, 100)
-          })
-          .catch((fallbackErr) => {
-            if ((fallbackErr as Error).name === 'AbortError') return
-            const errorMsg = fallbackErr instanceof Error ? fallbackErr.message : 'Something went wrong. Please try again.'
-            console.error('[Mystery] Both quick and fallback APIs failed:', fallbackErr)
-            setError(errorMsg)
-            setSearchState('idle')
-          })
-      })
-  }
-
-  const handleShowAnother = () => {
-    // Reset re-roll state for a fresh "Show Another"
-    setExcludeList([])
-    excludeListRef.current = []
-    setRerollCount(0)
-    setDestination(null)
-    setMultiCityResult(null)
-    handleSubmit({ preventDefault: () => {} } as React.FormEvent)
-  }
-
-  const handleReroll = () => {
-    if (rerollCount >= MAX_REROLLS) return
-
-    // Add the current destination's IATA to the exclude list
-    const currentIATA = destination?.city_code_IATA || destination?.iata
-    if (currentIATA) {
-      const updated = [...excludeList, currentIATA]
-      setExcludeList(updated)
-      excludeListRef.current = updated // Update ref synchronously for immediate use
-    }
-    setRerollCount(prev => prev + 1)
-    setDestination(null)
-    // Directly trigger API call since ref is already updated
-    setTimeout(() => {
-      handleSubmit({ preventDefault: () => {} } as React.FormEvent)
-    }, 50)
   }
 
   const handleReset = () => {
     handleCancel()
-    setExcludeList([])
-    excludeListRef.current = []
-    setRerollCount(0)
     setActiveTheme(null)
     setThemeNotification(null)
   }
 
   const handleThemeSelect = (theme: typeof quickThemes[number]) => {
-    // Pre-fill vibes (or keep all if empty = "any vibe")
     if (theme.vibes.length > 0) {
       setSelectedVibes(theme.vibes)
     }
-
-    // Pre-fill budget to budgetMax
     setBudget(theme.budgetMax)
 
-    // Set accommodation level based on budget range
     const maxBudget = parseInt(theme.budgetMax)
     if (maxBudget < 500) {
       setAccommodationLevel('budget')
@@ -606,7 +340,6 @@ export default function MysteryPage() {
       setAccommodationLevel('upscale')
     }
 
-    // Set trip duration per theme
     const durationMap: Record<string, number> = {
       'Beach Escape': 5,
       'City Culture': 4,
@@ -616,7 +349,6 @@ export default function MysteryPage() {
     }
     setTripDuration(durationMap[theme.label] || 5)
 
-    // Set budget priority per theme
     const priorityMap: Record<string, string> = {
       'Beach Escape': 'hotels',
       'City Culture': 'balanced',
@@ -628,18 +360,15 @@ export default function MysteryPage() {
 
     setActiveTheme(theme.label)
     setError('')
-
-    // Show dismissable notification
     setThemeNotification(`Form pre-filled from ${theme.label} theme`)
 
-    // Smooth-scroll to origin/departure section
     setTimeout(() => {
       originSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }, 100)
   }
 
-  const isSearching = searchState !== 'idle'
-  const hasResults = (searchState === 'quick-ready' || searchState === 'ready') && (destination || multiCityResult)
+  // Multi-city results visible
+  const hasMultiCityResults = numCities > 1 && multiCityResult && !multiCitySearching
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
@@ -901,14 +630,12 @@ export default function MysteryPage() {
                               const newVal = Number(e.target.value)
                               const diff = newVal - customSplit[key]
                               const others = (['flights', 'hotels', 'activities'] as const).filter(k => k !== key)
-                              // Distribute the difference proportionally among the other two
                               const otherTotal = others.reduce((s, k) => s + customSplit[k], 0)
                               const newSplit = { ...customSplit, [key]: newVal }
                               for (const ok of others) {
                                 const share = otherTotal > 0 ? customSplit[ok] / otherTotal : 0.5
                                 newSplit[ok] = Math.max(5, Math.round(customSplit[ok] - diff * share))
                               }
-                              // Ensure they sum to 100
                               const sum = newSplit.flights + newSplit.hotels + newSplit.activities
                               if (sum !== 100) {
                                 const largest = others.reduce((a, b) => newSplit[a] >= newSplit[b] ? a : b)
@@ -951,7 +678,7 @@ export default function MysteryPage() {
                   label=""
                   value={origin}
                   onChange={setOrigin}
-                  onSearchChange={setOriginInputText} // Track raw text input
+                  onSearchChange={setOriginInputText}
                   placeholder="Search your departure city..."
                   persistKey="origin"
                 />
@@ -962,7 +689,6 @@ export default function MysteryPage() {
                 <label className="block text-lg font-semibold text-navy mb-2">
                   When do you want to go? &#x1F4C5;
                 </label>
-                {/* Date Mode Toggle */}
                 <div className="flex rounded-lg overflow-hidden border-2 border-gray-200 mb-4">
                   <button
                     type="button"
@@ -988,7 +714,6 @@ export default function MysteryPage() {
                   </button>
                 </div>
 
-                {/* Specific Date Mode */}
                 {dateMode === 'specific' && (
                   <>
                     <input
@@ -1014,7 +739,6 @@ export default function MysteryPage() {
                   </>
                 )}
 
-                {/* Flexible Timeframe Mode */}
                 {dateMode === 'flexible' && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {timeframeOptions.map((option) => (
@@ -1195,7 +919,7 @@ export default function MysteryPage() {
               )}
             </fieldset>
 
-            {/* Error Message - Always visible when present */}
+            {/* Error Message */}
             {error && (
               <div
                 ref={errorRef}
@@ -1256,6 +980,39 @@ export default function MysteryPage() {
             )}
           </form>
 
+          {/* Active search indicator for single-city (popup is handling it) */}
+          {isSingleCitySearching && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => mystery.expand()}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 border border-white/20 text-white/80 hover:text-white hover:bg-white/15 transition cursor-pointer backdrop-blur-sm"
+              >
+                {mystery.state.status === 'searching' && (
+                  <div className="w-4 h-4 border-2 border-sky-400/30 border-t-sky-400 rounded-full animate-spin" />
+                )}
+                {mystery.state.status === 'quick-ready' && (
+                  <span>&#x2708;&#xFE0F;</span>
+                )}
+                {mystery.state.status === 'ready' && (
+                  <span>&#x2705;</span>
+                )}
+                {mystery.state.status === 'error' && (
+                  <span>&#x26A0;&#xFE0F;</span>
+                )}
+                <span className="text-sm font-medium">
+                  {mystery.state.status === 'searching' && 'Finding your destination...'}
+                  {mystery.state.status === 'quick-ready' && `${mystery.state.destination?.destination || 'Destination'} found! Loading details...`}
+                  {mystery.state.status === 'ready' && 'Your mystery trip is ready! Click to view'}
+                  {mystery.state.status === 'error' && 'Search failed. Click to see details'}
+                </span>
+                <span className="text-white/40 text-xs">&#x2197;&#xFE0F;</span>
+              </button>
+              <p className="text-white/40 text-xs mt-2">
+                Your search runs in the background -- feel free to browse other pages!
+              </p>
+            </div>
+          )}
+
           {/* Info */}
           <div className="mt-8 text-center">
             <p className="text-skyblue-light">
@@ -1264,106 +1021,19 @@ export default function MysteryPage() {
           </div>
         </div>
 
-        {/* Results Section -- shown below form when destination is available */}
-        {hasResults && (
+        {/* Multi-city results (stays in-page, not in popup) */}
+        {hasMultiCityResults && (
           <div ref={resultsRef} className="mt-12">
-            {/* Multi-city results */}
-            {numCities > 1 && multiCityResult && (
-              <MultiCityResults
-                result={multiCityResult}
-                origin={origin}
-                totalBudget={budget}
-                totalDays={tripDuration}
-                onStartOver={handleReset}
-              />
-            )}
-
-            {/* Single-city reveal */}
-            {numCities === 1 && destination && destination.destination && destination.city_code_IATA && (
-              <>
-                <MysteryReveal
-                  destination={destination}
-                  origin={origin}
-                  departDate={departDate}
-                  tripDuration={tripDuration}
-                  onShowAnother={handleShowAnother}
-                  onReroll={handleReroll}
-                  rerollCount={rerollCount}
-                  maxRerolls={MAX_REROLLS}
-                  detailsLoading={detailsLoading}
-                  currencyFormat={currency.format}
-                />
-                <div className="text-center mt-6">
-                  <button
-                    onClick={handleReset}
-                    className="text-skyblue-light hover:text-skyblue transition underline"
-                  >
-                    &larr; Start Over
-                  </button>
-                </div>
-              </>
-            )}
-
-            {/* Error State: If destination is invalid (single-city only) */}
-            {numCities === 1 && destination && (!destination.destination || !destination.city_code_IATA) && (
-              <div className="max-w-3xl mx-auto">
-                <div className="bg-red-50 border-2 border-red-500 rounded-2xl p-8 shadow-2xl text-center">
-                  <div className="text-6xl mb-4">&#x1F615;</div>
-                  <h2 className="text-2xl font-bold text-red-700 mb-4">Oops! Something went wrong</h2>
-                  <p className="text-red-600 mb-6">
-                    We couldn&apos;t generate a valid destination. This might be a temporary issue.
-                  </p>
-                  <button
-                    onClick={handleReset}
-                    className="bg-skyblue hover:bg-skyblue-dark text-navy font-bold py-3 px-8 rounded-lg transition"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              </div>
-            )}
+            <MultiCityResults
+              result={multiCityResult!}
+              origin={origin}
+              totalBudget={budget}
+              totalDays={tripDuration}
+              onStartOver={handleReset}
+            />
           </div>
         )}
       </div>
-
-      {/* Sticky Notification Bar */}
-      {searchState !== 'idle' && !notificationDismissed && (
-        <div className="fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto">
-          <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4 shadow-2xl backdrop-blur-lg flex items-center gap-3">
-            {searchState === 'searching' && (
-              <>
-                <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin shrink-0" />
-                <span className="text-white/80 text-sm">Finding your mystery destination...</span>
-                <button
-                  onClick={() => setNotificationDismissed(true)}
-                  className="ml-auto text-white/40 hover:text-white/70 text-sm shrink-0"
-                  aria-label="Dismiss"
-                >
-                  &#x2715;
-                </button>
-              </>
-            )}
-            {searchState === 'quick-ready' && (
-              <>
-                <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin shrink-0" />
-                <span className="text-white/80 text-sm">Destination found! Generating trip details...</span>
-                <button onClick={scrollToResults} className="ml-auto text-emerald-400 text-sm font-medium hover:text-emerald-300 shrink-0">
-                  Preview &#x2193;
-                </button>
-              </>
-            )}
-            {searchState === 'ready' && (
-              <>
-                <span className="text-emerald-400 text-lg shrink-0">&#x2713;</span>
-                <span className="text-white font-medium text-sm">Your mystery destination is ready!</span>
-                <button onClick={scrollToResults} className="ml-auto bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition shrink-0">
-                  View Results
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Floating Passport Button */}
       <PassportButton />

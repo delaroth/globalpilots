@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import Providers from '@/components/Providers'
+import MysteryPopup from '@/components/MysteryPopup'
 import CookieConsent from '@/components/CookieConsent'
 
 const inter = Inter({
@@ -87,7 +88,10 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <MysteryPopup />
+        </Providers>
         <Analytics />
         <SpeedInsights />
         <CookieConsent />
