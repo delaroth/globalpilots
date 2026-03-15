@@ -9,6 +9,9 @@ function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+  const verified = searchParams.get('verified') === 'true'
+  const resetSuccess = searchParams.get('reset') === 'true'
+  const tokenError = searchParams.get('error') === 'invalid-token'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -66,6 +69,27 @@ function LoginContent() {
           <h1 className="text-3xl font-bold text-navy mb-2">Welcome Back</h1>
           <p className="text-gray-600 mb-6">Sign in to your account</p>
 
+          {/* Verified Banner */}
+          {verified && (
+            <div className="mb-4 bg-green-50 border-2 border-green-500 rounded-lg p-4">
+              <p className="text-green-700 font-semibold text-sm">Email verified! You can now log in.</p>
+            </div>
+          )}
+
+          {/* Password Reset Success Banner */}
+          {resetSuccess && (
+            <div className="mb-4 bg-green-50 border-2 border-green-500 rounded-lg p-4">
+              <p className="text-green-700 font-semibold text-sm">Password reset successfully! You can now log in with your new password.</p>
+            </div>
+          )}
+
+          {/* Invalid Token Banner */}
+          {tokenError && (
+            <div className="mb-4 bg-amber-50 border-2 border-amber-500 rounded-lg p-4">
+              <p className="text-amber-700 font-semibold text-sm">Invalid or expired verification link. Please try signing up again or request a new verification email.</p>
+            </div>
+          )}
+
           {/* Error Message */}
           {error && (
             <div className="mb-4 bg-red-50 border-2 border-red-500 rounded-lg p-4">
@@ -103,6 +127,11 @@ function LoginContent() {
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
                 required
               />
+              <div className="mt-1 text-right">
+                <Link href="/forgot-password" className="text-sm text-skyblue hover:text-skyblue-dark font-medium">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <button

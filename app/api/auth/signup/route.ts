@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createUser, findUserByEmail, linkAlertsToUser } from '@/lib/auth'
+import { createVerificationToken, sendVerificationEmail } from '@/lib/email-verification'
 import { z } from 'zod'
 
 const signupSchema = z.object({
@@ -38,9 +39,18 @@ export async function POST(request: NextRequest) {
     // Link any anonymous alerts to this user
     await linkAlertsToUser(email, user.id)
 
+    // Send verification email
+    try {
+      const token = await createVerificationToken(user.id)
+      await sendVerificationEmail(user.email, token)
+    } catch (verificationError) {
+      // Don't fail signup if verification email fails — user can request a new one
+      console.error('[Signup] Failed to send verification email:', verificationError)
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Account created successfully',
+      message: 'Account created successfully. Please check your email to verify your account.',
       user: {
         id: user.id,
         email: user.email,

@@ -8,6 +8,7 @@ import {
   updateLastLogin,
   linkAlertsToUser,
 } from './auth'
+import { checkLockout, recordFailedAttempt, clearLockout } from './account-lockout'
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -23,17 +24,29 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Please enter your email and password')
         }
 
+        // Check account lockout
+        const lockout = checkLockout(credentials.email)
+        if (lockout.locked) {
+          const minutes = Math.ceil((lockout.remainingMs || 0) / 60000)
+          throw new Error(`Account locked. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`)
+        }
+
         const user = await findUserByEmail(credentials.email)
 
         if (!user || !user.password_hash) {
+          recordFailedAttempt(credentials.email)
           throw new Error('Invalid email or password')
         }
 
         const isValid = await verifyPassword(credentials.password, user.password_hash)
 
         if (!isValid) {
+          recordFailedAttempt(credentials.email)
           throw new Error('Invalid email or password')
         }
+
+        // Successful login — clear any lockout state
+        clearLockout(credentials.email)
 
         // Update last login
         await updateLastLogin(user.id)
