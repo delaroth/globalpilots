@@ -384,10 +384,16 @@ export default function MysteryPage() {
           throw new Error(errorData.error || `Quick pick failed (HTTP ${response.status})`)
         }
         const quickData = await response.json()
-        console.log('[Mystery] Phase 1 success:', quickData.destination)
+        console.log('[Mystery] Phase 1 response:', JSON.stringify({
+          destination: quickData.destination,
+          iata: quickData.city_code_IATA,
+          price: quickData.estimated_flight_cost,
+          cacheHit: quickData._cacheHit,
+          hasFields: !!quickData.destination && !!quickData.city_code_IATA
+        }))
 
         if (!quickData.destination || !quickData.city_code_IATA) {
-          throw new Error('Invalid quick pick response.')
+          throw new Error(`Invalid quick pick response: destination=${quickData.destination}, iata=${quickData.city_code_IATA}`)
         }
 
         // If this was a full cache hit, we have everything — skip phase 2
@@ -503,7 +509,7 @@ export default function MysteryPage() {
       })
       .catch((err) => {
         // Phase 1 failed — fall back to original single-API endpoint
-        console.warn('[Mystery] Quick pick failed, falling back to full API:', err.message)
+        console.warn('[Mystery] Quick pick failed, falling back to full API:', err.message, err.stack)
 
         fetch('/api/ai-mystery', {
           method: 'POST',
