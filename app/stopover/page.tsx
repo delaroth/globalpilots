@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'motion/react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
+import CurrencySelector from '@/components/CurrencySelector'
+import { useCurrency } from '@/hooks/useCurrency'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -106,6 +108,7 @@ const VISA_CONFIG = {
 // ---------------------------------------------------------------------------
 
 export default function StopoverPage() {
+  const { format: fmt, code: currencyCode, setCurrency, currencies } = useCurrency()
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
   const [departDate, setDepartDate] = useState(() => {
@@ -277,7 +280,8 @@ export default function StopoverPage() {
           </button>
 
           <p className="text-xs text-white/30 text-center mt-2">
-            Powered by Google Flights · Visa requirements checked for your passport · Prices in USD
+            Powered by Google Flights · Visa requirements checked for your passport ·{' '}
+            <CurrencySelector code={currencyCode} currencies={currencies} onChange={setCurrency} compact />
           </p>
         </motion.form>
 
@@ -321,7 +325,7 @@ export default function StopoverPage() {
                   <div className="text-right">
                     {result.directPrice ? (
                       <>
-                        <p className="text-2xl font-bold text-white">${result.directPrice}</p>
+                        <p className="text-2xl font-bold text-white">{fmt(result.directPrice)}</p>
                         <p className="text-xs text-emerald-400">
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 border border-emerald-500/30">
                             LIVE
@@ -375,15 +379,15 @@ export default function StopoverPage() {
                             </div>
                             <div className="text-right">
                               <p className="text-2xl font-bold text-emerald-400">
-                                ${stop.totalFlightCost}
+                                {fmt(stop.totalFlightCost)}
                               </p>
                               {stop.savings > 0 ? (
                                 <p className="text-xs text-emerald-400">
-                                  Save ${stop.savings} ({stop.savingsPercent}%)
+                                  Save {fmt(stop.savings)} ({stop.savingsPercent}%)
                                 </p>
                               ) : (
                                 <p className="text-xs text-amber-400">
-                                  +${Math.abs(stop.savings)} more
+                                  +{fmt(Math.abs(stop.savings))} more
                                 </p>
                               )}
                             </div>
@@ -408,7 +412,7 @@ export default function StopoverPage() {
                                 {result.origin} → {stop.hub}
                               </p>
                               <p className="text-xs text-white/40">
-                                ${stop.leg1Price} · {stop.leg1Airlines.join(', ')} · {stop.leg1Duration}
+                                {fmt(stop.leg1Price)} · {stop.leg1Airlines.join(', ')} · {stop.leg1Duration}
                                 {stop.leg1Stops > 0 && ` · ${stop.leg1Stops} stop`}
                               </p>
                             </div>
@@ -418,7 +422,7 @@ export default function StopoverPage() {
                                 {stop.hub} → {result.destination}
                               </p>
                               <p className="text-xs text-white/40">
-                                ${stop.leg2Price} · {stop.leg2Airlines.join(', ')} · {stop.leg2Duration}
+                                {fmt(stop.leg2Price)} · {stop.leg2Airlines.join(', ')} · {stop.leg2Duration}
                                 {stop.leg2Stops > 0 && ` · ${stop.leg2Stops} stop`}
                               </p>
                             </div>
@@ -431,25 +435,25 @@ export default function StopoverPage() {
                                 {stop.stopoverDays}-day stay in {stop.hubCity} ({budget})
                               </p>
                               <p className="text-sm font-medium text-white">
-                                ~${stop.totalGroundCost}
+                                ~{fmt(stop.totalGroundCost)}
                               </p>
                             </div>
                             <div className="grid grid-cols-4 gap-2 text-center">
                               <div>
                                 <p className="text-xs text-white/30">Hotel</p>
-                                <p className="text-xs text-white/60">${stop.costBreakdown.hotel}/d</p>
+                                <p className="text-xs text-white/60">{fmt(stop.costBreakdown.hotel)}/d</p>
                               </div>
                               <div>
                                 <p className="text-xs text-white/30">Food</p>
-                                <p className="text-xs text-white/60">${stop.costBreakdown.food}/d</p>
+                                <p className="text-xs text-white/60">{fmt(stop.costBreakdown.food)}/d</p>
                               </div>
                               <div>
                                 <p className="text-xs text-white/30">Transport</p>
-                                <p className="text-xs text-white/60">${stop.costBreakdown.transport}/d</p>
+                                <p className="text-xs text-white/60">{fmt(stop.costBreakdown.transport)}/d</p>
                               </div>
                               <div>
                                 <p className="text-xs text-white/30">Activities</p>
-                                <p className="text-xs text-white/60">${stop.costBreakdown.activities}/d</p>
+                                <p className="text-xs text-white/60">{fmt(stop.costBreakdown.activities)}/d</p>
                               </div>
                             </div>
                           </div>

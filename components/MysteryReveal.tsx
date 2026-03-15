@@ -107,6 +107,8 @@ interface MysteryRevealProps {
   rerollCount?: number
   maxRerolls?: number
   detailsLoading?: boolean
+  /** Currency formatter: takes USD amount, returns formatted string in user's currency */
+  currencyFormat?: (amountUSD: number) => string
 }
 
 interface EnrichmentData {
@@ -215,7 +217,10 @@ export default function MysteryReveal({
   maxRerolls = 3,
   tripDuration = 3,
   detailsLoading = false,
+  currencyFormat,
 }: MysteryRevealProps) {
+  // Currency formatting: use provided formatter or default to USD
+  const fmt = currencyFormat || ((usd: number) => `$${usd}`)
   const [phase, setPhase] = useState<RevealPhase>('clues')
   const bookingRef = useRef<HTMLDivElement>(null)
   const [shareUrl, setShareUrl] = useState('')
@@ -293,7 +298,7 @@ export default function MysteryReveal({
     {
       icon: '💰',
       label: 'Flight from',
-      value: `~$${flightPrice}`,
+      value: `~${fmt(flightPrice)}`,
     },
     {
       icon: '🍜',
@@ -672,19 +677,19 @@ export default function MysteryReveal({
                         <div className="text-center">
                           <p className="text-xs text-white/50">Hotel</p>
                           <p className="text-lg font-bold text-emerald-400">
-                            ${destination.budgetBreakdown.hotel}
+                            {fmt(destination.budgetBreakdown.hotel)}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-white/50">Activities</p>
                           <p className="text-lg font-bold text-emerald-400">
-                            ${destination.budgetBreakdown.activities}
+                            {fmt(destination.budgetBreakdown.activities)}
                           </p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-white/50">Total</p>
                           <p className="text-2xl font-bold text-emerald-400">
-                            ${destination.budgetBreakdown.total}
+                            {fmt(destination.budgetBreakdown.total)}
                           </p>
                         </div>
                       </div>
@@ -702,7 +707,7 @@ export default function MysteryReveal({
                             )}
                           </p>
                           <p className="text-2xl font-bold text-emerald-400">
-                            {isEstimate ? '~' : ''}${flightPrice}
+                            {isEstimate ? '~' : ''}{fmt(flightPrice)}
                             {isEstimate ? ' est.' : ''}
                           </p>
                           {destination.googleFlightsAirlines && destination.googleFlightsAirlines.length > 0 && (
@@ -730,13 +735,13 @@ export default function MysteryReveal({
                             Hotel ({tripDuration} nights)
                           </p>
                           <p className="text-2xl font-bold text-emerald-400">
-                            ${destination.estimated_hotel_per_night * tripDuration}
+                            {fmt(destination.estimated_hotel_per_night * tripDuration)}
                           </p>
                         </div>
                         <div>
                           <p className="text-sm text-white/50">Total</p>
                           <p className="text-2xl font-bold text-emerald-400">
-                            ${totalCost}
+                            {fmt(totalCost)}
                           </p>
                         </div>
                       </div>
@@ -763,10 +768,10 @@ export default function MysteryReveal({
                   className="text-xs text-white/40 text-center"
                 >
                   {isLivePrice
-                    ? `$${flightPrice} is a real-time price from Google Flights.${destination.googleFlightsPriceLevel ? ` Price level: ${destination.googleFlightsPriceLevel}.` : ''}${destination.googleFlightsTypicalRange ? ` Typical range: $${destination.googleFlightsTypicalRange[0]}–$${destination.googleFlightsTypicalRange[1]}.` : ''}`
+                    ? `${fmt(flightPrice)} is a real-time price from Google Flights.${destination.googleFlightsPriceLevel ? ` Price level: ${destination.googleFlightsPriceLevel}.` : ''}${destination.googleFlightsTypicalRange ? ` Typical range: ${fmt(destination.googleFlightsTypicalRange[0])}–${fmt(destination.googleFlightsTypicalRange[1])}.` : ''}`
                     : isEstimate
-                    ? `~$${flightPrice} est. is an estimated price based on regional averages. Actual price confirmed on booking.`
-                    : `~$${flightPrice} is an indicative cached price. Actual price confirmed on Aviasales.`}
+                    ? `~${fmt(flightPrice)} est. is an estimated price based on regional averages. Actual price confirmed on booking.`
+                    : `~${fmt(flightPrice)} is an indicative cached price. Actual price confirmed on Aviasales.`}
                 </motion.p>
 
                 {/* Why It's Perfect */}
@@ -1159,8 +1164,8 @@ export default function MysteryReveal({
                     href={bookingBundle.flightUrl}
                     className="block w-full bg-emerald-500/90 hover:bg-emerald-500 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl text-center"
                   >
-                    Book Flights (~$
-                    {isEstimate ? `${flightPrice} est.` : flightPrice})
+                    Book Flights (~{fmt(flightPrice)}
+                    {isEstimate ? ' est.' : ''})
                     <span className="block text-sm font-normal mt-1 opacity-90">
                       {formatDate(effectiveDepartDate)} &middot;{' '}
                       {AFFILIATE_FLAGS.kiwi

@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
+import CurrencySelector from '@/components/CurrencySelector'
+import { useCurrency } from '@/hooks/useCurrency'
 import MysteryLoading from '@/components/MysteryLoading'
 import MysteryReveal from '@/components/MysteryReveal'
 import ClueReveal from '@/components/ClueReveal'
@@ -74,6 +76,8 @@ export default function MysteryPage() {
     date.setDate(date.getDate() + 14)
     return date.toISOString().split('T')[0]
   }
+
+  const currency = useCurrency()
 
   const [step, setStep] = useState<'form' | 'loading' | 'loading-clues' | 'reveal'>('form')
   const [budget, setBudget] = useState('')
@@ -355,7 +359,7 @@ export default function MysteryPage() {
 
     const requestBody = {
       origin: resolvedOrigin,
-      budget: parseFloat(budget),
+      budget: currency.toUSD(parseFloat(budget)),
       vibes: selectedVibes,
       dates: requestDates,
       tripDuration,
@@ -446,7 +450,7 @@ export default function MysteryPage() {
             country: quickData.country,
             iata: quickData.iata,
             origin: resolvedOrigin,
-            budget: parseFloat(budget),
+            budget: currency.toUSD(parseFloat(budget)),
             vibes: selectedVibes,
             dates: requestDates,
             tripDuration,
@@ -743,28 +747,41 @@ export default function MysteryPage() {
                 <label htmlFor="budget" className="block text-lg font-semibold text-navy mb-2">
                   What's your budget? 💰
                 </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-xl">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    id="budget"
-                    value={budget}
-                    onChange={(e) => {
-                      setBudget(e.target.value)
-                      if (error) setError('') // Clear error when user types
-                    }}
-                    placeholder="1500"
-                    min="100"
-                    className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-lg"
-                    required
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-xl">
+                      {currency.symbol}
+                    </span>
+                    <input
+                      type="number"
+                      id="budget"
+                      value={budget}
+                      onChange={(e) => {
+                        setBudget(e.target.value)
+                        if (error) setError('')
+                      }}
+                      placeholder="1500"
+                      min="100"
+                      className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-lg"
+                      required
+                    />
+                  </div>
+                  <CurrencySelector
+                    code={currency.code}
+                    currencies={currency.currencies}
+                    onChange={currency.setCurrency}
+                    compact
                   />
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
                   {numCities === 1
                     ? 'Total budget for flights + accommodation + activities'
                     : `Total budget for all ${numCities} cities — flights + daily expenses`}
+                  {!currency.isUSD && budget && Number(budget) > 0 && currency.rate && (
+                    <span className="text-gray-400 ml-1">
+                      (≈ ${currency.toUSD(Number(budget))} USD)
+                    </span>
+                  )}
                 </p>
               </div>
 
@@ -1349,6 +1366,7 @@ export default function MysteryPage() {
               rerollCount={rerollCount}
               maxRerolls={MAX_REROLLS}
               detailsLoading={detailsLoading}
+              currencyFormat={currency.format}
             />
             <div className="text-center mt-6">
               <button
