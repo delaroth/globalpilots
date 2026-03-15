@@ -7,7 +7,7 @@ import { buildBookingBundle, AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { trackActivity } from '@/lib/activity-feed'
 import type { DestinationCost } from '@/lib/destination-costs'
 import ClueReveal from '@/components/ClueReveal'
-import ScratchReveal from '@/components/ScratchReveal'
+// ScratchReveal removed — flow is now clues → revealed → complete
 import ConfettiCelebration from '@/components/ConfettiCelebration'
 import SaveTripButton from '@/components/SaveTripButton'
 import BookingTracker from '@/components/BookingTracker'
@@ -15,6 +15,7 @@ import AffiliateDisclosure from '@/components/AffiliateDisclosure'
 import TripPrep from '@/components/TripPrep'
 import { addStamp } from '@/lib/travel-passport'
 import { countryNameToCode } from '@/lib/enrichment/country-data'
+import { hasSupportedCharacters } from '@/lib/enrichment/attractions'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -153,7 +154,7 @@ interface EnrichmentData {
   holidays: { date: string; name: string; localName: string }[]
 }
 
-type RevealPhase = 'clues' | 'scratch' | 'revealed'
+type RevealPhase = 'clues' | 'revealed'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -286,29 +287,53 @@ export default function MysteryReveal({
       destination.budget_breakdown?.hotel_per_night ||
       destination.estimated_hotel_per_night ||
       undefined,
+    country: destination.country,
   })
 
-  // Build clues for ClueReveal
+  // Derive a climate hint from the country name (no API data needed)
+  const getClimateHint = (country: string): string => {
+    const c = country.toLowerCase()
+    const tropical = ['thailand', 'vietnam', 'cambodia', 'laos', 'myanmar', 'indonesia', 'malaysia', 'philippines', 'singapore', 'india', 'sri lanka', 'maldives', 'costa rica', 'panama', 'colombia', 'ecuador', 'peru', 'brazil', 'mexico', 'cuba', 'dominican republic', 'jamaica', 'kenya', 'tanzania', 'nigeria', 'ghana', 'madagascar', 'fiji', 'bali']
+    const desert = ['egypt', 'morocco', 'tunisia', 'jordan', 'israel', 'oman', 'uae', 'united arab emirates', 'qatar', 'saudi arabia', 'bahrain', 'kuwait']
+    const cold = ['iceland', 'norway', 'sweden', 'finland', 'russia', 'canada', 'greenland', 'alaska']
+    const mediterranean = ['greece', 'italy', 'spain', 'portugal', 'croatia', 'turkey', 'cyprus', 'malta', 'montenegro', 'albania']
+    if (tropical.some(t => c.includes(t))) return 'Tropical — warm & humid, pack light clothes'
+    if (desert.some(t => c.includes(t))) return 'Arid & warm — sunscreen essential'
+    if (cold.some(t => c.includes(t))) return 'Cool climate — pack warm layers'
+    if (mediterranean.some(t => c.includes(t))) return 'Mediterranean — sunny & pleasant'
+    return 'Temperate — pack layers for variable weather'
+  }
+
+  // Build clues for ClueReveal — only using fields the quick route returns
+  // (destination, country, iata, estimated_flight_cost, airline, stops)
+  const airlineInfo = destination.googleFlightsAirlines?.[0]
+  const stopsInfo = destination.googleFlightsStops
+  const flightClueValue = airlineInfo
+    ? `~${fmt(flightPrice)} with ${airlineInfo}${stopsInfo !== undefined ? (stopsInfo === 0 ? ' (nonstop)' : ` (${stopsInfo} stop${stopsInfo > 1 ? 's' : ''})`) : ''}`
+    : `~${fmt(flightPrice)}`
+
   const clues = [
     {
-      icon: destination.country ? '🌍' : '🗺️',
-      label: 'Region',
-      value: destination.country,
+      icon: '🌍',
+      label: 'Country',
+      value: `Your destination is in ${destination.country}`,
     },
     {
-      icon: '💰',
-      label: 'Flight from',
-      value: `~${fmt(flightPrice)}`,
+      icon: '✈️',
+      label: 'Flights',
+      value: flightClueValue,
     },
     {
-      icon: '🍜',
-      label: 'Must-try dish',
-      value: destination.best_local_food?.[0] || 'Local cuisine',
+      icon: '🌤️',
+      label: 'Climate',
+      value: getClimateHint(destination.country),
     },
-    ...(destination.bestTimeToGo
-      ? [{ icon: '📅', label: 'Best time', value: destination.bestTimeToGo }]
-      : []),
-  ].slice(0, 4)
+    {
+      icon: '❓',
+      label: 'Destination',
+      value: 'Can you guess where you\'re going?',
+    },
+  ]
 
   const totalCost =
     destination.budgetBreakdown?.total ||
@@ -505,10 +530,10 @@ export default function MysteryReveal({
               clues={clues}
               destinationName={destination.destination}
               country={destination.country}
-              onComplete={() => setPhase('scratch')}
+              onComplete={handleFullReveal}
             />
             <button
-              onClick={() => setPhase('revealed')}
+              onClick={handleFullReveal}
               className="mt-4 text-xs text-white/30 hover:text-white/50 transition"
             >
               Skip to reveal
@@ -517,29 +542,15 @@ export default function MysteryReveal({
         )}
 
         {/* ================================================================
-            PHASE 2 — SCRATCH REVEAL
-        ================================================================ */}
-        {phase === 'scratch' && (
-          <motion.div key="scratch" {...phaseTransition} className="text-center">
-            <ScratchReveal
-              destinationName={destination.destination}
-              country={destination.country}
-              onRevealed={handleFullReveal}
-            />
-            <button
-              onClick={handleFullReveal}
-              className="mt-4 text-xs text-white/30 hover:text-white/50 transition"
-            >
-              Skip
-            </button>
-          </motion.div>
-        )}
-
-        {/* ================================================================
-            PHASE 3 — FULL REVEALED CARD
+            PHASE 2 — FULL REVEALED CARD
         ================================================================ */}
         {phase === 'revealed' && (
-          <motion.div key="revealed" {...phaseTransition}>
+          <motion.div
+            key="revealed"
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 200, damping: 20, duration: 0.6 } }}
+            exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.3, ease: 'easeIn' } }}
+          >
             {/* Confetti fires on reveal */}
             <ConfettiCelebration active={phase === 'revealed'} duration={4000} intensity="high" />
 
@@ -1420,7 +1431,7 @@ export default function MysteryReveal({
                             </span>
                           </div>
                           <div className="space-y-2">
-                            {enrichment.attractions.slice(0, 5).map((a, idx) => (
+                            {enrichment.attractions.filter(a => hasSupportedCharacters(a.name)).slice(0, 5).map((a, idx) => (
                               <div key={idx} className="flex gap-2">
                                 <span className="text-xs text-white/30 mt-0.5 shrink-0">{idx + 1}.</span>
                                 <div className="min-w-0">

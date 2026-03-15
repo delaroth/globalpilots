@@ -11,6 +11,18 @@ export interface Attraction {
   distance: string
 }
 
+/**
+ * Returns true if the name contains only supported characters:
+ * Basic Latin, common punctuation/spaces, Latin Extended diacritics,
+ * and common CJK characters.
+ */
+export function hasSupportedCharacters(name: string): boolean {
+  // Allow: Basic Latin (a-z, A-Z, 0-9), common punctuation & spaces,
+  // Latin Extended (\u00C0-\u024F), CJK (\u3000-\u9FFF)
+  const supported = /^[a-zA-Z0-9 \u00C0-\u024F\u3000-\u9FFF.,;:!?'"\-()&/]+$/
+  return supported.test(name)
+}
+
 // In-memory cache: IATA code -> { attractions, fetchedAt }
 const attractionsCache = new Map<string, { attractions: Attraction[]; fetchedAt: number }>()
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days
@@ -79,7 +91,10 @@ export async function fetchAttractions(
       .filter((p) => {
         // Skip airport articles and very generic results
         const lower = p.title.toLowerCase()
-        return !lower.includes('airport') && !lower.includes('airline')
+        if (lower.includes('airport') || lower.includes('airline')) return false
+        // Skip names with unsupported/rendering-breaking characters
+        if (!hasSupportedCharacters(p.title)) return false
+        return true
       })
       .slice(0, 8)
       .map((p) => {

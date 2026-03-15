@@ -300,6 +300,7 @@ export function buildHotelLink(
   options?: {
     maxPricePerNight?: number   // From destination-costs or Side Quest calculator
     sortByPrice?: boolean       // Show cheapest first
+    country?: string            // Appended to search text for better Agoda city resolution
   }
 ): string {
   const checkInDate = new Date(checkIn)
@@ -308,7 +309,12 @@ export function buildHotelLink(
 
   const formatDate = (d: Date) => d.toISOString().split('T')[0]
 
-  let url = `https://www.agoda.com/search?textToSearch=${encodeURIComponent(cityName)}&checkIn=${formatDate(checkInDate)}&checkOut=${formatDate(checkOutDate)}&adults=1`
+  // Include country in the search text so Agoda resolves the correct city
+  const searchText = options?.country
+    ? `${cityName}, ${options.country}`
+    : cityName
+
+  let url = `https://www.agoda.com/search?textToSearch=${encodeURIComponent(searchText)}&checkIn=${formatDate(checkInDate)}&checkOut=${formatDate(checkOutDate)}&adults=1`
 
   // Budget constraints — align hotel search with Side Quest math
   if (options?.maxPricePerNight) {
@@ -393,8 +399,9 @@ export function buildBookingBundle(params: {
   departDate: string
   nights?: number
   maxHotelPerNight?: number
+  country?: string
 }): { flightUrl: string; hotelUrl: string; activitiesUrl: string } {
-  const { origin, destination, cityName, departDate, nights = 3, maxHotelPerNight } = params
+  const { origin, destination, cityName, departDate, nights = 3, maxHotelPerNight, country } = params
 
   // Calculate return date from depart + nights
   const returnDate = (() => {
@@ -410,6 +417,7 @@ export function buildBookingBundle(params: {
   const hotelUrl = buildHotelLink(cityName, departDate, nights, {
     maxPricePerNight: maxHotelPerNight,
     sortByPrice: !!maxHotelPerNight,
+    country,
   })
   const activitiesUrl = buildActivitiesLink(cityName)
 

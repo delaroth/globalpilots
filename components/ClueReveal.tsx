@@ -94,15 +94,18 @@ export default function ClueReveal({
 
     const timer = setTimeout(() => {
       setVisibleClues((prev) => prev + 1)
-      // Allow a new guess each time a new clue appears
-      if (!guessedCorrectly) {
-        setCanGuessThisRound(true)
-        setLastGuessWrong(false)
-      }
     }, 1500)
 
     return () => clearTimeout(timer)
-  }, [visibleClues, clues.length, guessedCorrectly])
+  }, [visibleClues, clues.length])
+
+  // Re-enable guessing each time a new clue appears
+  useEffect(() => {
+    if (visibleClues > 0 && !guessedCorrectly) {
+      setCanGuessThisRound(true)
+      setLastGuessWrong(false)
+    }
+  }, [visibleClues, guessedCorrectly])
 
   // Call onComplete 2 seconds after destination is revealed
   useEffect(() => {
