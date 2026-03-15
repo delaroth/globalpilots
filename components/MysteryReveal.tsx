@@ -84,6 +84,14 @@ interface Destination {
   bestTimeToGo?: string
   suggestedDepartureDate?: string
   suggestedReturnDate?: string
+  // Google Flights real-time pricing
+  googleFlightsPrice?: number
+  googleFlightsPriceLevel?: string
+  googleFlightsTypicalRange?: [number, number]
+  googleFlightsAirlines?: string[]
+  googleFlightsStops?: number
+  googleFlightsDuration?: string
+  priceIsLive?: boolean
 }
 
 interface MysteryRevealProps {
@@ -205,6 +213,7 @@ export default function MysteryReveal({
   const flightPrice =
     destination.indicativeFlightPrice || destination.estimated_flight_cost
   const isEstimate = destination.priceIsEstimate
+  const isLivePrice = destination.priceIsLive
 
   // Effective travel dates
   const effectiveDepartDate = destination.suggestedDepartureDate || departDate
@@ -656,11 +665,23 @@ export default function MysteryReveal({
                     <div className="bg-white/[0.06] border border-emerald-500/20 rounded-xl p-6">
                       <div className="grid grid-cols-3 gap-4 text-center">
                         <div>
-                          <p className="text-sm text-white/50">Flight</p>
+                          <p className="text-sm text-white/50">
+                            Flight
+                            {isLivePrice && (
+                              <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                LIVE
+                              </span>
+                            )}
+                          </p>
                           <p className="text-2xl font-bold text-emerald-400">
                             {isEstimate ? '~' : ''}${flightPrice}
                             {isEstimate ? ' est.' : ''}
                           </p>
+                          {destination.googleFlightsAirlines && destination.googleFlightsAirlines.length > 0 && (
+                            <p className="text-xs text-white/30 mt-0.5">
+                              {destination.googleFlightsAirlines.join(', ')} · {destination.googleFlightsStops === 0 ? 'Nonstop' : `${destination.googleFlightsStops} stop${destination.googleFlightsStops === 1 ? '' : 's'}`}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <p className="text-sm text-white/50">
@@ -686,7 +707,9 @@ export default function MysteryReveal({
                   {...staggerChild(5)}
                   className="text-xs text-white/40 text-center"
                 >
-                  {isEstimate
+                  {isLivePrice
+                    ? `$${flightPrice} is a real-time price from Google Flights.${destination.googleFlightsPriceLevel ? ` Price level: ${destination.googleFlightsPriceLevel}.` : ''}${destination.googleFlightsTypicalRange ? ` Typical range: $${destination.googleFlightsTypicalRange[0]}–$${destination.googleFlightsTypicalRange[1]}.` : ''}`
+                    : isEstimate
                     ? `~$${flightPrice} est. is an estimated price based on regional averages. Actual price confirmed on booking.`
                     : `~$${flightPrice} is an indicative cached price. Actual price confirmed on Aviasales.`}
                 </motion.p>

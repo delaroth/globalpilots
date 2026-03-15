@@ -2,7 +2,7 @@
 // All new fields are OPTIONAL to maintain backward compatibility.
 // Existing providers continue to work unchanged.
 
-export type FlightSource = 'kiwi' | 'travelpayouts' | 'duffel' | 'flightapi'
+export type FlightSource = 'kiwi' | 'travelpayouts' | 'duffel' | 'flightapi' | 'serpapi'
 
 export type PriceConfidence = 'live' | 'cached' | 'estimated'
 

@@ -1,18 +1,21 @@
+import { serpapiProvider } from './serpapi'
 import { kiwiProvider } from './kiwi'
 import { flightapiProvider } from './flightapi'
 import { travelpayoutsProvider } from './travelpayouts'
 import type { FlightSearchParams, FlightOffer, CheapestDestination, FlightProvider } from './types'
 
 export type { FlightSearchParams, FlightOffer, CheapestDestination, FlightProvider }
+export { getGoogleFlightsPrice, getSerpApiUsage } from './serpapi'
 
-// Priority order: Kiwi → FlightAPI.io → TravelPayouts
+// Priority order: SerpApi → Kiwi → FlightAPI.io → TravelPayouts
+// SerpApi: real-time Google Flights data (250 free searches/month)
 // Kiwi: requires API key (apply at tequila.kiwi.com — needs active users)
 // FlightAPI: requires API key + credits ($49/mo for 30k credits)
-// TravelPayouts: always available, cached 1-3 day old prices (current sole source)
+// TravelPayouts: always available, cached 1-3 day old prices (fallback)
 //
 // The chain degrades gracefully: unavailable providers are skipped silently.
-// Adding a Kiwi or FlightAPI key instantly activates live data — no code change needed.
 const providers: FlightProvider[] = [
+  serpapiProvider,
   kiwiProvider,
   flightapiProvider,
   travelpayoutsProvider,

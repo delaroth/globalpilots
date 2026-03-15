@@ -5,6 +5,7 @@ import { calculateBudgetAllocation, PackageComponents, formatAllocationForAI, ge
 import { supabase } from '@/lib/supabase'
 import { AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { searchKiwiInspiration } from '@/lib/kiwi'
+import { getGoogleFlightsPrice } from '@/lib/flight-providers'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -97,6 +98,14 @@ interface MysteryResponse {
   suggestedDepartureDate?: string
   suggestedReturnDate?: string
   blog_post_slug?: string
+  // Google Flights real-time pricing (from SerpApi)
+  googleFlightsPrice?: number
+  googleFlightsPriceLevel?: string
+  googleFlightsTypicalRange?: [number, number]
+  googleFlightsAirlines?: string[]
+  googleFlightsStops?: number
+  googleFlightsDuration?: string
+  priceIsLive?: boolean
 }
 
 // Hardcoded fallback destinations by region for thin-cache scenarios
@@ -458,6 +467,30 @@ Pick ONE destination matching vibes. Explain WHY it matches (not just "affordabl
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.9, 2500)
     const result = parseAIJSON<MysteryResponse>(aiResponse.content)
+
+    // ── Real-time price validation via Google Flights (SerpApi) ────────
+    // Uses 1 of 250 free monthly searches to get live pricing for the chosen destination
+    const iata = result.iata || result.city_code_IATA
+    if (iata && !priceIsEstimate) {
+      const departDate = result.suggestedDepartureDate || dates.split(' ')[0] || kiwiDateFrom
+      const returnDate = result.suggestedReturnDate || (departDate ? new Date(new Date(departDate).getTime() + (tripDuration - 1) * 86400000).toISOString().split('T')[0] : undefined)
+
+      const livePrice = await getGoogleFlightsPrice(origin, iata, departDate, returnDate)
+
+      if (livePrice) {
+        console.log(`[AI-Mystery] Google Flights live price: $${livePrice.price} (${livePrice.airlines.join(', ')}, ${livePrice.stops} stops, ${livePrice.duration})`)
+        result.googleFlightsPrice = livePrice.price
+        result.googleFlightsPriceLevel = livePrice.priceLevel
+        result.googleFlightsTypicalRange = livePrice.typicalRange
+        result.googleFlightsAirlines = livePrice.airlines
+        result.googleFlightsStops = livePrice.stops
+        result.googleFlightsDuration = livePrice.duration
+        // Update the indicative price if Google Flights has real data
+        result.indicativeFlightPrice = livePrice.price
+        result.estimated_flight_cost = livePrice.price
+        result.priceIsLive = true
+      }
+    }
 
     // Add priceIsEstimate flag
     if (priceIsEstimate) {
