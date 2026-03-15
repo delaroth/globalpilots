@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { Suspense, useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
@@ -675,7 +675,7 @@ function SharedResult({ params }: { params: URLSearchParams }) {
 // Main page component
 // ---------------------------------------------------------------------------
 
-export default function QuizPage() {
+function QuizPageContent() {
   const searchParams = useSearchParams()
   const hasSharedResult = searchParams.get('result')
 
@@ -779,5 +779,13 @@ export default function QuizPage() {
 
       <Footer />
     </main>
+  )
+}
+
+export default function QuizPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0f]" />}>
+      <QuizPageContent />
+    </Suspense>
   )
 }
