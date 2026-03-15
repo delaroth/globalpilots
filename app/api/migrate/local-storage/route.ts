@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import type { SavedTrip } from '@/lib/trip-history'
 import type { PassportStamp, PassportBadge } from '@/lib/travel-passport'
 
+export const dynamic = 'force-dynamic'
+
 // ─── Simple in-memory rate limiter (3 requests/minute per user) ───
 const rateLimitMap = new Map<string, number[]>()
 const RATE_LIMIT = 3

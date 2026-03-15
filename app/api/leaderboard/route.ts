@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 interface LeaderboardEntry {
   rank: number
   destination: string

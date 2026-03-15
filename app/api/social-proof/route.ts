@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 const FALLBACK_RESPONSE = {
   weeklyReveals: 500,
   topDestinations: ['Bangkok', 'Bali', 'Lisbon'],
