@@ -8,6 +8,9 @@ import { getClimateData, type ClimateData } from './climate'
 import { getExchangeRate, type ExchangeRateResult } from './exchange-rates'
 import { getSafetyInfo, type SafetyInfo } from './safety'
 import { getHolidaysDuringTrip, type Holiday } from './holidays'
+import { fetchWeather, type WeatherData } from './weather'
+import { fetchAttractions, type Attraction } from './attractions'
+import { fetchTimezone, type TimezoneInfo } from './timezone'
 import { getDestinationCost } from '@/lib/destination-costs'
 
 export interface EnrichmentParams {
@@ -25,6 +28,9 @@ export interface EnrichmentData {
   country: CountryData | null
   visa: VisaInfo | null
   climate: ClimateData | null
+  weather: WeatherData | null
+  attractions: Attraction[] | null
+  timezone: TimezoneInfo | null
   exchangeRate: ExchangeRateResult | null
   safety: SafetyInfo | null
   holidays: Holiday[]
@@ -36,6 +42,9 @@ export type {
   CountryData,
   VisaInfo,
   ClimateData,
+  WeatherData,
+  Attraction,
+  TimezoneInfo,
   ExchangeRateResult,
   SafetyInfo,
   Holiday,
@@ -70,12 +79,16 @@ export async function enrichDestination(
     exchangeResult,
     safetyResult,
     holidaysResult,
+    weatherResult,
+    attractionsResult,
   ] = await Promise.allSettled([
     fetchDestinationPhotos(cityName, country),
     countryCode ? fetchCountryData(countryCode) : Promise.resolve(null),
     currencyCode ? getExchangeRate(currencyCode) : Promise.resolve(null),
     getSafetyInfo(country),
     countryCode ? getHolidaysDuringTrip(countryCode, departDate, returnDate) : Promise.resolve([]),
+    fetchWeather(iata, departDate),
+    fetchAttractions(iata),
   ])
 
   // Visa check is synchronous — no need for Promise.allSettled
@@ -88,7 +101,7 @@ export async function enrichDestination(
     }
   }
 
-  // Climate check is synchronous (hardcoded data)
+  // Climate check is synchronous (hardcoded data) — used as fallback when weather API fails
   let climate: ClimateData | null = null
   try {
     climate = getClimateData(iata, departMonth)
@@ -96,11 +109,22 @@ export async function enrichDestination(
     climate = null
   }
 
+  // Timezone is synchronous (static lookup)
+  let timezone: TimezoneInfo | null = null
+  try {
+    timezone = fetchTimezone(iata)
+  } catch {
+    timezone = null
+  }
+
   return {
     photos: photosResult.status === 'fulfilled' ? photosResult.value : [],
     country: countryResult.status === 'fulfilled' ? countryResult.value : null,
     visa,
     climate,
+    weather: weatherResult.status === 'fulfilled' ? weatherResult.value : null,
+    attractions: attractionsResult.status === 'fulfilled' ? attractionsResult.value : null,
+    timezone,
     exchangeRate: exchangeResult.status === 'fulfilled' ? exchangeResult.value : null,
     safety: safetyResult.status === 'fulfilled' ? safetyResult.value : null,
     holidays: holidaysResult.status === 'fulfilled' ? holidaysResult.value : [],

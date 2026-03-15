@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import MigrationPrompt from '@/components/MigrationPrompt'
 
 interface PriceAlert {
   id: string
@@ -38,6 +39,11 @@ interface UserStatistics {
   estimated_money_saved: number
 }
 
+interface PassportData {
+  stamps: any[]
+  badges: any[]
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -45,9 +51,12 @@ export default function DashboardPage() {
   const [alerts, setAlerts] = useState<PriceAlert[]>([])
   const [savedTrips, setSavedTrips] = useState<SavedTrip[]>([])
   const [statistics, setStatistics] = useState<UserStatistics | null>(null)
+  const [passport, setPassport] = useState<PassportData | null>(null)
   const [isLoadingAlerts, setIsLoadingAlerts] = useState(true)
   const [isLoadingTrips, setIsLoadingTrips] = useState(true)
   const [isLoadingStats, setIsLoadingStats] = useState(true)
+  const [isLoadingPassport, setIsLoadingPassport] = useState(true)
+  const [showMigration, setShowMigration] = useState(false)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -56,12 +65,25 @@ export default function DashboardPage() {
     }
   }, [status, router])
 
+  // Check for unmigrated localStorage data
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (localStorage.getItem('gp_migrated') === 'true') return
+
+    const hasTrips = !!localStorage.getItem('gp_trips')
+    const hasPassport = !!localStorage.getItem('gp_passport')
+    if (hasTrips || hasPassport) {
+      setShowMigration(true)
+    }
+  }, [])
+
   // Fetch user data
   useEffect(() => {
     if (session?.user?.id) {
       fetchAlerts()
       fetchSavedTrips()
       fetchStatistics()
+      fetchPassport()
     }
   }, [session])
 
@@ -107,6 +129,20 @@ export default function DashboardPage() {
     }
   }
 
+  const fetchPassport = async () => {
+    try {
+      const response = await fetch('/api/dashboard/passport')
+      if (response.ok) {
+        const data = await response.json()
+        setPassport(data.passport)
+      }
+    } catch (error) {
+      console.error('Error fetching passport:', error)
+    } finally {
+      setIsLoadingPassport(false)
+    }
+  }
+
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
   }
@@ -126,8 +162,14 @@ export default function DashboardPage() {
     return null
   }
 
+  const stampCount = passport?.stamps?.length || 0
+  const badgeCount = passport?.badges?.length || 0
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+      {/* Migration Prompt Modal */}
+      {showMigration && <MigrationPrompt />}
+
       {/* Navigation */}
       <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -164,15 +206,15 @@ export default function DashboardPage() {
             Welcome back, {session.user.name?.split(' ')[0] || 'Traveler'}!
           </h1>
           <p className="text-xl text-skyblue-light">
-            Here's your travel dashboard
+            Here&apos;s your travel dashboard
           </p>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-3xl">🔔</span>
+              <span className="text-3xl">{'\uD83D\uDD14'}</span>
               <span className="text-sm text-gray-500">Active</span>
             </div>
             <p className="text-3xl font-bold text-navy">
@@ -183,7 +225,7 @@ export default function DashboardPage() {
 
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-3xl">⭐</span>
+              <span className="text-3xl">{'\u2B50'}</span>
               <span className="text-sm text-gray-500">Saved</span>
             </div>
             <p className="text-3xl font-bold text-navy">
@@ -194,7 +236,7 @@ export default function DashboardPage() {
 
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-3xl">🌍</span>
+              <span className="text-3xl">{'\uD83C\uDF0D'}</span>
               <span className="text-sm text-gray-500">Discovered</span>
             </div>
             <p className="text-3xl font-bold text-navy">
@@ -203,9 +245,20 @@ export default function DashboardPage() {
             <p className="text-sm text-gray-600">Destinations</p>
           </div>
 
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-3xl">{'\uD83D\uDCCD'}</span>
+              <span className="text-sm text-gray-500">Passport</span>
+            </div>
+            <p className="text-3xl font-bold text-navy">
+              {isLoadingPassport ? '...' : stampCount}
+            </p>
+            <p className="text-sm text-gray-600">Stamps</p>
+          </div>
+
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-3xl">💰</span>
+              <span className="text-3xl">{'\uD83D\uDCB0'}</span>
               <span className="text-sm text-green-100">Estimated</span>
             </div>
             <p className="text-3xl font-bold">
@@ -214,6 +267,30 @@ export default function DashboardPage() {
             <p className="text-sm text-green-100">Money Saved</p>
           </div>
         </div>
+
+        {/* Badge Showcase */}
+        {!isLoadingPassport && badgeCount > 0 && (
+          <div className="mb-12 bg-white/5 border border-white/10 rounded-2xl p-6">
+            <h2 className="text-xl font-bold text-white mb-4">
+              {'\uD83C\uDFC6'} Your Badges
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {passport!.badges.map((badge: any) => (
+                <div
+                  key={badge.badge_id || badge.id}
+                  className="flex items-center gap-2 bg-navy/60 border border-skyblue/20 rounded-lg px-4 py-2"
+                  title={badge.description}
+                >
+                  <span className="text-2xl">{badge.emoji}</span>
+                  <div>
+                    <p className="text-sm font-bold text-white">{badge.name}</p>
+                    <p className="text-xs text-skyblue-light">{badge.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -225,7 +302,7 @@ export default function DashboardPage() {
                 href="/alerts"
                 className="text-skyblue hover:text-skyblue-dark font-semibold text-sm"
               >
-                Manage →
+                Manage {'\u2192'}
               </Link>
             </div>
 
@@ -235,7 +312,7 @@ export default function DashboardPage() {
               </div>
             ) : alerts.length === 0 ? (
               <div className="text-center py-12">
-                <div className="text-6xl mb-4">🔔</div>
+                <div className="text-6xl mb-4">{'\uD83D\uDD14'}</div>
                 <p className="text-gray-600 mb-4">No active alerts</p>
                 <Link
                   href="/alerts"
@@ -253,11 +330,11 @@ export default function DashboardPage() {
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-bold text-navy">
-                        {alert.origin} → {alert.destination}
+                        {alert.origin} {'\u2192'} {alert.destination}
                       </h3>
                       {alert.flexible_dates && (
                         <span className="text-xs bg-skyblue/20 text-skyblue px-2 py-1 rounded">
-                          ±{alert.date_range_days}d
+                          {'\u00B1'}{alert.date_range_days}d
                         </span>
                       )}
                     </div>
@@ -280,7 +357,7 @@ export default function DashboardPage() {
                     href="/alerts"
                     className="block text-center text-skyblue hover:text-skyblue-dark font-semibold text-sm py-2"
                   >
-                    View all {alerts.length} alerts →
+                    View all {alerts.length} alerts {'\u2192'}
                   </Link>
                 )}
               </div>
@@ -295,7 +372,7 @@ export default function DashboardPage() {
                 href="/mystery"
                 className="text-skyblue hover:text-skyblue-dark font-semibold text-sm"
               >
-                Discover →
+                Discover {'\u2192'}
               </Link>
             </div>
 
@@ -305,7 +382,7 @@ export default function DashboardPage() {
               </div>
             ) : savedTrips.length === 0 ? (
               <div className="text-center py-12">
-                <div className="text-6xl mb-4">✈️</div>
+                <div className="text-6xl mb-4">{'\u2708\uFE0F'}</div>
                 <p className="text-gray-600 mb-4">No saved trips yet</p>
                 <Link
                   href="/mystery"
@@ -325,7 +402,7 @@ export default function DashboardPage() {
                       <h3 className="font-bold text-navy">
                         {trip.destination_data?.destination || 'Mystery Destination'}
                       </h3>
-                      {trip.is_favorite && <span className="text-xl">⭐</span>}
+                      {trip.is_favorite && <span className="text-xl">{'\u2B50'}</span>}
                     </div>
                     <p className="text-sm text-gray-600 mb-2">
                       {trip.destination_data?.country}
@@ -351,7 +428,7 @@ export default function DashboardPage() {
             href="/mystery"
             className="bg-gradient-to-br from-skyblue to-skyblue-dark text-navy rounded-xl p-6 hover:shadow-2xl transition transform hover:scale-105"
           >
-            <div className="text-4xl mb-3">✨</div>
+            <div className="text-4xl mb-3">{'\u2728'}</div>
             <h3 className="text-xl font-bold mb-2">Discover Mystery Destination</h3>
             <p className="text-sm text-navy/80">Let AI plan your perfect surprise trip</p>
           </Link>
@@ -360,7 +437,7 @@ export default function DashboardPage() {
             href="/alerts"
             className="bg-white rounded-xl p-6 hover:shadow-2xl transition transform hover:scale-105"
           >
-            <div className="text-4xl mb-3">🔔</div>
+            <div className="text-4xl mb-3">{'\uD83D\uDD14'}</div>
             <h3 className="text-xl font-bold text-navy mb-2">Create Price Alert</h3>
             <p className="text-sm text-gray-600">Get notified when prices drop</p>
           </Link>
@@ -369,7 +446,7 @@ export default function DashboardPage() {
             href="/blog"
             className="bg-white rounded-xl p-6 hover:shadow-2xl transition transform hover:scale-105"
           >
-            <div className="text-4xl mb-3">📖</div>
+            <div className="text-4xl mb-3">{'\uD83D\uDCD6'}</div>
             <h3 className="text-xl font-bold text-navy mb-2">Browse Travel Guides</h3>
             <p className="text-sm text-gray-600">Comprehensive destination guides</p>
           </Link>

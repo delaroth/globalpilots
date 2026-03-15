@@ -119,6 +119,21 @@ interface EnrichmentData {
     description: string
     packingTip: string
   } | null
+  weather: {
+    current: { tempC: number; description: string; icon: string }
+    forecast: { date: string; highC: number; lowC: number; rain: number; description: string }[]
+    packingTip: string
+  } | null
+  attractions: {
+    name: string
+    description: string
+    distance: string
+  }[] | null
+  timezone: {
+    timezone: string
+    utcOffset: string
+    currentTime: string
+  } | null
   exchangeRate: { rate: number; formatted: string } | null
   safety: { level: 1 | 2 | 3 | 4; label: string } | null
   holidays: { date: string; name: string; localName: string }[]
@@ -1057,8 +1072,24 @@ export default function MysteryReveal({
                         Destination Intel
                       </h3>
                       <div className="grid grid-cols-2 gap-3">
-                        {/* Climate */}
-                        {enrichment.climate && (
+                        {/* Weather (live) or Climate (fallback) */}
+                        {enrichment.weather ? (
+                          <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-base">{enrichment.weather.current.icon}</span>
+                              <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                                Weather Now
+                              </span>
+                            </div>
+                            <p className="text-white font-medium text-sm">
+                              {enrichment.weather.current.tempC}&deg;C &middot;{' '}
+                              {enrichment.weather.current.description}
+                            </p>
+                            <p className="text-xs text-white/40 mt-1">
+                              {enrichment.weather.packingTip}
+                            </p>
+                          </div>
+                        ) : enrichment.climate ? (
                           <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-base">🌤️</span>
@@ -1074,7 +1105,7 @@ export default function MysteryReveal({
                               {enrichment.climate.packingTip}
                             </p>
                           </div>
-                        )}
+                        ) : null}
 
                         {/* Visa */}
                         {enrichment.visa && (
@@ -1171,7 +1202,88 @@ export default function MysteryReveal({
                               </p>
                             </div>
                           )}
+
+                        {/* Timezone */}
+                        {enrichment.timezone && (
+                          <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-base">🕐</span>
+                              <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                                Local Time
+                              </span>
+                            </div>
+                            <p className="text-white font-medium text-sm">
+                              {enrichment.timezone.currentTime}
+                            </p>
+                            <p className="text-xs text-white/40 mt-1">
+                              {enrichment.timezone.utcOffset} &middot;{' '}
+                              {enrichment.timezone.timezone.replace(/_/g, ' ')}
+                            </p>
+                          </div>
+                        )}
                       </div>
+
+                      {/* 3-Day Weather Forecast */}
+                      {enrichment.weather && enrichment.weather.forecast.length > 0 && (
+                        <div className="mt-3 bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-base">📅</span>
+                            <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                              3-Day Forecast
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            {enrichment.weather.forecast.slice(0, 3).map((day) => (
+                              <div key={day.date} className="text-center">
+                                <p className="text-xs text-white/50">
+                                  {new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                </p>
+                                <p className="text-white font-medium text-sm mt-1">
+                                  {day.highC}&deg; / {day.lowC}&deg;
+                                </p>
+                                <p className="text-xs text-white/40">
+                                  {day.description}
+                                </p>
+                                {day.rain > 0 && (
+                                  <p className="text-xs text-blue-300/60 mt-0.5">
+                                    {day.rain}mm rain
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Top Attractions */}
+                      {enrichment.attractions && enrichment.attractions.length > 0 && (
+                        <div className="mt-3 bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-base">📍</span>
+                            <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                              Nearby Attractions
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {enrichment.attractions.slice(0, 5).map((a, idx) => (
+                              <div key={idx} className="flex gap-2">
+                                <span className="text-xs text-white/30 mt-0.5 shrink-0">{idx + 1}.</span>
+                                <div className="min-w-0">
+                                  <p className="text-white font-medium text-sm">
+                                    {a.name}
+                                    <span className="text-white/30 font-normal ml-1.5 text-xs">
+                                      {a.distance}
+                                    </span>
+                                  </p>
+                                  <p className="text-xs text-white/40 line-clamp-2">
+                                    {a.description}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Holidays during trip */}
                       {enrichment.holidays && enrichment.holidays.length > 0 && (

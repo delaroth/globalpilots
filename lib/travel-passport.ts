@@ -168,15 +168,47 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
     description: 'Guessed a destination before the reveal',
     condition: null, // awarded manually
   },
+  {
+    id: 'streak-3',
+    name: '3-Day Streak',
+    emoji: '\u{1F525}',
+    description: 'Revealed destinations 3 days in a row',
+    condition: null, // checked via streak system
+  },
+  {
+    id: 'streak-7',
+    name: 'Week Warrior',
+    emoji: '\u{26A1}',
+    description: '7-day reveal streak',
+    condition: null, // checked via streak system
+  },
+  {
+    id: 'streak-30',
+    name: 'Monthly Master',
+    emoji: '\u{1F451}',
+    description: '30-day reveal streak',
+    condition: null, // checked via streak system
+  },
 ]
 
 export { BADGE_DEFINITIONS }
 
 // ---------------------------------------------------------------------------
-// Storage key
+// Streak types
+// ---------------------------------------------------------------------------
+
+export interface StreakData {
+  current: number
+  longest: number
+  lastRevealDate: string
+}
+
+// ---------------------------------------------------------------------------
+// Storage keys
 // ---------------------------------------------------------------------------
 
 const STORAGE_KEY = 'gp_passport'
+const STREAK_KEY = 'gp_streak'
 
 // ---------------------------------------------------------------------------
 // Core functions
@@ -402,4 +434,82 @@ export function awardBadge(badgeId: string): PassportBadge | null {
   raw.badges.push(badge)
   saveRaw(raw)
   return badge
+}
+
+// ---------------------------------------------------------------------------
+// Streak system
+// ---------------------------------------------------------------------------
+
+function loadStreak(): StreakData {
+  if (typeof window === 'undefined') return { current: 0, longest: 0, lastRevealDate: '' }
+  try {
+    const raw = localStorage.getItem(STREAK_KEY)
+    if (!raw) return { current: 0, longest: 0, lastRevealDate: '' }
+    return JSON.parse(raw) as StreakData
+  } catch {
+    return { current: 0, longest: 0, lastRevealDate: '' }
+  }
+}
+
+function saveStreak(data: StreakData): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(STREAK_KEY, JSON.stringify(data))
+  } catch {
+    // localStorage full or unavailable
+  }
+}
+
+/**
+ * Get the user's current streak data.
+ */
+export function getStreak(): StreakData {
+  return loadStreak()
+}
+
+/**
+ * Call when a user reveals a destination. Updates the streak counter and
+ * auto-awards streak badges when milestones are hit.
+ */
+export function updateStreak(): void {
+  const streak = loadStreak()
+  const today = new Date().toISOString().split('T')[0]
+
+  if (streak.lastRevealDate === today) {
+    // Already revealed today — streak unchanged
+    return
+  }
+
+  // Check if the last reveal was yesterday
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0]
+
+  if (streak.lastRevealDate === yesterday) {
+    // Consecutive day — extend streak
+    streak.current += 1
+  } else {
+    // Streak broken (or first reveal ever) — start fresh
+    streak.current = 1
+  }
+
+  streak.lastRevealDate = today
+  if (streak.current > streak.longest) {
+    streak.longest = streak.current
+  }
+
+  saveStreak(streak)
+
+  // Check streak badge milestones
+  const milestones: { days: number; badgeId: string }[] = [
+    { days: 3, badgeId: 'streak-3' },
+    { days: 7, badgeId: 'streak-7' },
+    { days: 30, badgeId: 'streak-30' },
+  ]
+
+  for (const { days, badgeId } of milestones) {
+    if (streak.current >= days) {
+      awardBadge(badgeId) // no-ops if already awarded
+    }
+  }
 }

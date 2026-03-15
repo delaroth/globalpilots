@@ -12,6 +12,7 @@ export default function Navigation() {
     { href: '/mystery', label: 'Mystery Vacation' },
     { href: '/whats-happening', label: "What's Happening" },
     { href: '/trip-cost', label: 'Trip Costs' },
+    { href: '/quiz', label: 'Quiz' },
     { href: '/tools', label: 'All Tools' },
   ]
 

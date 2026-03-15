@@ -36,6 +36,28 @@ const tools = [
     border: 'border-amber-400/30 hover:border-amber-400/60',
     accent: 'text-amber-300',
   },
+  {
+    title: 'Destination Quiz',
+    emoji: '\uD83E\uDDE9',
+    href: '/quiz',
+    description:
+      'Answer 6 fun questions to discover your travel personality and get matched with your ideal mystery destination. Share results with friends!',
+    cta: 'Take the Quiz',
+    gradient: 'from-cyan-600/30 to-teal-600/30',
+    border: 'border-cyan-400/30 hover:border-cyan-400/60',
+    accent: 'text-cyan-300',
+  },
+  {
+    title: 'Leaderboard',
+    emoji: '\uD83C\uDFC6',
+    href: '/leaderboard',
+    description:
+      'See who found the cheapest mystery trips this week. Real discoveries ranked by cost — can you beat the leaderboard?',
+    cta: 'View Rankings',
+    gradient: 'from-yellow-600/30 to-amber-600/30',
+    border: 'border-yellow-400/30 hover:border-yellow-400/60',
+    accent: 'text-yellow-300',
+  },
 ]
 
 const labsTools = [
@@ -77,7 +99,7 @@ export default function ToolsPage() {
           </div>
 
           {/* Main Tools Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {tools.map((tool) => (
               <Link
                 key={tool.href}
