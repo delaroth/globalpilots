@@ -55,6 +55,23 @@ export function cleanExpiredCache(): void {
   }
 }
 
+/**
+ * Get cache statistics for admin dashboard
+ */
+export function getCacheStats(): { totalEntries: number; activeEntries: number; expiredEntries: number } {
+  const now = Date.now()
+  let active = 0
+  let expired = 0
+  for (const [, entry] of cache.entries()) {
+    if (now - entry.timestamp > entry.ttl) {
+      expired++
+    } else {
+      active++
+    }
+  }
+  return { totalEntries: cache.size, activeEntries: active, expiredEntries: expired }
+}
+
 // Clean expired cache every 10 minutes
 if (typeof setInterval !== 'undefined') {
   setInterval(cleanExpiredCache, 10 * 60 * 1000)
