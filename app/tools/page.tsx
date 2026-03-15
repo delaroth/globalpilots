@@ -25,6 +25,17 @@ const tools = [
     border: 'border-indigo-400/30 hover:border-indigo-400/60',
     accent: 'text-indigo-300',
   },
+  {
+    title: "What's Happening",
+    emoji: '\uD83C\uDF89',
+    href: '/whats-happening',
+    description:
+      'Discover 110+ festivals and events worldwide. Filter by month, category, or region — find the perfect reason to book your next trip.',
+    cta: 'Explore Events',
+    gradient: 'from-amber-600/30 to-orange-600/30',
+    border: 'border-amber-400/30 hover:border-amber-400/60',
+    accent: 'text-amber-300',
+  },
 ]
 
 const labsTools = [

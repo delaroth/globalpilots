@@ -9,6 +9,11 @@ import type { DestinationCost } from '@/lib/destination-costs'
 import ClueReveal from '@/components/ClueReveal'
 import ScratchReveal from '@/components/ScratchReveal'
 import ConfettiCelebration from '@/components/ConfettiCelebration'
+import SaveTripButton from '@/components/SaveTripButton'
+import BookingTracker from '@/components/BookingTracker'
+import TripPrep from '@/components/TripPrep'
+import { addStamp } from '@/lib/travel-passport'
+import { countryNameToCode } from '@/lib/enrichment/country-data'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -173,6 +178,9 @@ export default function MysteryReveal({
   const [dared, setDared] = useState(false)
   const [downloading, setDownloading] = useState(false)
 
+  // Passport stamp
+  const [stampId, setStampId] = useState<string | null>(null)
+
   // Enrichment
   const [enrichment, setEnrichment] = useState<EnrichmentData | null>(null)
   const [enrichmentLoading, setEnrichmentLoading] = useState(false)
@@ -262,7 +270,29 @@ export default function MysteryReveal({
       destination: destination.destination,
       country: destination.country,
     }).catch(() => {})
-  }, [destination.destination, destination.country])
+
+    // Add passport stamp
+    try {
+      const cc = countryNameToCode(destination.country) || ''
+      const stamp = addStamp({
+        destination: destination.destination,
+        country: destination.country,
+        countryCode: cc,
+        iata,
+        flag: '',
+        revealedAt: Date.now(),
+        departDate: effectiveDepartDate,
+        totalCost,
+        isBooked: false,
+      })
+      setStampId(stamp.id)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('passport-updated'))
+      }
+    } catch {
+      // silently fail — passport is non-critical
+    }
+  }, [destination.destination, destination.country, iata, effectiveDepartDate, totalCost])
 
   // Scroll to booking buttons after full reveal
   useEffect(() => {
@@ -955,10 +985,11 @@ export default function MysteryReveal({
                   </h3>
 
                   {/* Flight */}
-                  <a
+                  <BookingTracker
+                    stampId={stampId || ''}
+                    type="flight"
+                    provider={AFFILIATE_FLAGS.kiwi ? 'Kiwi' : 'Aviasales'}
                     href={bookingBundle.flightUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="block w-full bg-emerald-500/90 hover:bg-emerald-500 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl text-center"
                   >
                     Book Flights (~$
@@ -969,13 +1000,14 @@ export default function MysteryReveal({
                         ? 'Book on Kiwi'
                         : 'Book on Aviasales'}
                     </span>
-                  </a>
+                  </BookingTracker>
 
                   {/* Hotel */}
-                  <a
+                  <BookingTracker
+                    stampId={stampId || ''}
+                    type="hotel"
+                    provider="Agoda"
                     href={bookingBundle.hotelUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="block w-full bg-blue-500/90 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl text-center"
                   >
                     Find Hotels (~${destination.estimated_hotel_per_night}
@@ -984,20 +1016,21 @@ export default function MysteryReveal({
                       {formatDate(effectiveDepartDate)} &ndash;{' '}
                       {formatDate(effectiveReturnDate)} &middot; Search on Agoda
                     </span>
-                  </a>
+                  </BookingTracker>
 
                   {/* Activities */}
-                  <a
+                  <BookingTracker
+                    stampId={stampId || ''}
+                    type="activity"
+                    provider="GetYourGuide"
                     href={bookingBundle.activitiesUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className="block w-full bg-purple-500/90 hover:bg-purple-500 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl text-center"
                   >
                     Book Activities
                     <span className="block text-sm font-normal mt-1 opacity-90">
                       Browse on GetYourGuide
                     </span>
-                  </a>
+                  </BookingTracker>
                 </motion.div>
 
                 {/* ============================================================
@@ -1169,8 +1202,20 @@ export default function MysteryReveal({
                   ) : null}
                 </motion.div>
 
+                {/* ---- Trip Prep: Phrasebook, Packing, Practical ---- */}
+                {enrichment?.country && (
+                  <motion.div {...staggerChild(16)}>
+                    <TripPrep
+                      countryCode={countryNameToCode(destination.country) || ''}
+                      cityName={destination.destination}
+                      climate={enrichment.climate || undefined}
+                      tripDuration={tripDuration}
+                    />
+                  </motion.div>
+                )}
+
                 {/* ---- Continue Planning Links ---- */}
-                <motion.div {...staggerChild(16)}>
+                <motion.div {...staggerChild(17)}>
                   <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
                     <span className="text-xs text-white/30 mr-1">
                       Continue planning:
@@ -1200,7 +1245,7 @@ export default function MysteryReveal({
 
                 {/* ---- Re-roll Section ---- */}
                 {onReroll && (
-                  <motion.div {...staggerChild(17)}>
+                  <motion.div {...staggerChild(18)}>
                     <div className="border-t border-white/10 pt-6">
                       {rerollCount < maxRerolls ? (
                         <div className="text-center">
@@ -1227,8 +1272,27 @@ export default function MysteryReveal({
                   </motion.div>
                 )}
 
-                {/* ---- Show Another + Share ---- */}
-                <motion.div {...staggerChild(18)}>
+                {/* ---- Save Trip + Show Another + Share ---- */}
+                <motion.div {...staggerChild(19)}>
+                  {/* Save Trip */}
+                  <div className="mb-4 flex justify-center">
+                    <SaveTripButton
+                      destination={destination.destination}
+                      country={destination.country}
+                      iata={iata}
+                      flightPrice={flightPrice}
+                      totalCost={totalCost}
+                      tripDuration={tripDuration}
+                      departDate={effectiveDepartDate}
+                      origin={origin}
+                      vibes={[]}
+                      enrichment={enrichment ? {
+                        climate: enrichment.climate || undefined,
+                        visa: enrichment.visa || undefined,
+                        flag: enrichment.country?.flag,
+                      } : undefined}
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       onClick={onShowAnother}
@@ -1272,7 +1336,7 @@ export default function MysteryReveal({
 
                 {/* Share URL display */}
                 {shareUrl && (
-                  <motion.div {...staggerChild(19)}>
+                  <motion.div {...staggerChild(20)}>
                     <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
                       <p className="text-sm font-semibold text-emerald-400 mb-2">
                         Shareable link created!
@@ -1303,7 +1367,7 @@ export default function MysteryReveal({
                 )}
 
                 {/* ---- Dare a Friend + Download Story Card ---- */}
-                <motion.div {...staggerChild(20)}>
+                <motion.div {...staggerChild(21)}>
                   <div className="grid grid-cols-2 gap-4">
                     {/* Dare a Friend */}
                     <button

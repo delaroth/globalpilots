@@ -9,6 +9,10 @@ import MultiCityResults from '@/components/MultiCityResults'
 import type { TripResult } from '@/components/MultiCityResults'
 import { searchAirports, majorAirports } from '@/lib/geolocation'
 import SocialProof from '@/components/SocialProof'
+import PassportButton from '@/components/PassportButton'
+import TripHistory from '@/components/TripHistory'
+import CompareReveals from '@/components/CompareReveals'
+import type { SavedTrip } from '@/lib/trip-history'
 
 const vibeOptions = [
   { emoji: '🏖', label: 'Beach', value: 'beach' },
@@ -97,6 +101,10 @@ export default function MysteryPage() {
   const [numCities, setNumCities] = useState(1)
   const [region, setRegion] = useState('Any')
   const [multiCityResult, setMultiCityResult] = useState<TripResult | null>(null)
+
+  // Trip history & compare
+  const [tripHistoryOpen, setTripHistoryOpen] = useState(false)
+  const [compareTrips, setCompareTrips] = useState<SavedTrip[] | null>(null)
 
   // Theme notification
   const [themeNotification, setThemeNotification] = useState<string | null>(null)
@@ -470,9 +478,17 @@ export default function MysteryPage() {
             </div>
             <span className="text-white text-xl font-bold">GlobePilot</span>
           </Link>
-          <Link href="/" className="text-skyblue hover:text-skyblue-light transition">
-            ← Back to Home
-          </Link>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setTripHistoryOpen(true)}
+              className="text-white/60 hover:text-white transition text-sm font-medium"
+            >
+              My Trips
+            </button>
+            <Link href="/" className="text-skyblue hover:text-skyblue-light transition">
+              ← Back to Home
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -1053,6 +1069,29 @@ export default function MysteryPage() {
           </div>
         )}
       </div>
+
+      {/* Floating Passport Button */}
+      <PassportButton />
+
+      {/* Trip History Drawer */}
+      <TripHistory
+        isOpen={tripHistoryOpen}
+        onClose={() => setTripHistoryOpen(false)}
+        onSelectTrip={() => setTripHistoryOpen(false)}
+        onCompare={(trips) => {
+          setTripHistoryOpen(false)
+          setCompareTrips(trips)
+        }}
+      />
+
+      {/* Compare Reveals Modal */}
+      {compareTrips && compareTrips.length >= 2 && (
+        <CompareReveals
+          trips={compareTrips}
+          onClose={() => setCompareTrips(null)}
+          onBook={() => setCompareTrips(null)}
+        />
+      )}
     </div>
   )
 }
