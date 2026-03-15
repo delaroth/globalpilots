@@ -743,12 +743,22 @@ function SearchPageContent() {
                           ? 'Check This Fare on Kiwi'
                           : 'Check on Aviasales'}
                     </button>
+
+                    {/* Always show Google Flights as a reliable alternative */}
+                    {exactDateResult.source !== 'google-flights' && (
+                      <a
+                        href={`https://www.google.com/travel/flights?q=flights+from+${origin}+to+${destination}+on+${exactDate}${isRoundTrip && returnDate ? '+returning+' + returnDate : ''}&curr=USD`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-6 rounded-lg transition mt-2 text-sm"
+                      >
+                        Also check on Google Flights
+                      </a>
+                    )}
                     <p className="text-center text-xs text-gray-500 mt-3">
                       {exactDateResult.source === 'google-flights'
                         ? 'Opens Google Flights with this route'
-                        : exactDateResult.source === 'kiwi'
-                          ? 'Opens Kiwi.com to verify this fare'
-                          : 'Opens Aviasales to see current prices'}
+                        : 'Estimated price — verify on booking site'}
                     </p>
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <p className="text-xs text-gray-500 mb-2 font-medium text-center">Plan your stay</p>

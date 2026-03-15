@@ -233,16 +233,19 @@ export async function getGoogleFlightsPrice(
     resetUsageIfNewMonth()
     if (!SERPAPI_KEY || monthlyUsage >= FREE_LIMIT) return null
 
-    const { bestFlights, priceInsights } = await searchGoogleFlights({
+    const { bestFlights, otherFlights, priceInsights } = await searchGoogleFlights({
       origin,
       destination,
       outboundDate: departDate,
       returnDate,
     })
 
-    if (bestFlights.length === 0) return null
+    // Use best_flights first, fall back to other_flights (domestic/short-haul routes
+    // often only have results in other_flights)
+    const allFlights = [...bestFlights, ...otherFlights]
+    if (allFlights.length === 0) return null
 
-    const cheapest = bestFlights[0]
+    const cheapest = allFlights[0]
     const airlines = [...new Set(cheapest.flights.map(f => f.airline))]
     const airlineLogos = cheapest.flights
       .map(f => f.airline_logo)

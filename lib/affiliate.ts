@@ -265,14 +265,21 @@ export function buildFlightLinkForSource(
  * affiliate wrapping — no tracking, no commissions, just the search page.
  */
 export function buildFlightLink(origin: string, dest: string, date: string, returnDate?: string): string {
+  // Parse YYYY-MM-DD directly to avoid timezone issues with new Date()
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr)
-    const day = String(d.getDate()).padStart(2, '0')
-    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const parts = dateStr.split('-')
+    if (parts.length !== 3) return ''
+    const day = parts[2]
+    const month = parts[1]
     return day + month
   }
 
   const departFormatted = formatDate(date)
+  if (!departFormatted) {
+    // Fallback to Google Flights if date parsing fails
+    return buildGoogleFlightsLink(origin, dest, date, returnDate)
+  }
+
   const returnFormatted = returnDate ? formatDate(returnDate) : ''
   const searchPath = `${origin}${departFormatted}${dest}${returnFormatted}1`
   const aviasalesUrl = `https://www.aviasales.com/search/${searchPath}`
@@ -283,6 +290,19 @@ export function buildFlightLink(origin: string, dest: string, date: string, retu
   }
 
   return `https://tp.media/r?campaign_id=${CAMPAIGN_ID}&marker=${MARKER}&p=4114&sub_id=${SUB_ID}&trs=${TRS}&u=${encodeURIComponent(aviasalesUrl)}`
+}
+
+/**
+ * Build a Google Flights link — reliable fallback for all routes worldwide.
+ * Works for domestic, international, one-way, and round-trip.
+ */
+export function buildGoogleFlightsLink(origin: string, dest: string, date: string, returnDate?: string): string {
+  let url = `https://www.google.com/travel/flights?q=flights+from+${origin}+to+${dest}+on+${date}`
+  if (returnDate) {
+    url += `+returning+${returnDate}`
+  }
+  url += '&curr=USD'
+  return url
 }
 
 /**
