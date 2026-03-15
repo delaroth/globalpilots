@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { searchAirports, majorAirports } from '@/lib/geolocation'
+import { searchAirports, majorAirports, lookupAirportByCode } from '@/lib/geolocation'
 
 interface AirportAutocompleteProps {
   value: string
@@ -12,6 +12,13 @@ interface AirportAutocompleteProps {
   onSearchChange?: (text: string) => void // Optional callback for raw text input
   allowAnywhere?: boolean // Show "Anywhere" option in dropdown
   persistKey?: string // localStorage key suffix for persistence (e.g. 'origin')
+}
+
+/**
+ * Check if a code is a group code (comma-separated, e.g. "LCA,PFO")
+ */
+function isGroupCode(code: string): boolean {
+  return code.includes(',')
 }
 
 export default function AirportAutocomplete({
@@ -67,7 +74,7 @@ export default function AirportAutocomplete({
 
   const anywhereEntry = { code: 'ANYWHERE', city: 'Anywhere', country: 'Cheapest destinations' }
 
-  // Improved filtering: prioritize exact IATA code matches, then partial matches
+  // Improved filtering: prioritize group entries, exact IATA code matches, then partial matches
   const filteredAirports = searchQuery.trim()
     ? (() => {
         const query = searchQuery.trim().toUpperCase()
@@ -80,30 +87,36 @@ export default function AirportAutocomplete({
 
         const allResults = searchAirports(searchQuery)
 
+        // Group entries (country/city groups) — these come first from searchAirports
+        const groupResults = allResults.filter(a => isGroupCode(a.code))
+
+        // Individual airport results
+        const individualResults = allResults.filter(a => !isGroupCode(a.code))
+
         // Exact IATA code match
-        const exactMatch = allResults.filter(a => a.code === query)
+        const exactMatch = individualResults.filter(a => a.code === query)
 
         // IATA code starts with query
-        const codeStartsWith = allResults.filter(a =>
+        const codeStartsWith = individualResults.filter(a =>
           a.code.startsWith(query) && a.code !== query
         )
 
         // City name starts with query
-        const cityStartsWith = allResults.filter(a =>
+        const cityStartsWith = individualResults.filter(a =>
           a.city.toUpperCase().startsWith(query) &&
           !exactMatch.includes(a) &&
           !codeStartsWith.includes(a)
         )
 
         // Other matches
-        const otherMatches = allResults.filter(a =>
+        const otherMatches = individualResults.filter(a =>
           !exactMatch.includes(a) &&
           !codeStartsWith.includes(a) &&
           !cityStartsWith.includes(a)
         )
 
-        // Return prioritized results
-        return [...exactMatch, ...codeStartsWith, ...cityStartsWith, ...otherMatches].slice(0, 10)
+        // Return prioritized results: groups first, then exact, starts-with, others
+        return [...groupResults, ...exactMatch, ...codeStartsWith, ...cityStartsWith, ...otherMatches].slice(0, 12)
       })()
     : allowAnywhere ? [anywhereEntry] : []
 
@@ -124,6 +137,12 @@ export default function AirportAutocomplete({
     if (value && !selectedCity) {
       if (value === 'ANYWHERE') {
         setSelectedCity('Anywhere')
+      } else if (isGroupCode(value)) {
+        // Group code — look up via lookupAirportByCode
+        const info = lookupAirportByCode(value)
+        if (info) {
+          setSelectedCity(info.city)
+        }
       } else {
         const airport = majorAirports.find(a => a.code === value)
         if (airport) {
@@ -145,12 +164,12 @@ export default function AirportAutocomplete({
     }
   }
 
-  // Auto-select when typing a valid IATA code
+  // Auto-select when typing a valid IATA code (single codes only, NOT group codes)
   useEffect(() => {
     const query = searchQuery.trim().toUpperCase()
 
-    // If user typed exactly 3 letters (case-insensitive)
-    if (query.length === 3 && !(allowAnywhere && query === 'ANY')) {
+    // If user typed exactly 3 letters (case-insensitive) — only match single IATA codes
+    if (query.length === 3 && /^[A-Z]{3}$/.test(query) && !(allowAnywhere && query === 'ANY')) {
       const exactMatch = majorAirports.find(a => a.code === query)
       if (exactMatch) {
         // Auto-select the exact IATA code match immediately
@@ -172,13 +191,16 @@ export default function AirportAutocomplete({
       const query = searchQuery.trim()
       const results = searchAirports(query)
 
-      if (results.length === 1) {
-        handleSelect(results[0].code, results[0].city)
+      // Filter out group entries for auto-select on blur — prefer individual airports
+      const individualResults = results.filter(a => !isGroupCode(a.code))
+
+      if (individualResults.length === 1) {
+        handleSelect(individualResults[0].code, individualResults[0].city)
         return
       }
 
-      // Check for exact match on name or code (case-insensitive)
-      const exactByCode = results.find(
+      // Check for exact match on name or code (case-insensitive), individual only
+      const exactByCode = individualResults.find(
         (a) => a.code.toLowerCase() === query.toLowerCase()
       )
       if (exactByCode) {
@@ -186,7 +208,7 @@ export default function AirportAutocomplete({
         return
       }
 
-      const exactByCity = results.find(
+      const exactByCity = individualResults.find(
         (a) => a.city.toLowerCase() === query.toLowerCase()
       )
       if (exactByCity) {
@@ -206,7 +228,7 @@ export default function AirportAutocomplete({
         const airport = filteredAirports[0]
         handleSelect(airport.code, airport.city)
       }
-      // If query is exactly 3 letters, try to find exact IATA match
+      // If query is exactly 3 letters, try to find exact IATA match (single codes only)
       else if (/^[A-Z]{3}$/i.test(searchQuery.trim())) {
         const query = searchQuery.trim().toUpperCase()
         const exactMatch = majorAirports.find(a => a.code === query)
@@ -218,6 +240,9 @@ export default function AirportAutocomplete({
       setShowDropdown(false)
     }
   }
+
+  // Determine display code for the selected value chip
+  const displayCode = value && !isGroupCode(value) && value !== 'ANYWHERE' ? value : null
 
   return (
     <div className="space-y-2 relative" ref={dropdownRef}>
@@ -231,8 +256,8 @@ export default function AirportAutocomplete({
           <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 flex justify-between items-center">
             <div>
               <span className="font-semibold text-navy">{selectedCity}</span>
-              {value !== 'ANYWHERE' && (
-                <span className="text-sm text-gray-600 ml-2">({value})</span>
+              {displayCode && (
+                <span className="text-sm text-gray-600 ml-2">({displayCode})</span>
               )}
             </div>
             <button
@@ -275,24 +300,37 @@ export default function AirportAutocomplete({
       {/* Dropdown */}
       {showDropdown && filteredAirports.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-lg shadow-2xl max-h-80 overflow-y-auto">
-          {filteredAirports.map((airport) => (
-            <button
-              key={airport.code}
-              type="button"
-              onClick={() => handleSelect(airport.code, airport.city)}
-              className="w-full px-4 py-3 text-left hover:bg-skyblue/10 transition border-b border-gray-100 last:border-b-0"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <span className="font-semibold text-navy">{airport.city}</span>
-                  <span className="text-sm text-gray-600 ml-2">({airport.code})</span>
+          {filteredAirports.map((airport) => {
+            const isGroup = isGroupCode(airport.code)
+            const codeCount = isGroup ? airport.code.split(',').length : 0
+            return (
+              <button
+                key={airport.code}
+                type="button"
+                onClick={() => handleSelect(airport.code, airport.city)}
+                className={`w-full px-4 py-3 text-left hover:bg-skyblue/10 transition border-b border-gray-100 last:border-b-0 ${isGroup ? 'bg-blue-50/50' : ''}`}
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className={`font-semibold ${isGroup ? 'text-blue-700' : 'text-navy'}`}>
+                      {airport.city}
+                    </span>
+                    {!isGroup && (
+                      <span className="text-sm text-gray-600 ml-2">({airport.code})</span>
+                    )}
+                    {isGroup && (
+                      <span className="text-xs text-blue-500 ml-2">
+                        {codeCount} airports
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {airport.country}
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500">
-                  {airport.country}
-                </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       )}
 

@@ -27,7 +27,7 @@ const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
   ),
 })
 
-type DateMode = 'exact-date' | 'flexible-month' | 'day-windows'
+type DateMode = 'exact-date' | 'flexible-month' | 'day-windows' | 'multi-city'
 
 interface WeekendDeal {
   value: number
@@ -136,19 +136,45 @@ function SearchPageContent() {
   const [emptyRoute, setEmptyRoute] = useState(false)
   const [showPopularSuggestions, setShowPopularSuggestions] = useState(false)
 
+  // Multi-city
+  interface FlightLeg {
+    from: string
+    to: string
+    date: string
+  }
+  const [legs, setLegs] = useState<FlightLeg[]>([
+    { from: '', to: '', date: exactDate },
+    { from: '', to: '', date: '' },
+  ])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [multiCityResults, setMultiCityResults] = useState<any>(null)
+
   const today = new Date().toISOString().split('T')[0]
   const currentMonth = new Date().toISOString().slice(0, 7)
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
     setCalendarData(null); setExactDateResult(null); setWeekendDeals([]); setDiscoverResults([])
-    setError(''); setEmptyRoute(false); setShowPopularSuggestions(false)
+    setError(''); setEmptyRoute(false); setShowPopularSuggestions(false); setMultiCityResults(null)
 
-    if (!origin) { setError('Please select a departure airport'); return }
-    if ((dateMode === 'exact-date' || dateMode === 'flexible-month') && !destination && destination !== 'ANYWHERE') {
-      setError('Please select a destination for this search mode'); return
+    // Multi-city validation is different
+    if (dateMode === 'multi-city') {
+      if (legs.length < 2) { setError('Add at least 2 flight legs'); return }
+      for (let i = 0; i < legs.length; i++) {
+        if (!legs[i].from || !legs[i].to || !legs[i].date) {
+          setError(`Please fill in all fields for flight ${i + 1}`); return
+        }
+        if (legs[i].from === legs[i].to) {
+          setError(`Flight ${i + 1}: origin and destination must be different`); return
+        }
+      }
+    } else {
+      if (!origin) { setError('Please select a departure airport'); return }
+      if ((dateMode === 'exact-date' || dateMode === 'flexible-month') && !destination && destination !== 'ANYWHERE') {
+        setError('Please select a destination for this search mode'); return
+      }
+      if (destination && destination !== 'ANYWHERE' && origin === destination) { setError('Departure and destination must be different'); return }
     }
-    if (destination && destination !== 'ANYWHERE' && origin === destination) { setError('Departure and destination must be different'); return }
 
     setLoading(true)
     try {
@@ -313,6 +339,29 @@ function SearchPageContent() {
         } else {
           setShowPopularSuggestions(true)
         }
+
+      } else if (dateMode === 'multi-city') {
+        const res = await fetch('/api/search/flights/multi-city', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ legs }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || `API error: ${res.status}`)
+        }
+        const data = await res.json()
+        if (!data.success || !data.legs || data.legs.length === 0) {
+          setEmptyRoute(true)
+        } else {
+          setMultiCityResults(data)
+          const legSummary = legs.map(l => l.from).join('→') + '→' + legs[legs.length - 1].to
+          saveRecentSearch({
+            origin: legs[0].from, destination: legs[legs.length - 1].to, mode: 'exact-date',
+            label: `${legSummary} · Multi-city`,
+            url: `/search?origin=${legs[0].from}&mode=multi-city`,
+          })
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
@@ -336,25 +385,28 @@ function SearchPageContent() {
         <form onSubmit={handleSearch} className="max-w-3xl mx-auto mb-10">
           <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
 
-            {/* Origin + Destination */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <AirportAutocomplete id="origin" label="From" value={origin} onChange={setOrigin} placeholder="Departure city or code..." />
-              <AirportAutocomplete
-                id="destination" label="To"
-                value={destination} onChange={setDestination}
-                placeholder={dateMode === 'day-windows' ? 'Any destination (optional)' : 'City, code, or "Anywhere"...'}
-                allowAnywhere
-              />
-            </div>
+            {/* Origin + Destination (hidden in multi-city mode) */}
+            {dateMode !== 'multi-city' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <AirportAutocomplete id="origin" label="From" value={origin} onChange={setOrigin} placeholder="Departure city or code..." />
+                <AirportAutocomplete
+                  id="destination" label="To"
+                  value={destination} onChange={setDestination}
+                  placeholder={dateMode === 'day-windows' ? 'Any destination (optional)' : 'City, code, or "Anywhere"...'}
+                  allowAnywhere
+                />
+              </div>
+            )}
 
             {/* Date mode tabs */}
             <div>
               <p className="text-sm font-medium text-navy mb-2">How do you want to search?</p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {([
                   { mode: 'exact-date', emoji: '📌', label: 'Exact Date', desc: 'Know your date' },
                   { mode: 'flexible-month', emoji: '📅', label: 'Browse Month', desc: 'See all prices' },
                   { mode: 'day-windows', emoji: '🗓', label: 'My Days Off', desc: 'Thu–Sun, etc.' },
+                  { mode: 'multi-city', emoji: '🗺️', label: 'Multi-city', desc: 'Multiple stops' },
                 ] as const).map(({ mode, emoji, label, desc }) => (
                   <button key={mode} type="button"
                     onClick={() => { setDateMode(mode); setError('') }}
@@ -484,6 +536,80 @@ function SearchPageContent() {
               </div>
             )}
 
+            {/* MULTI-CITY MODE */}
+            {dateMode === 'multi-city' && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-navy">Flight legs</p>
+                {legs.map((leg, idx) => (
+                  <div key={idx} className="flex items-end gap-2">
+                    <div className="flex-1 min-w-0">
+                      <AirportAutocomplete
+                        id={`mc-from-${idx}`}
+                        label={idx === 0 ? 'From' : ''}
+                        value={leg.from}
+                        onChange={(val) => {
+                          const updated = [...legs]
+                          updated[idx] = { ...updated[idx], from: val }
+                          setLegs(updated)
+                        }}
+                        placeholder="Origin"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <AirportAutocomplete
+                        id={`mc-to-${idx}`}
+                        label={idx === 0 ? 'To' : ''}
+                        value={leg.to}
+                        onChange={(val) => {
+                          const updated = [...legs]
+                          updated[idx] = { ...updated[idx], to: val }
+                          setLegs(updated)
+                        }}
+                        placeholder="Destination"
+                      />
+                    </div>
+                    <div className="w-36 shrink-0">
+                      {idx === 0 && <label className="block text-sm font-medium text-navy mb-1">Date</label>}
+                      <input
+                        type="date"
+                        value={leg.date}
+                        onChange={(e) => {
+                          const updated = [...legs]
+                          updated[idx] = { ...updated[idx], date: e.target.value }
+                          setLegs(updated)
+                        }}
+                        min={idx > 0 && legs[idx - 1].date ? legs[idx - 1].date : today}
+                        className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                        required
+                      />
+                    </div>
+                    {idx >= 2 && (
+                      <button
+                        type="button"
+                        onClick={() => setLegs(legs.filter((_, i) => i !== idx))}
+                        className="px-2 py-2.5 text-red-400 hover:text-red-600 transition text-lg leading-none"
+                        title="Remove leg"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {legs.length < 5 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prevTo = legs[legs.length - 1]?.to || ''
+                      setLegs([...legs, { from: prevTo, to: '', date: '' }])
+                    }}
+                    className="text-sm text-skyblue hover:text-skyblue-dark font-medium transition"
+                  >
+                    + Add flight
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Search button */}
             <button type="submit" disabled={loading}
               className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg">
@@ -512,6 +638,7 @@ function SearchPageContent() {
               {destination !== 'ANYWHERE' && dateMode === 'flexible-month' && 'Loading cheapest days...'}
               {destination !== 'ANYWHERE' && dateMode === 'exact-date' && 'Checking flight prices...'}
               {destination !== 'ANYWHERE' && dateMode === 'day-windows' && `Finding ${departDay}–${returnDay} trips...`}
+              {dateMode === 'multi-city' && `Searching ${legs.length} flight legs...`}
             </p>
           </div>
         )}
@@ -667,6 +794,72 @@ function SearchPageContent() {
               </div>
             )}
 
+            {/* MULTI-CITY RESULTS */}
+            {multiCityResults && multiCityResults.legs && (
+              <div className="max-w-2xl mx-auto">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-2">Multi-city Itinerary</h2>
+                  <p className="text-skyblue-light">{multiCityResults.legs.length} flights</p>
+                </div>
+                <div className="space-y-4">
+                  {multiCityResults.legs.map((leg: any, idx: number) => (
+                    <div key={idx} className="bg-white rounded-xl shadow-lg overflow-hidden">
+                      <div className="px-5 py-4 flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-white bg-navy rounded-full w-5 h-5 flex items-center justify-center">{idx + 1}</span>
+                            <span className="font-bold text-navy text-lg">{leg.from} → {leg.to}</span>
+                            {leg.isLive && (
+                              <span className="inline-flex items-center gap-1 bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                                <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+                                LIVE
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-gray-500 text-sm">
+                            {new Date(leg.date + 'T00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                          </p>
+                          {leg.airlines && leg.airlines.length > 0 && (
+                            <p className="text-gray-400 text-xs mt-1">
+                              {leg.airlines.join(', ')}
+                              {leg.stops !== undefined && ` · ${leg.stops === 0 ? 'Direct' : `${leg.stops} stop${leg.stops > 1 ? 's' : ''}`}`}
+                              {leg.duration && ` · ${leg.duration}`}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0 ml-4">
+                          {leg.price != null ? (
+                            <p className="text-2xl font-bold text-navy">${leg.price}</p>
+                          ) : (
+                            <p className="text-sm text-gray-400">No price</p>
+                          )}
+                        </div>
+                      </div>
+                      {leg.bookingUrl && (
+                        <div className="px-5 pb-3">
+                          <a
+                            href={leg.bookingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-skyblue hover:text-skyblue-dark font-medium transition"
+                          >
+                            Book on Google Flights &rarr;
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Total price */}
+                <div className="mt-6 bg-gradient-to-r from-skyblue to-skyblue-dark rounded-xl p-5 text-center shadow-lg">
+                  <p className="text-navy/70 text-sm font-medium uppercase tracking-wide">Estimated Total</p>
+                  <p className="text-navy text-5xl font-bold mt-1">${multiCityResults.totalPrice}</p>
+                  <p className="text-navy/60 text-xs mt-2">Sum of individual one-way fares — actual multi-city fare may differ</p>
+                </div>
+              </div>
+            )}
+
             {/* ANYWHERE: cheapest destinations */}
             {discoverResults.length > 0 && (
               <div className="max-w-3xl mx-auto">
@@ -777,9 +970,9 @@ function SearchPageContent() {
             )}
 
             {/* Empty state */}
-            {!calendarData && !exactDateResult && weekendDeals.length === 0 && discoverResults.length === 0 && !emptyRoute && !error && (
+            {!calendarData && !exactDateResult && weekendDeals.length === 0 && discoverResults.length === 0 && !multiCityResults && !emptyRoute && !error && (
               <div className="max-w-3xl mx-auto mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
                     <div className="text-4xl mb-3">📌</div>
                     <h3 className="text-white font-semibold mb-2">Exact Date</h3>
@@ -794,6 +987,11 @@ function SearchPageContent() {
                     <div className="text-4xl mb-3">🗓</div>
                     <h3 className="text-white font-semibold mb-2">My Days Off</h3>
                     <p className="text-skyblue-light text-sm">Free Thursday to Sunday? Find the cheapest destinations for those days.</p>
+                  </div>
+                  <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
+                    <div className="text-4xl mb-3">🗺️</div>
+                    <h3 className="text-white font-semibold mb-2">Multi-city</h3>
+                    <p className="text-skyblue-light text-sm">Plan a multi-stop trip with separate flights for each leg.</p>
                   </div>
                 </div>
               </div>

@@ -60,7 +60,7 @@ function buildBookingUrl(origin: string, destination: string, departDate: string
   return `${base}?q=flights+from+${origin}+to+${destination}+on+${departDate}${returnDate ? '+returning+' + returnDate : ''}`
 }
 
-async function searchGoogleFlights(params: {
+export async function searchGoogleFlights(params: {
   origin: string
   destination: string
   outboundDate: string
