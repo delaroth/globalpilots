@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 import MysteryLoading from '@/components/MysteryLoading'
 import MysteryReveal from '@/components/MysteryReveal'
+import ClueReveal from '@/components/ClueReveal'
 import MultiCityResults from '@/components/MultiCityResults'
 import type { TripResult } from '@/components/MultiCityResults'
 import { searchAirports, majorAirports } from '@/lib/geolocation'
@@ -74,7 +75,7 @@ export default function MysteryPage() {
     return date.toISOString().split('T')[0]
   }
 
-  const [step, setStep] = useState<'form' | 'loading' | 'reveal'>('form')
+  const [step, setStep] = useState<'form' | 'loading' | 'loading-clues' | 'reveal'>('form')
   const [budget, setBudget] = useState('')
   const [origin, setOrigin] = useState('')
   const [originInputText, setOriginInputText] = useState('') // Track raw input text
@@ -109,6 +110,23 @@ export default function MysteryPage() {
   // Theme notification
   const [themeNotification, setThemeNotification] = useState<string | null>(null)
   const originSectionRef = useRef<HTMLDivElement>(null)
+
+  // Loading-clues flow: track whether API data arrived and clue animation finished
+  const [apiDataReady, setApiDataReady] = useState(false)
+  const [clueAnimationDone, setClueAnimationDone] = useState(false)
+
+  // When both the API data and clue animation are done, transition to reveal
+  useEffect(() => {
+    if (step === 'loading-clues' && apiDataReady && clueAnimationDone && destination) {
+      setStep('reveal')
+      setIsSubmitting(false)
+    }
+  }, [step, apiDataReady, clueAnimationDone, destination])
+
+  // Stable callback for ClueReveal onComplete
+  const handlePreviewClueComplete = useCallback(() => {
+    setClueAnimationDone(true)
+  }, [])
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -273,11 +291,11 @@ export default function MysteryPage() {
       }
     }
 
-    console.log('[Mystery] ✅ All validations passed! Starting search with:', { origin: resolvedOrigin, budget, vibes: selectedVibes, departDate, numCities })
-    setStep('loading')
+    console.log('[Mystery] All validations passed! Starting search with:', { origin: resolvedOrigin, budget, vibes: selectedVibes, departDate, numCities })
 
-    // ─── Multi-city mystery flow ───
+    // ─── Multi-city mystery flow (uses old MysteryLoading) ───
     if (numCities > 1) {
+      setStep('loading')
       try {
         const response = await fetch('/api/multi-city', {
           method: 'POST',
@@ -318,62 +336,67 @@ export default function MysteryPage() {
       return
     }
 
-    // ─── Single-city mystery flow ───
-    try {
-      console.log('[Mystery] 🚀 Making API call to /api/ai-mystery...')
-      const response = await fetch('/api/ai-mystery', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          origin: resolvedOrigin, // Use resolved origin
-          budget: parseFloat(budget),
-          vibes: selectedVibes,
-          dates: dateMode === 'specific'
-            ? `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`
-            : `flexible:${timeframe}`,
-          tripDuration,
-          packageComponents,
-          email: emailForUpdates || undefined,
-          exclude: excludeListRef.current.length > 0 ? excludeListRef.current : undefined,
-          accommodationLevel,
-          budgetPriority,
-        }),
+    // ─── Single-city mystery flow (uses ClueReveal during loading) ───
+    // Reset loading-clues tracking state and show clue animation immediately
+    setApiDataReady(false)
+    setClueAnimationDone(false)
+    setStep('loading-clues')
+
+    // Fire API call in the background (don't await — let clues play while it loads)
+    console.log('[Mystery] Making API call to /api/ai-mystery...')
+    fetch('/api/ai-mystery', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        origin: resolvedOrigin,
+        budget: parseFloat(budget),
+        vibes: selectedVibes,
+        dates: dateMode === 'specific'
+          ? `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`
+          : `flexible:${timeframe}`,
+        tripDuration,
+        packageComponents,
+        email: emailForUpdates || undefined,
+        exclude: excludeListRef.current.length > 0 ? excludeListRef.current : undefined,
+        accommodationLevel,
+        budgetPriority,
+      }),
+    })
+      .then(async (response) => {
+        console.log('[Mystery] API response status:', response.status)
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+          const errorMsg = errorData.error || `Failed to generate destination (HTTP ${response.status})`
+          console.error('[Mystery] API error response:', errorData)
+          throw new Error(errorMsg)
+        }
+
+        const data = await response.json()
+        console.log('[Mystery] API success! Received destination:', data.destination)
+
+        if (data.error) {
+          console.error('[Mystery] API returned error in data:', data.error)
+          throw new Error(data.error)
+        }
+
+        if (!data.destination || !data.city_code_IATA) {
+          console.error('[Mystery] API returned invalid data structure:', data)
+          throw new Error('Invalid response from server. Please try again.')
+        }
+
+        setDestination(data)
+        setApiDataReady(true)
       })
-
-      console.log('[Mystery] API response status:', response.status)
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
-        const errorMsg = errorData.error || `Failed to generate destination (HTTP ${response.status})`
-        console.error('[Mystery] API error response:', errorData)
-        throw new Error(errorMsg)
-      }
-
-      const data = await response.json()
-      console.log('[Mystery] ✅ API success! Received destination:', data.destination)
-
-      if (data.error) {
-        console.error('[Mystery] API returned error in data:', data.error)
-        throw new Error(data.error)
-      }
-
-      if (!data.destination || !data.city_code_IATA) {
-        console.error('[Mystery] API returned invalid data structure:', data)
-        throw new Error('Invalid response from server. Please try again.')
-      }
-
-      setDestination(data)
-      setStep('reveal')
-      setIsSubmitting(false) // Reset on success
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
-      console.error('[Mystery] ❌ Error during mystery destination generation:', err)
-      setError(errorMsg)
-      setStep('form')
-      setIsSubmitting(false) // Reset on error
-    }
+      .catch((err) => {
+        const errorMsg = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+        console.error('[Mystery] Error during mystery destination generation:', err)
+        setError(errorMsg)
+        setStep('form')
+        setIsSubmitting(false)
+      })
   }
 
   const handleShowAnother = () => {
@@ -381,7 +404,7 @@ export default function MysteryPage() {
     setExcludeList([])
     excludeListRef.current = []
     setRerollCount(0)
-    setStep('loading')
+    setDestination(null)
     handleSubmit({ preventDefault: () => {} } as React.FormEvent)
   }
 
@@ -397,7 +420,6 @@ export default function MysteryPage() {
     }
     setRerollCount(prev => prev + 1)
     setDestination(null)
-    setStep('loading')
     // Directly trigger API call since ref is already updated
     setTimeout(() => {
       handleSubmit({ preventDefault: () => {} } as React.FormEvent)
@@ -412,6 +434,8 @@ export default function MysteryPage() {
     setExcludeList([])
     excludeListRef.current = []
     setRerollCount(0)
+    setApiDataReady(false)
+    setClueAnimationDone(false)
     setActiveTheme(null)
     setThemeNotification(null)
   }
@@ -970,7 +994,73 @@ export default function MysteryPage() {
           </div>
         )}
 
-        {/* Step 2: Loading */}
+        {/* Step 2a: Loading with clue game (single-city) */}
+        {step === 'loading-clues' && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-navy-dark/95 backdrop-blur-sm">
+            <div className="max-w-3xl w-full mx-4">
+              {/* Show ClueReveal with preview clues while API loads */}
+              {!clueAnimationDone ? (
+                <ClueReveal
+                  clues={[
+                    {
+                      icon: '\uD83D\uDCB0',
+                      label: 'Budget',
+                      value: `$${budget}`,
+                    },
+                    {
+                      icon: '\uD83C\uDFAD',
+                      label: 'Vibe',
+                      value: selectedVibes
+                        .map((v) => {
+                          const match = vibeOptions.find((vo) => vo.value === v)
+                          return match ? match.label : v
+                        })
+                        .join(' & ') || 'Surprise me',
+                    },
+                    {
+                      icon: '\uD83D\uDCC5',
+                      label: 'When',
+                      value: dateMode === 'specific'
+                        ? new Date(departDate + 'T00:00:00').toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          }) + ` (${tripDuration} days)`
+                        : timeframeOptions.find((t) => t.value === timeframe)?.label || timeframe,
+                    },
+                    {
+                      icon: '\u2708\uFE0F',
+                      label: 'Destination',
+                      value: '???',
+                    },
+                  ]}
+                  destinationName="???"
+                  country="???"
+                  onComplete={handlePreviewClueComplete}
+                />
+              ) : (
+                /* Clue animation finished but API still loading — show brief waiting state */
+                <div className="bg-navy-light/80 backdrop-blur-sm rounded-2xl p-12 border-2 border-skyblue/40 shadow-2xl">
+                  <div className="text-center">
+                    <div className="text-6xl mb-6 animate-pulse">🌍</div>
+                    <h2 className="text-2xl font-bold text-white mb-3">
+                      Finding your destination...
+                    </h2>
+                    <p className="text-skyblue-light text-sm mb-6">
+                      Almost there — putting the finishing touches on your mystery trip
+                    </p>
+                    <div className="flex justify-center gap-2">
+                      <div className="w-3 h-3 bg-skyblue rounded-full animate-bounce"></div>
+                      <div className="w-3 h-3 bg-skyblue rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                      <div className="w-3 h-3 bg-skyblue rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step 2b: Loading fallback (multi-city uses MysteryLoading) */}
         {step === 'loading' && (
           <div className="fixed inset-0 flex items-center justify-center z-50 bg-navy-dark/95 backdrop-blur-sm">
             <div className="max-w-3xl w-full mx-4">
@@ -978,14 +1068,10 @@ export default function MysteryPage() {
                 <div className="text-center mb-8">
                   <div className="text-7xl mb-6 animate-spin-slow inline-block">🌍</div>
                   <h2 className="text-3xl font-bold text-white mb-3">
-                    {numCities === 1
-                      ? 'Our AI is finding your perfect destination...'
-                      : `AI is planning your ${numCities}-city mystery route...`}
+                    AI is planning your {numCities}-city mystery route...
                   </h2>
                   <p className="text-skyblue-light text-lg">
-                    {numCities === 1
-                      ? 'Searching flights, hotels, and creating your custom itinerary'
-                      : 'Optimizing your route, checking flights, and calculating budgets'}
+                    Optimizing your route, checking flights, and calculating budgets
                   </p>
                 </div>
                 <MysteryLoading

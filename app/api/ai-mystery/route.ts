@@ -161,6 +161,48 @@ function getOriginRegion(origin: string): string {
   return 'SE Asia' // default
 }
 
+// ── Fuzzy cache helpers ─────────────────────────────────────────
+
+/** Canonical vibe keys sorted for comparison */
+function normalizeVibes(vibes: string[]): string[] {
+  return vibes.map(v => v.toLowerCase().trim()).sort()
+}
+
+/**
+ * Build a fuzzy cache key that normalizes budget to ±15% buckets.
+ * We store under a canonical key and also check nearby budget buckets on read.
+ */
+function buildFuzzyCacheKey(origin: string, budget: number, vibes: string[], dates: string, tripDuration: number, components: PackageComponents, exclude: string[], accommodationLevel: string, budgetPriority: string): string {
+  // Bucket budget to nearest 15% band: round to nearest step of budget*0.15
+  const bucketSize = Math.max(50, Math.round(budget * 0.15))
+  const budgetBucket = Math.round(budget / bucketSize) * bucketSize
+  const sortedVibes = normalizeVibes(vibes).join(',')
+  return `mystery:${origin}:${budgetBucket}:${sortedVibes}:${dates}:${tripDuration}:${JSON.stringify(components)}:${exclude.sort().join(',')}:${accommodationLevel}:${budgetPriority}`
+}
+
+/**
+ * Try to find a fuzzy cache hit: same origin, similar vibes, budget within ±15%
+ * Returns the cached result or null.
+ */
+function getFuzzyCache(origin: string, budget: number, vibes: string[], dates: string, tripDuration: number, components: PackageComponents, exclude: string[], accommodationLevel: string, budgetPriority: string): MysteryResponse | null {
+  // Try the exact bucket first
+  const primaryKey = buildFuzzyCacheKey(origin, budget, vibes, dates, tripDuration, components, exclude, accommodationLevel, budgetPriority)
+  const primary = getCached<MysteryResponse>(primaryKey)
+  if (primary) return primary
+
+  // Try adjacent budget buckets (±1 bucket)
+  const bucketSize = Math.max(50, Math.round(budget * 0.15))
+  for (const offset of [-bucketSize, bucketSize]) {
+    const nearbyBudget = budget + offset
+    if (nearbyBudget < 100) continue
+    const nearbyKey = buildFuzzyCacheKey(origin, nearbyBudget, vibes, dates, tripDuration, components, exclude, accommodationLevel, budgetPriority)
+    const nearby = getCached<MysteryResponse>(nearbyKey)
+    if (nearby) return nearby
+  }
+
+  return null
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limit: 10 requests per minute for this expensive AI endpoint
@@ -237,15 +279,16 @@ export async function POST(request: NextRequest) {
 
     console.log('[AI-Mystery] Budget allocation:', allocationText)
 
-    // Check cache (include exclude list to avoid serving cached excluded destinations)
-    const cacheKey = `mystery:${origin}:${budget}:${vibes.join(',')}:${dates}:${tripDuration}:${JSON.stringify(components)}:${exclude.sort().join(',')}:${accommodationLevel}:${budgetPriority}`
-    const cached = getCached<MysteryResponse>(cacheKey)
+    // ── Fuzzy cache check ────────────────────────────────────────
+    const cached = getFuzzyCache(origin, budget, vibes, dates, tripDuration, components, exclude, accommodationLevel, budgetPriority)
     if (cached) {
-      console.log('[AI-Mystery] Cache hit')
+      console.log('[AI-Mystery] Fuzzy cache hit')
       if (email) {
         await captureEmail(email, 'mystery').catch(err => console.error('[AI-Mystery] Email capture failed:', err))
       }
-      return NextResponse.json(cached)
+      return NextResponse.json(cached, {
+        headers: { 'X-Cache-Hit': 'true' },
+      })
     }
 
     let priceInfo: { destination: string; city?: string; country?: string; price: number }[] = []
@@ -256,65 +299,73 @@ export async function POST(request: NextRequest) {
     const flexibleTimeframe = isFlexible ? dates.replace('flexible:', '') : null
     const flexibleRange = flexibleTimeframe ? calculateFlexibleDateRange(flexibleTimeframe) : null
 
-    // Try Kiwi first if enabled
-    if (AFFILIATE_FLAGS.kiwi && process.env.KIWI_API_KEY) {
-      try {
-        console.log('[AI-Mystery] Using Kiwi inspiration search')
-        let kiwiDateFrom: string
-        let kiwiDateTo: string
+    // ── Parallel flight price fetching ───────────────────────────
+    // Fire both Kiwi and TravelPayouts in parallel, prefer Kiwi if both succeed
+    const maxFlightPrice = Math.floor(budget * (userSplit.flights / 100))
 
-        if (flexibleRange) {
-          kiwiDateFrom = flexibleRange.dateFrom
-          kiwiDateTo = flexibleRange.dateTo
-        } else {
-          const departDate = dates.split(' ')[0] || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
-          kiwiDateFrom = departDate
-          kiwiDateTo = new Date(new Date(departDate).getTime() + 30 * 86400000).toISOString().split('T')[0]
-        }
+    let kiwiDateFrom: string
+    let kiwiDateTo: string
+    if (flexibleRange) {
+      kiwiDateFrom = flexibleRange.dateFrom
+      kiwiDateTo = flexibleRange.dateTo
+    } else {
+      const departDate = dates.split(' ')[0] || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+      kiwiDateFrom = departDate
+      kiwiDateTo = new Date(new Date(departDate).getTime() + 30 * 86400000).toISOString().split('T')[0]
+    }
 
-        const maxFlightPrice = Math.floor(budget * (userSplit.flights / 100))
-        const kiwiResults = await searchKiwiInspiration({
+    const kiwiEnabled = AFFILIATE_FLAGS.kiwi && !!process.env.KIWI_API_KEY
+    const tpEnabled = !!TOKEN
+
+    // Build parallel fetch promises
+    const kiwiPromise = kiwiEnabled
+      ? searchKiwiInspiration({
           origin,
           dateFrom: kiwiDateFrom,
           dateTo: kiwiDateTo,
           maxPrice: maxFlightPrice,
-        })
-
-        priceInfo = kiwiResults.map(r => ({
+        }).then(results => results.map(r => ({
           destination: r.flyTo,
           city: r.cityTo,
           country: r.countryTo?.name,
           price: r.price,
-        }))
-      } catch (err) {
-        console.error('[AI-Mystery] Kiwi failed, falling back to TravelPayouts:', err)
-      }
+        })))
+      : Promise.resolve([] as { destination: string; city?: string; country?: string; price: number }[])
+
+    const tpPromise = tpEnabled
+      ? fetch(`${API_BASE}/v2/prices/latest?origin=${origin}&currency=usd&limit=30&token=${TOKEN}`, { next: { revalidate: 3600 } })
+          .then(async res => {
+            if (!res.ok) return []
+            const data = await res.json()
+            const destinations = data.data || []
+            return destinations
+              .filter((d: any) => d.value <= maxFlightPrice)
+              .slice(0, 20)
+              .map((d: any) => ({ destination: d.destination, price: d.value }))
+              .sort((a: any, b: any) => a.price - b.price)
+          })
+      : Promise.resolve([] as { destination: string; city?: string; country?: string; price: number }[])
+
+    // Await both in parallel
+    const [kiwiResult, tpResult] = await Promise.allSettled([kiwiPromise, tpPromise])
+
+    const kiwiData = kiwiResult.status === 'fulfilled' ? kiwiResult.value : []
+    const tpData = tpResult.status === 'fulfilled' ? tpResult.value : []
+
+    if (kiwiResult.status === 'rejected') {
+      console.error('[AI-Mystery] Kiwi failed:', kiwiResult.reason)
+    }
+    if (tpResult.status === 'rejected') {
+      console.error('[AI-Mystery] TravelPayouts failed:', tpResult.reason)
     }
 
-    // TravelPayouts fallback
-    if (priceInfo.length === 0 && TOKEN) {
-      try {
-        const pricesUrl = `${API_BASE}/v2/prices/latest?origin=${origin}&currency=usd&limit=30&token=${TOKEN}`
-        const pricesResponse = await fetch(pricesUrl, { next: { revalidate: 3600 } })
-
-        if (pricesResponse.ok) {
-          const pricesData = await pricesResponse.json()
-          const destinations = pricesData.data || []
-
-          // Apply budget filter based on user's budget priority split
-          const maxFlightPrice = budget * (userSplit.flights / 100)
-          priceInfo = destinations
-            .filter((d: any) => d.value <= maxFlightPrice)
-            .slice(0, 20)
-            .map((d: any) => ({
-              destination: d.destination,
-              price: d.value,
-            }))
-            .sort((a: any, b: any) => a.price - b.price)
-        }
-      } catch (err) {
-        console.error('[AI-Mystery] TravelPayouts failed:', err)
-      }
+    // Prefer Kiwi (richer data with city/country), fall back to TP
+    if (kiwiData.length > 0) {
+      console.log(`[AI-Mystery] Using Kiwi results (${kiwiData.length} destinations)`)
+      priceInfo = kiwiData
+    } else if (tpData.length > 0) {
+      console.log(`[AI-Mystery] Using TravelPayouts results (${tpData.length} destinations)`)
+      priceInfo = tpData
     }
 
     // Thin-cache fallback: use hardcoded destinations with estimated prices
@@ -323,7 +374,6 @@ export async function POST(request: NextRequest) {
       priceIsEstimate = true
       const region = getOriginRegion(origin)
       const fallbacks = FALLBACK_DESTINATIONS[region] || FALLBACK_DESTINATIONS['SE Asia']
-      const maxFlightPrice = budget * (userSplit.flights / 100)
 
       priceInfo = fallbacks
         .filter(f => f.priceRange[0] <= maxFlightPrice)
@@ -349,104 +399,61 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Build AI prompt
-    const systemPrompt = `You are a travel expert specializing in budget-conscious mystery vacation planning. You MUST respond with valid JSON only, no additional text.`
+    // ── Build AI prompt (optimized for ~30% fewer tokens) ────────
+    const systemPrompt = `Travel expert. Respond with valid JSON only.`
 
-    const estimateNote = priceIsEstimate
-      ? '\nIMPORTANT: The flight prices below are estimated ranges, not live data. Pick the best destination for the user\'s vibes and flag the price as an estimate.'
-      : ''
+    const notes: string[] = []
+    if (priceIsEstimate) notes.push('Flight prices are estimates — flag with priceIsEstimate.')
+    if (exclude.length > 0) notes.push(`Do NOT suggest: ${exclude.join(', ')}. Pick a DIFFERENT destination.`)
+    if (flexibleRange) notes.push(`Flexible dates ${flexibleRange.dateFrom} to ${flexibleRange.dateTo}. Include suggestedDepartureDate and suggestedReturnDate (YYYY-MM-DD).`)
 
-    const excludeNote = exclude.length > 0
-      ? `\nDo NOT suggest these destinations (already shown to user): ${exclude.join(', ')}. Pick a DIFFERENT destination.`
-      : ''
-
-    const flexibleDateNote = flexibleRange
-      ? `\nThe user has flexible dates within the range ${flexibleRange.dateFrom} to ${flexibleRange.dateTo} (timeframe: ${flexibleTimeframe}). Suggest the optimal departure and return dates within this range for the destination you pick, considering weather, events, and best value. Include "suggestedDepartureDate" and "suggestedReturnDate" (YYYY-MM-DD format) in your response.`
-      : ''
-
-    const accomDescriptions: Record<string, string> = {
-      'hostel': 'hostels, guesthouses, or very budget accommodation ($10-30/night)',
-      'budget': 'budget hotels or Airbnbs ($30-60/night)',
-      'mid-range': 'comfortable mid-range hotels ($60-120/night)',
-      'upscale': 'upscale hotels with good amenities ($120-250/night)',
-      'luxury': 'luxury or boutique hotels ($250+/night)',
-    }
     const accomMaxPerNight: Record<string, number> = {
       'hostel': 30, 'budget': 60, 'mid-range': 120, 'upscale': 250, 'luxury': 500
     }
 
-    const userPrompt = `Given:
-- Total Budget: ${budget} USD for ${tripDuration} days
-- Budget Tier: ${budgetTier}
-- Budget Allocation: ${allocationText}
-- Departing from: ${origin}
-- Travel dates: ${isFlexible ? `Flexible (${flexibleTimeframe}), range: ${flexibleRange?.dateFrom} to ${flexibleRange?.dateTo}` : dates}
-- Vibes: ${vibes.join(', ')}
-- Package includes: ${components.includeFlight ? 'Flight' : ''} ${components.includeHotel ? 'Hotel' : ''} ${components.includeItinerary ? 'Itinerary' : ''} ${components.includeTransportation ? 'Transport' : ''}
-- Available destinations with flight prices: ${JSON.stringify(priceInfo)}${estimateNote}${excludeNote}${flexibleDateNote}
-- Accommodation level: ${accomDescriptions[accommodationLevel] || 'mid-range hotels'}
-- Hotel per night MUST NOT exceed $${accomMaxPerNight[accommodationLevel] || 120}
-- Budget priority: "${budgetPriority}" — ${budgetPriority === 'flights' ? 'User wants to fly FURTHER to more interesting/distant destinations. Pick faraway destinations, not nearby ones.' : budgetPriority === 'hotels' ? 'User wants nicer accommodation. Closer destinations are fine if the hotel is great.' : budgetPriority === 'activities' ? 'User wants rich experiences. Pick destinations known for food, culture, tours.' : 'Balance distance, accommodation, and experiences.'}
+    const priorityHint: Record<string, string> = {
+      'flights': 'Fly FURTHER to distant destinations.',
+      'hotels': 'Closer is fine if hotel is great.',
+      'activities': 'Pick destinations known for food/culture/tours.',
+      'balanced': 'Balance distance, accommodation, experiences.',
+    }
 
-CRITICAL BUDGET RULES:
-1. Flight cost MUST be <= $${allocation.flight}
-2. Hotel per night MUST be <= $${allocation.hotel_per_night}
-3. Daily activities MUST fit within $${Math.floor(allocation.activities / tripDuration)} per day
-4. NEVER exceed the total budget of $${budget}
+    // Only request optional sections the user selected
+    const optionalSections: string[] = []
+    if (components.includeHotel) {
+      optionalSections.push(`"hotel_recommendations": [{"name":"...","estimated_price_per_night":N,"neighborhood":"...","why_recommended":"..."},...]`)
+    }
+    if (components.includeItinerary) {
+      optionalSections.push(`"daily_itinerary": [{"day":N,"activities":[{"time":"HH:MM AM","activity":"...","estimated_cost":N}],"total_day_cost":N},...]`)
+    }
+    if (components.includeTransportation) {
+      optionalSections.push(`"local_transportation": {"airport_to_city":"...","daily_transport":"...","estimated_daily_cost":N}`)
+    }
+    if (flexibleRange) {
+      optionalSections.push(`"suggestedDepartureDate": "YYYY-MM-DD", "suggestedReturnDate": "YYYY-MM-DD"`)
+    }
 
-Select ONE destination that matches the vibes perfectly. Explain WHY it matches the specific vibes, not just "it's affordable".
+    const userPrompt = `Budget: $${budget} USD, ${tripDuration} days, tier: ${budgetTier}
+Allocation: ${allocationText}
+Origin: ${origin} | Dates: ${isFlexible ? `Flexible (${flexibleTimeframe})` : dates}
+Vibes: ${vibes.join(', ')} | Priority: ${budgetPriority} — ${priorityHint[budgetPriority] || priorityHint['balanced']}
+Accommodation: ${accommodationLevel} (max $${accomMaxPerNight[accommodationLevel] || 120}/night)
+Package: ${[components.includeFlight && 'Flight', components.includeHotel && 'Hotel', components.includeItinerary && 'Itinerary', components.includeTransportation && 'Transport'].filter(Boolean).join('+')}
+Destinations: ${JSON.stringify(priceInfo)}
+${notes.length > 0 ? notes.join('\n') : ''}
+RULES: flight<=$${allocation.flight}, hotel/night<=$${allocation.hotel_per_night}, daily activities<=$${Math.floor(allocation.activities / tripDuration)}, total<=$${budget}
 
-Return this EXACT JSON structure:
+Pick ONE destination matching vibes. Explain WHY it matches (not just "affordable"). Return JSON:
 {
-  "destination": "City name",
-  "country": "Country name",
-  "iata": "3-letter IATA code",
-  "city_code_IATA": "same IATA code",
-  "indicativeFlightPrice": flight price from list,
-  "estimated_flight_cost": same flight price,
-  "estimated_hotel_per_night": realistic hotel price,
-  "whyThisPlace": "2-3 sentences about why this destination matches their vibes specifically",
-  "why_its_perfect": "same explanation",
-  "budgetBreakdown": {
-    "flights": flight cost,
-    "hotel": total hotel cost for ${tripDuration} nights,
-    "activities": activity budget,
-    "food": food budget,
-    "total": total of all above
-  },
-  "itinerary": [
-    { "day": 1, "activities": ["Activity 1", "Activity 2", "Activity 3"] },
-    { "day": 2, "activities": ["Activity 1", "Activity 2", "Activity 3"] },
-    { "day": 3, "activities": ["Activity 1", "Activity 2", "Activity 3"] }
-  ],
-  "bestTimeToGo": "Month range",
-  "localTip": "One insider tip",
-  "day1": ["Activity 1", "Activity 2", "Activity 3"],
-  "day2": ["Activity 1", "Activity 2", "Activity 3"],
-  "day3": ["Activity 1", "Activity 2", "Activity 3"],
-  "best_local_food": ["Dish 1", "Dish 2", "Dish 3"],
-  "insider_tip": "Same insider tip",
-  ${components.includeHotel ? `"hotel_recommendations": [
-    { "name": "Hotel name", "estimated_price_per_night": price, "neighborhood": "Area", "why_recommended": "Why" },
-    { "name": "Hotel 2", "estimated_price_per_night": price, "neighborhood": "Area", "why_recommended": "Why" }
-  ],` : ''}
-  ${components.includeItinerary ? `"daily_itinerary": [
-    { "day": 1, "activities": [{ "time": "9:00 AM", "activity": "Activity", "estimated_cost": cost }, { "time": "1:00 PM", "activity": "Activity", "estimated_cost": cost }, { "time": "6:00 PM", "activity": "Activity", "estimated_cost": cost }], "total_day_cost": sum },
-    { "day": 2, "activities": [{ "time": "9:00 AM", "activity": "Activity", "estimated_cost": cost }, { "time": "1:00 PM", "activity": "Activity", "estimated_cost": cost }, { "time": "6:00 PM", "activity": "Activity", "estimated_cost": cost }], "total_day_cost": sum },
-    { "day": 3, "activities": [{ "time": "9:00 AM", "activity": "Activity", "estimated_cost": cost }, { "time": "1:00 PM", "activity": "Activity", "estimated_cost": cost }, { "time": "6:00 PM", "activity": "Activity", "estimated_cost": cost }], "total_day_cost": sum }
-  ],` : ''}
-  ${components.includeTransportation ? `"local_transportation": { "airport_to_city": "Method and cost", "daily_transport": "Recommended method", "estimated_daily_cost": cost },` : ''}
-  ${flexibleRange ? `"suggestedDepartureDate": "YYYY-MM-DD within the flexible range",
-  "suggestedReturnDate": "YYYY-MM-DD within the flexible range",` : ''}
-  "budget_breakdown": {
-    "flight": ${allocation.flight},
-    "hotel_total": ${allocation.hotel_total},
-    "hotel_per_night": ${allocation.hotel_per_night},
-    "activities": ${allocation.activities},
-    "local_transport": ${allocation.local_transport},
-    "food_estimate": ${allocation.food_estimate},
-    "buffer": ${allocation.buffer}
-  }
+  "destination":"City","country":"Country","iata":"XXX","city_code_IATA":"XXX",
+  "indicativeFlightPrice":N,"estimated_flight_cost":N,"estimated_hotel_per_night":N,
+  "whyThisPlace":"2-3 sentences","why_its_perfect":"same",
+  "budgetBreakdown":{"flights":N,"hotel":N,"activities":N,"food":N,"total":N},
+  "itinerary":[{"day":1,"activities":["...","...","..."]},...for each day],
+  "bestTimeToGo":"Month range","localTip":"One insider tip",
+  "best_local_food":["Dish1","Dish2","Dish3"],"insider_tip":"same as localTip",
+  ${optionalSections.length > 0 ? optionalSections.join(',\n  ') + ',' : ''}
+  "budget_breakdown":{"flight":${allocation.flight},"hotel_total":${allocation.hotel_total},"hotel_per_night":${allocation.hotel_per_night},"activities":${allocation.activities},"local_transport":${allocation.local_transport},"food_estimate":${allocation.food_estimate},"buffer":${allocation.buffer}}
 }`
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.9, 2500)
@@ -467,6 +474,19 @@ Return this EXACT JSON structure:
     if (!result.insider_tip) result.insider_tip = result.localTip
     if (!result.localTip) result.localTip = result.insider_tip
 
+    // Derive day1/day2/day3 from itinerary if AI didn't provide them separately
+    if (result.itinerary && result.itinerary.length > 0) {
+      if (!result.day1 || result.day1.length === 0) {
+        result.day1 = result.itinerary[0]?.activities || []
+      }
+      if (!result.day2 || result.day2.length === 0) {
+        result.day2 = result.itinerary[1]?.activities || []
+      }
+      if (!result.day3 || result.day3.length === 0) {
+        result.day3 = result.itinerary[2]?.activities || []
+      }
+    }
+
     // Capture email
     if (email) {
       await captureEmail(email, 'mystery').catch(err => console.error('[AI-Mystery] Email capture failed:', err))
@@ -479,10 +499,13 @@ Return this EXACT JSON structure:
       })
       .catch(err => console.error('[AI-Mystery] Blog generation failed:', err))
 
-    // Cache for 1 hour
+    // Cache for 1 hour using fuzzy key
+    const cacheKey = buildFuzzyCacheKey(origin, budget, vibes, dates, tripDuration, components, exclude, accommodationLevel, budgetPriority)
     setCache(cacheKey, result, 60 * 60 * 1000)
 
-    return NextResponse.json(result)
+    return NextResponse.json(result, {
+      headers: { 'X-Cache-Hit': 'false' },
+    })
   } catch (error) {
     console.error('[AI-Mystery] Error:', error)
     // Don't leak internal error details to client

@@ -8,6 +8,8 @@ interface MysteryLoadingProps {
   vibes?: string[]
   numCities?: number
   tripDuration?: number
+  /** Optional one-line summary of what the user searched for */
+  searchSummary?: string
 }
 
 const stages = [
@@ -23,6 +25,7 @@ export default function MysteryLoading({
   vibes,
   numCities,
   tripDuration,
+  searchSummary,
 }: MysteryLoadingProps) {
   const [elapsed, setElapsed] = useState(0)
 
@@ -75,7 +78,7 @@ export default function MysteryLoading({
     <div className="flex flex-col items-center justify-center">
       {/* Search Recap */}
       <p className="text-skyblue-light text-lg font-medium mb-6 text-center">
-        {recapLine}
+        {searchSummary || recapLine}
       </p>
 
       {/* Progress bar with plane */}

@@ -72,6 +72,16 @@ export default function Footer() {
                   Terms of Service
                 </Link>
               </li>
+              <li>
+                <Link href="/faq" className="hover:text-skyblue transition">
+                  FAQ
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="hover:text-skyblue transition">
+                  Contact Us
+                </Link>
+              </li>
             </ul>
 
             {/* Social Links Placeholder */}
@@ -102,6 +112,9 @@ export default function Footer() {
           </p>
           <p className="text-skyblue-light/70 text-xs mt-2">
             Powered by TravelPayouts & DeepSeek AI
+          </p>
+          <p className="text-white/30 text-xs mt-3">
+            Some links on this site are affiliate links. We may earn a commission at no extra cost to you.
           </p>
         </div>
       </div>

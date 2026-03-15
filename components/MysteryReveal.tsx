@@ -11,6 +11,7 @@ import ScratchReveal from '@/components/ScratchReveal'
 import ConfettiCelebration from '@/components/ConfettiCelebration'
 import SaveTripButton from '@/components/SaveTripButton'
 import BookingTracker from '@/components/BookingTracker'
+import AffiliateDisclosure from '@/components/AffiliateDisclosure'
 import TripPrep from '@/components/TripPrep'
 import { addStamp } from '@/lib/travel-passport'
 import { countryNameToCode } from '@/lib/enrichment/country-data'
@@ -980,8 +981,9 @@ export default function MysteryReveal({
                     BOOKING BUTTONS
                 ============================================================ */}
                 <motion.div {...staggerChild(14)} ref={bookingRef} className="space-y-3">
-                  <h3 className="text-xl font-bold text-white mb-4">
+                  <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     Book Your Trip
+                    <AffiliateDisclosure />
                   </h3>
 
                   {/* Flight */}
