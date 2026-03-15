@@ -6,6 +6,7 @@ import './globals.css'
 import Providers from '@/components/Providers'
 import MysteryPopup from '@/components/MysteryPopup'
 import CookieConsent from '@/components/CookieConsent'
+import FeedbackButton from '@/components/FeedbackButton'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -91,6 +92,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <MysteryPopup />
+          <FeedbackButton />
         </Providers>
         <Analytics />
         <SpeedInsights />

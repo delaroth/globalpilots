@@ -152,7 +152,8 @@ const BADGE_DEFINITIONS: BadgeDefinition[] = [
     name: 'Booking Boss',
     emoji: '\u{2708}\u{FE0F}',
     description: 'Booked 3 mystery trips',
-    condition: (p) => p.stats.totalBooked >= 3,
+    // DISABLED: Re-enable when affiliate links are activated
+    condition: null,
   },
   {
     id: 'world-traveler',
