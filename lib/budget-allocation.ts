@@ -18,22 +18,41 @@ export interface BudgetAllocation {
   total: number
 }
 
+/** Budget split percentages (0-100, must sum to ~100) */
+export interface BudgetSplit {
+  flights: number
+  hotels: number
+  activities: number
+}
+
+/** Preset splits for budget priority options */
+export const PRIORITY_SPLITS: Record<string, BudgetSplit> = {
+  flights:    { flights: 50, hotels: 25, activities: 25 },
+  balanced:   { flights: 35, hotels: 35, activities: 30 },
+  hotels:     { flights: 20, hotels: 50, activities: 30 },
+  activities: { flights: 25, hotels: 25, activities: 50 },
+}
+
 /**
- * Calculate smart budget allocation across selected package components
- * @param totalBudget - Total trip budget in USD
- * @param tripDuration - Number of days
- * @param components - Which components to include
- * @returns Budget allocation breakdown
+ * Calculate smart budget allocation across selected package components.
+ *
+ * Accepts an optional `customSplit` to override the default percentages.
+ * When provided, the user's custom flight/hotel/activities percentages
+ * are used instead of the priority-based defaults.
  */
 export function calculateBudgetAllocation(
   totalBudget: number,
   tripDuration: number,
-  components: PackageComponents
+  components: PackageComponents,
+  options?: {
+    budgetPriority?: string
+    customSplit?: BudgetSplit
+  }
 ): BudgetAllocation {
   // Reserve 8% buffer for unexpected costs
   const bufferPercent = 0.08
   const bufferAmount = Math.floor(totalBudget * bufferPercent)
-  let remainingBudget = totalBudget - bufferAmount
+  const remainingBudget = totalBudget - bufferAmount
 
   const allocation: BudgetAllocation = {
     flight: 0,
@@ -46,63 +65,65 @@ export function calculateBudgetAllocation(
     total: totalBudget,
   }
 
-  // Count how many components are selected
   const selectedCount = Object.values(components).filter(Boolean).length
-
   if (selectedCount === 0) {
-    // No components selected - allocate everything to buffer
     allocation.buffer = totalBudget
     return allocation
   }
 
-  // Determine allocation percentages based on selected components
-  if (
-    components.includeFlight &&
-    components.includeHotel &&
-    components.includeItinerary &&
-    components.includeTransportation
-  ) {
-    // ALL COMPONENTS: Flight 35%, Hotel 35%, Activities 15%, Transport 5%, Food 10%
-    allocation.flight = Math.floor(remainingBudget * 0.35)
-    allocation.hotel_total = Math.floor(remainingBudget * 0.35)
-    allocation.activities = Math.floor(remainingBudget * 0.15)
-    allocation.local_transport = Math.floor(remainingBudget * 0.05)
-    allocation.food_estimate = Math.floor(remainingBudget * 0.10)
-  } else if (
-    components.includeFlight &&
-    components.includeHotel &&
-    components.includeItinerary
-  ) {
-    // Flight + Hotel + Itinerary: 35% / 35% / 20% / 10% food
-    allocation.flight = Math.floor(remainingBudget * 0.35)
-    allocation.hotel_total = Math.floor(remainingBudget * 0.35)
-    allocation.activities = Math.floor(remainingBudget * 0.20)
-    allocation.food_estimate = Math.floor(remainingBudget * 0.10)
-  } else if (components.includeFlight && components.includeHotel) {
-    // Flight + Hotel: 45% each, 10% activities
-    allocation.flight = Math.floor(remainingBudget * 0.45)
-    allocation.hotel_total = Math.floor(remainingBudget * 0.45)
-    allocation.activities = Math.floor(remainingBudget * 0.10)
-  } else if (components.includeFlight && components.includeItinerary) {
-    // Flight + Itinerary: 60% flight, 40% activities
-    allocation.flight = Math.floor(remainingBudget * 0.60)
-    allocation.activities = Math.floor(remainingBudget * 0.40)
-  } else if (components.includeHotel && components.includeItinerary) {
-    // Hotel + Itinerary: 60% hotel, 40% activities
-    allocation.hotel_total = Math.floor(remainingBudget * 0.60)
-    allocation.activities = Math.floor(remainingBudget * 0.40)
-  } else if (components.includeFlight) {
-    // Flight only: all budget
-    allocation.flight = remainingBudget
-  } else if (components.includeHotel) {
-    // Hotel only: all budget
-    allocation.hotel_total = remainingBudget
-  } else if (components.includeItinerary) {
-    // Itinerary only: all budget
-    allocation.activities = remainingBudget
-  } else if (components.includeTransportation) {
-    // Transportation only: all budget
-    allocation.local_transport = remainingBudget
+  // Determine split percentages
+  const split = options?.customSplit
+    || PRIORITY_SPLITS[options?.budgetPriority || 'balanced']
+    || PRIORITY_SPLITS.balanced
+
+  // Normalize split to ensure it sums to 100
+  const total = split.flights + split.hotels + split.activities
+  const flightPct = split.flights / total
+  const hotelPct = split.hotels / total
+  const activityPct = split.activities / total
+
+  if (components.includeFlight) {
+    allocation.flight = Math.floor(remainingBudget * flightPct)
+  }
+  if (components.includeHotel) {
+    allocation.hotel_total = Math.floor(remainingBudget * hotelPct)
+  }
+  if (components.includeItinerary || components.includeTransportation) {
+    const actBudget = Math.floor(remainingBudget * activityPct)
+    if (components.includeItinerary && components.includeTransportation) {
+      allocation.activities = Math.floor(actBudget * 0.7)
+      allocation.local_transport = Math.floor(actBudget * 0.15)
+      allocation.food_estimate = Math.floor(actBudget * 0.15)
+    } else if (components.includeItinerary) {
+      allocation.activities = Math.floor(actBudget * 0.6)
+      allocation.food_estimate = Math.floor(actBudget * 0.4)
+    } else {
+      allocation.local_transport = actBudget
+    }
+  }
+
+  // If a component is off, redistribute its share proportionally
+  if (!components.includeFlight && (components.includeHotel || components.includeItinerary)) {
+    const extra = Math.floor(remainingBudget * flightPct)
+    if (components.includeHotel && components.includeItinerary) {
+      allocation.hotel_total += Math.floor(extra * 0.5)
+      allocation.activities += Math.floor(extra * 0.5)
+    } else if (components.includeHotel) {
+      allocation.hotel_total += extra
+    } else {
+      allocation.activities += extra
+    }
+  }
+  if (!components.includeHotel && (components.includeFlight || components.includeItinerary)) {
+    const extra = Math.floor(remainingBudget * hotelPct)
+    if (components.includeFlight && components.includeItinerary) {
+      allocation.flight += Math.floor(extra * 0.5)
+      allocation.activities += Math.floor(extra * 0.5)
+    } else if (components.includeFlight) {
+      allocation.flight += extra
+    } else {
+      allocation.activities += extra
+    }
   }
 
   // Calculate per-night hotel cost

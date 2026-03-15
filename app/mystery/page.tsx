@@ -147,6 +147,8 @@ export default function MysteryPage() {
   const [emailForUpdates, setEmailForUpdates] = useState('')
   const [accommodationLevel, setAccommodationLevel] = useState('mid-range')
   const [budgetPriority, setBudgetPriority] = useState('balanced')
+  const [showAdvancedBudget, setShowAdvancedBudget] = useState(false)
+  const [customSplit, setCustomSplit] = useState({ flights: 35, hotels: 35, activities: 30 })
 
   // Adjust trip duration when numCities changes
   useEffect(() => {
@@ -314,6 +316,7 @@ export default function MysteryPage() {
             departureTimeframe: dateMode === 'flexible' ? timeframe : undefined,
             accommodationLevel,
             budgetPriority,
+            customSplit: showAdvancedBudget ? customSplit : undefined,
           }),
         })
 
@@ -361,6 +364,7 @@ export default function MysteryPage() {
       exclude: excludeListRef.current.length > 0 ? excludeListRef.current : undefined,
       accommodationLevel,
       budgetPriority,
+      customSplit: showAdvancedBudget ? customSplit : undefined,
     }
 
     // Phase 1: Quick pick (fast — only calls SerpApi Explore, no AI)
@@ -449,6 +453,7 @@ export default function MysteryPage() {
             flightPrice: quickData.estimated_flight_cost,
             accommodationLevel,
             budgetPriority,
+            customSplit: showAdvancedBudget ? customSplit : undefined,
             packageComponents,
             hotelEstimate: quickData.estimated_hotel_per_night,
           }),
@@ -798,7 +803,11 @@ export default function MysteryPage() {
                     <button
                       key={priority.value}
                       type="button"
-                      onClick={() => setBudgetPriority(priority.value)}
+                      onClick={() => {
+                        setBudgetPriority(priority.value)
+                        setCustomSplit(priority.split)
+                        setShowAdvancedBudget(false)
+                      }}
                       className={`py-3 px-4 rounded-lg font-medium transition-all text-left ${
                         budgetPriority === priority.value
                           ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue/50'
@@ -806,10 +815,98 @@ export default function MysteryPage() {
                       }`}
                     >
                       <div className="text-sm font-semibold">{priority.label}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{priority.desc}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {priority.desc}
+                        <span className="text-gray-400 ml-1">
+                          ({priority.split.flights}/{priority.split.hotels}/{priority.split.activities})
+                        </span>
+                      </div>
                     </button>
                   ))}
                 </div>
+
+                {/* Advanced Budget Split Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedBudget(!showAdvancedBudget)}
+                  className="mt-3 text-sm text-skyblue hover:text-skyblue/80 transition flex items-center gap-1"
+                >
+                  <span className={`transition-transform ${showAdvancedBudget ? 'rotate-90' : ''}`}>▸</span>
+                  {showAdvancedBudget ? 'Hide custom split' : 'Customize exact split'}
+                </button>
+
+                {/* Collapsible Advanced Sliders */}
+                {showAdvancedBudget && (
+                  <div className="mt-3 bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-3">
+                    {budget && Number(budget) > 0 && (
+                      <p className="text-xs text-gray-500 mb-2">
+                        After 8% buffer (${Math.floor(Number(budget) * 0.08)}), allocating ${Math.floor(Number(budget) * 0.92)}:
+                      </p>
+                    )}
+                    {[
+                      { key: 'flights' as const, label: 'Flights', emoji: '✈️' },
+                      { key: 'hotels' as const, label: 'Hotels', emoji: '🏨' },
+                      { key: 'activities' as const, label: 'Food & Activities', emoji: '🎭' },
+                    ].map(({ key, label, emoji }) => {
+                      const pct = customSplit[key]
+                      const amount = budget ? Math.floor(Number(budget) * 0.92 * (pct / 100)) : 0
+                      return (
+                        <div key={key}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-medium text-gray-700">
+                              {emoji} {label}
+                            </span>
+                            <span className="text-sm text-gray-600 font-semibold tabular-nums">
+                              {pct}%{amount > 0 ? ` ($${amount})` : ''}
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={5}
+                            max={80}
+                            value={pct}
+                            onChange={(e) => {
+                              const newVal = Number(e.target.value)
+                              const diff = newVal - customSplit[key]
+                              const others = (['flights', 'hotels', 'activities'] as const).filter(k => k !== key)
+                              // Distribute the difference proportionally among the other two
+                              const otherTotal = others.reduce((s, k) => s + customSplit[k], 0)
+                              const newSplit = { ...customSplit, [key]: newVal }
+                              for (const ok of others) {
+                                const share = otherTotal > 0 ? customSplit[ok] / otherTotal : 0.5
+                                newSplit[ok] = Math.max(5, Math.round(customSplit[ok] - diff * share))
+                              }
+                              // Ensure they sum to 100
+                              const sum = newSplit.flights + newSplit.hotels + newSplit.activities
+                              if (sum !== 100) {
+                                const largest = others.reduce((a, b) => newSplit[a] >= newSplit[b] ? a : b)
+                                newSplit[largest] += 100 - sum
+                              }
+                              setCustomSplit(newSplit)
+                              setBudgetPriority('custom')
+                            }}
+                            className="w-full h-2 rounded-full appearance-none cursor-pointer accent-skyblue bg-gray-200"
+                          />
+                        </div>
+                      )
+                    })}
+                    <div className="flex gap-2 pt-1">
+                      {budgetPriorities.map(p => (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => {
+                            setCustomSplit(p.split)
+                            setBudgetPriority(p.value)
+                          }}
+                          className="text-xs px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-600 transition"
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Departure City */}

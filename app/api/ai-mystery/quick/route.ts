@@ -21,6 +21,7 @@ interface QuickRequest {
   exclude?: string[]
   accommodationLevel?: string
   budgetPriority?: string
+  customSplit?: { flights: number; hotels: number; activities: number }
   packageComponents?: PackageComponents
 }
 
@@ -180,21 +181,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Budget allocation
-    const allocation = calculateBudgetAllocation(budget, tripDuration, components)
-    const prioritySplits: Record<string, { flights: number; hotels: number; activities: number }> = {
-      'flights': { flights: 50, hotels: 25, activities: 25 },
-      'balanced': { flights: 35, hotels: 35, activities: 30 },
-      'hotels': { flights: 20, hotels: 50, activities: 30 },
-      'activities': { flights: 25, hotels: 25, activities: 50 },
-    }
-    const userSplit = prioritySplits[budgetPriority] || prioritySplits['balanced']
-    const usableBudget = budget - allocation.buffer
-    if (components.includeFlight) allocation.flight = Math.floor(usableBudget * userSplit.flights / 100)
-    if (components.includeHotel) {
-      allocation.hotel_total = Math.floor(usableBudget * userSplit.hotels / 100)
-      allocation.hotel_per_night = Math.floor(allocation.hotel_total / tripDuration)
-    }
+    // Budget allocation — uses customSplit if provided, otherwise priority preset
+    const allocation = calculateBudgetAllocation(budget, tripDuration, components, {
+      budgetPriority,
+      customSplit: body.customSplit,
+    })
 
     const maxFlightPrice = allocation.flight
 

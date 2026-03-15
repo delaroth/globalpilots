@@ -24,6 +24,7 @@ interface MysteryRequest {
   exclude?: string[]
   accommodationLevel?: string
   budgetPriority?: string
+  customSplit?: { flights: number; hotels: number; activities: number }
 }
 
 function calculateFlexibleDateRange(timeframe: string): { dateFrom: string; dateTo: string } {
@@ -268,24 +269,11 @@ export async function POST(request: NextRequest) {
       includeTransportation: false,
     }
 
-    const allocation = calculateBudgetAllocation(budget, tripDuration, components)
+    const allocation = calculateBudgetAllocation(budget, tripDuration, components, {
+      budgetPriority,
+      customSplit: body.customSplit,
+    })
     const budgetTier = getBudgetTier(budget, tripDuration)
-
-    // Override allocation based on user's budget priority
-    const prioritySplits: Record<string, { flights: number; hotels: number; activities: number }> = {
-      'flights': { flights: 50, hotels: 25, activities: 25 },
-      'balanced': { flights: 35, hotels: 35, activities: 30 },
-      'hotels': { flights: 20, hotels: 50, activities: 30 },
-      'activities': { flights: 25, hotels: 25, activities: 50 },
-    }
-    const userSplit = prioritySplits[budgetPriority] || prioritySplits['balanced']
-    const usableBudget = budget - allocation.buffer
-    if (components.includeFlight) allocation.flight = Math.floor(usableBudget * userSplit.flights / 100)
-    if (components.includeHotel) {
-      allocation.hotel_total = Math.floor(usableBudget * userSplit.hotels / 100)
-      allocation.hotel_per_night = Math.floor(allocation.hotel_total / tripDuration)
-    }
-    allocation.activities = Math.floor(usableBudget * userSplit.activities / 100)
 
     const allocationText = formatAllocationForAI(allocation, tripDuration)
 
@@ -315,7 +303,7 @@ export async function POST(request: NextRequest) {
     // ── Flight price fetching ────────────────────────────────────
     // PRIMARY: SerpApi Explore (1 call → 20-50 destinations with live prices, dates, airlines)
     // FALLBACK: Kiwi + TravelPayouts (if Explore returns empty / quota exhausted)
-    const maxFlightPrice = Math.floor(budget * (userSplit.flights / 100))
+    const maxFlightPrice = allocation.flight
 
     // Derive Explore params from user inputs
     const exploreMonth = isFlexible
