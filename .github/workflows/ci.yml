@@ -51,37 +51,49 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED"
 
-          # Flag changes that need manual review
+          # Check commit message for manual override keywords
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MSG"
+
+          # YOU DECIDE: add [deploy] to auto-promote, [review] to force PR
+          #   git commit -m "fix button color [deploy]"    → straight to production
+          #   git commit -m "new auth flow [review]"       → creates PR for testing
+          #   git commit -m "fix typo"                     → auto-detects based on files
+
           NEEDS_REVIEW=false
 
-          # Database schema changes
-          if echo "$CHANGED" | grep -q "supabase.*\.sql"; then
-            echo "⚠️ Database schema changes detected — needs manual review"
+          # [review] in commit message = always create PR
+          if echo "$COMMIT_MSG" | grep -qi "\[review\]"; then
+            echo "🔒 Manual review requested via [review] tag"
             NEEDS_REVIEW=true
-          fi
+          # [deploy] in commit message = always auto-promote
+          elif echo "$COMMIT_MSG" | grep -qi "\[deploy\]"; then
+            echo "🚀 Auto-deploy requested via [deploy] tag"
+            NEEDS_REVIEW=false
+          else
+            # No tag — auto-detect based on changed files
+            echo "No deploy tag — auto-detecting based on files..."
 
-          # Package dependency changes
-          if echo "$CHANGED" | grep -q "package\.json"; then
-            echo "⚠️ Dependency changes detected — needs manual review"
-            NEEDS_REVIEW=true
-          fi
-
-          # Middleware changes (affects all routes)
-          if echo "$CHANGED" | grep -q "middleware\.ts"; then
-            echo "⚠️ Middleware changes detected — needs manual review"
-            NEEDS_REVIEW=true
-          fi
-
-          # Auth changes
-          if echo "$CHANGED" | grep -q "auth"; then
-            echo "⚠️ Auth changes detected — needs manual review"
-            NEEDS_REVIEW=true
-          fi
-
-          # Environment variable changes
-          if echo "$CHANGED" | grep -q "\.env"; then
-            echo "⚠️ Environment changes detected — needs manual review"
-            NEEDS_REVIEW=true
+            if echo "$CHANGED" | grep -q "supabase.*\.sql"; then
+              echo "⚠️ Database schema changes"
+              NEEDS_REVIEW=true
+            fi
+            if echo "$CHANGED" | grep -q "package\.json"; then
+              echo "⚠️ Dependency changes"
+              NEEDS_REVIEW=true
+            fi
+            if echo "$CHANGED" | grep -q "middleware\.ts"; then
+              echo "⚠️ Middleware changes"
+              NEEDS_REVIEW=true
+            fi
+            if echo "$CHANGED" | grep -q "auth"; then
+              echo "⚠️ Auth changes"
+              NEEDS_REVIEW=true
+            fi
+            if echo "$CHANGED" | grep -q "\.env"; then
+              echo "⚠️ Environment changes"
+              NEEDS_REVIEW=true
+            fi
           fi
 
           echo "needs_review=$NEEDS_REVIEW" >> $GITHUB_OUTPUT
