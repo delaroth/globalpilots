@@ -1,0 +1,131 @@
+name: CI — Test & Promote to Production
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  test:
+    name: Type Check & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+        env:
+          # Minimal env vars needed for build (no real secrets)
+          NEXT_PUBLIC_STEALTH_MODE: 'true'
+          NEXT_PUBLIC_SITE_URL: 'www.globepilots.com'
+          NEXT_PUBLIC_SUPABASE_URL: 'https://placeholder.supabase.co'
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'placeholder'
+
+  promote:
+    name: Promote to Production
+    needs: test
+    runs-on: ubuntu-latest
+    # Only auto-promote if tests pass
+    if: success()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for breaking changes
+        id: check_changes
+        run: |
+          # Get list of changed files between main and dev
+          CHANGED=$(git diff --name-only origin/main...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # Flag changes that need manual review
+          NEEDS_REVIEW=false
+
+          # Database schema changes
+          if echo "$CHANGED" | grep -q "supabase.*\.sql"; then
+            echo "⚠️ Database schema changes detected — needs manual review"
+            NEEDS_REVIEW=true
+          fi
+
+          # Package dependency changes
+          if echo "$CHANGED" | grep -q "package\.json"; then
+            echo "⚠️ Dependency changes detected — needs manual review"
+            NEEDS_REVIEW=true
+          fi
+
+          # Middleware changes (affects all routes)
+          if echo "$CHANGED" | grep -q "middleware\.ts"; then
+            echo "⚠️ Middleware changes detected — needs manual review"
+            NEEDS_REVIEW=true
+          fi
+
+          # Auth changes
+          if echo "$CHANGED" | grep -q "auth"; then
+            echo "⚠️ Auth changes detected — needs manual review"
+            NEEDS_REVIEW=true
+          fi
+
+          # Environment variable changes
+          if echo "$CHANGED" | grep -q "\.env"; then
+            echo "⚠️ Environment changes detected — needs manual review"
+            NEEDS_REVIEW=true
+          fi
+
+          echo "needs_review=$NEEDS_REVIEW" >> $GITHUB_OUTPUT
+
+          # Count changes for commit message
+          FILE_COUNT=$(echo "$CHANGED" | wc -l)
+          echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+
+      - name: Auto-merge to main (safe changes)
+        if: steps.check_changes.outputs.needs_review == 'false'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git checkout main
+          git merge origin/dev --no-edit
+          git push origin main
+          echo "✅ Auto-promoted to production (${{ steps.check_changes.outputs.file_count }} files)"
+
+      - name: Create PR for review (breaking changes)
+        if: steps.check_changes.outputs.needs_review == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if PR already exists
+          EXISTING_PR=$(gh pr list --base main --head dev --json number --jq '.[0].number')
+
+          if [ -z "$EXISTING_PR" ]; then
+            gh pr create \
+              --base main \
+              --head dev \
+              --title "Deploy to Production" \
+              --body "$(cat <<'EOF'
+          ## Auto-generated deployment PR
+
+          Tests passed but changes flagged for manual review:
+
+          ${{ steps.check_changes.outputs.needs_review == 'true' && '⚠️ Contains changes to: database schema, dependencies, middleware, auth, or environment' || '✅ Safe changes only' }}
+
+          **Changed files:** ${{ steps.check_changes.outputs.file_count }}
+
+          Review the changes, then merge to deploy to production.
+          EOF
+          )"
+            echo "📋 Created PR for manual review"
+          else
+            echo "📋 PR #$EXISTING_PR already exists"
+          fi
