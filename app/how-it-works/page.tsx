@@ -6,15 +6,15 @@ const features = [
   {
     step: 1,
     title: 'Mystery Vacation',
-    subtitle: 'Plan Single or Multi-City Trips with AI',
+    subtitle: 'AI-Powered Surprise Trips with Live Pricing',
     href: '/mystery',
     description:
-      'Set your budget, departure airport, and travel vibes. Our AI analyzes real flight data and destination costs to craft a surprise vacation that fits your budget — whether it is a single-city getaway or an optimized multi-stop adventure across 2-5 cities.',
+      'Set your budget in any of 30 currencies, pick your departure airport, dates, and travel vibes. Our AI queries Google Travel Explore for vibe-matched destinations with live Google Flights pricing. Your destination reveals in 2-3 seconds, then a detailed AI itinerary streams in with custom budget splits, local tips, and a clue-guessing game.',
     howItWorks: [
-      'Enter your budget and departure airport',
-      'Choose your travel style: beach, culture, adventure, or party',
-      'AI finds the best destination match — single city or multi-city route',
-      'Get a complete trip plan with flights, hotels, and activities',
+      'Enter your budget, departure airport, dates, and travel vibes',
+      'Google Travel Explore finds destinations scored by vibe match',
+      'Destination reveals in ~2 seconds with live flight pricing',
+      'AI-generated itinerary, budget breakdown, and tips stream in progressively',
     ],
     gradient: 'from-purple-600/20 to-pink-600/20',
     border: 'border-purple-400/30',
@@ -22,18 +22,84 @@ const features = [
     mockupBg: 'bg-gradient-to-br from-purple-900/50 to-pink-900/50',
     mockupContent: {
       label: 'Your Mystery Trip',
-      items: ['Budget: $800', 'Vibes: Beach + Culture', 'Duration: 7 days', 'Destination: ???'],
+      items: ['Budget: $800 (USD)', 'Vibes: Beach + Culture', 'Reveal: 2.1s — Lisbon!', 'LIVE: $289 round-trip'],
     },
   },
   {
     step: 2,
+    title: 'Smart Stopover Finder',
+    subtitle: 'Save Money by Adding a Destination',
+    href: '/stopover',
+    description:
+      'Find flights with multi-day stopovers that cost less than flying direct. The Smart Stopover Finder checks visa requirements for your passport nationality, calculates your savings, and gives a "free vacation" verdict when the stopover route beats the direct price. Powered by live Google Flights data.',
+    howItWorks: [
+      'Enter your origin, destination, dates, and passport nationality',
+      'AI finds hub cities with visa-free transit for your passport',
+      'Compare stopover routes vs direct flight costs',
+      'Get a free vacation verdict when stopovers save you money',
+    ],
+    gradient: 'from-emerald-600/20 to-cyan-600/20',
+    border: 'border-emerald-400/30',
+    accent: 'text-emerald-300',
+    mockupBg: 'bg-gradient-to-br from-emerald-900/50 to-cyan-900/50',
+    mockupContent: {
+      label: 'NYC → Bali via Dubai',
+      items: ['Direct: $890', '3-day Dubai stopover: $720', 'Visa: FREE for US passport', 'Verdict: Free vacation!'],
+    },
+  },
+  {
+    step: 3,
+    title: 'Flight Search',
+    subtitle: 'Live Google Flights Data',
+    href: '/search',
+    description:
+      "Search real-time flight prices powered by Google Flights. Prices are tagged with a LIVE badge so you know they are current. Compare dates across a full calendar view, find the cheapest days to fly, or search with destination set to 'Anywhere' to discover the best deals from your airport.",
+    howItWorks: [
+      'Enter your departure airport and destination (or Anywhere)',
+      'Pick your travel dates or browse the calendar view',
+      'See LIVE-badged prices from Google Flights',
+      'Book directly through Google Flights at the price you see',
+    ],
+    gradient: 'from-sky-600/20 to-blue-600/20',
+    border: 'border-sky-400/30',
+    accent: 'text-sky-300',
+    mockupBg: 'bg-gradient-to-br from-sky-900/50 to-blue-900/50',
+    mockupContent: {
+      label: 'BKK → Tokyo (NRT)',
+      items: ['Mar 20: $189 LIVE', 'Mar 21: $145 LIVE — Cheapest!', 'Mar 22: $210 LIVE'],
+    },
+  },
+  {
+    step: 4,
+    title: 'Layover Explorer',
+    subtitle: 'Turn Layovers into Side Quests',
+    href: '/explore',
+    description:
+      'Compare direct flights vs stopover routes through hub airports with live Google Flights pricing. See a side-quest value analysis for each hub city — what you can do, eat, and see during a layover. Find creative routing that adds a bonus city to your trip, often for the same price or less.',
+    howItWorks: [
+      'Enter your origin and final destination',
+      'See direct flight prices alongside stopover options (all live)',
+      'Explore side-quest value scores for each hub city',
+      'Book the route that gives you the best value and experience',
+    ],
+    gradient: 'from-teal-600/20 to-green-600/20',
+    border: 'border-teal-400/30',
+    accent: 'text-teal-300',
+    mockupBg: 'bg-gradient-to-br from-teal-900/50 to-green-900/50',
+    mockupContent: {
+      label: 'London → Bangkok via Istanbul',
+      items: ['Direct: $620 LIVE', 'Via Istanbul (2-day stop): $480 LIVE', 'Side-quest score: 9.2/10'],
+    },
+  },
+  {
+    step: 5,
     title: 'Trip Cost Calculator',
     subtitle: 'Know Before You Go',
     href: '/trip-cost',
     description:
-      'Get detailed daily cost breakdowns for 60+ destinations. See what to expect for accommodation, food, transport, and activities across budget, mid-range, and comfort tiers.',
+      'Get detailed daily cost breakdowns for 60+ destinations worldwide. See what to expect for accommodation, food, transport, and activities across budget, mid-range, and comfort tiers. Multiply by your trip length for an accurate total budget estimate.',
     howItWorks: [
-      'Select your destination city',
+      'Select your destination city from 60+ options',
       'Choose your travel tier: budget, mid-range, or comfort',
       'See daily breakdowns for all expense categories',
       'Multiply by trip length for your total budget',
@@ -48,69 +114,69 @@ const features = [
     },
   },
   {
-    step: 3,
-    title: 'Flight Search',
-    subtitle: 'Real-Time Google Flights Data',
-    href: '/search',
+    step: 6,
+    title: 'Destination Quiz',
+    subtitle: 'Find Your Perfect Match',
+    href: '/quiz',
     description:
-      "Search real-time flight prices powered by Google Flights. Compare dates across a full calendar view, find the cheapest days to fly, or search with destination set to 'Anywhere' to discover the best deals from your airport.",
+      'Answer 6 quick questions about your travel personality — pace, budget style, food preferences, and more. Our matching algorithm recommends destinations tailored to you. Share your results with friends to compare travel styles and plan trips together.',
     howItWorks: [
-      'Enter your departure airport and destination (or Anywhere)',
-      'Pick your travel dates or browse the calendar view',
-      'Compare prices across flexible date ranges',
-      'Book directly through Google Flights at the price you see',
+      'Answer 6 fun travel personality questions',
+      'Get matched with destinations that fit your style',
+      'See detailed explanations for each recommendation',
+      'Share your results and compare with friends',
     ],
-    gradient: 'from-sky-600/20 to-blue-600/20',
-    border: 'border-sky-400/30',
-    accent: 'text-sky-300',
-    mockupBg: 'bg-gradient-to-br from-sky-900/50 to-blue-900/50',
+    gradient: 'from-rose-600/20 to-orange-600/20',
+    border: 'border-rose-400/30',
+    accent: 'text-rose-300',
+    mockupBg: 'bg-gradient-to-br from-rose-900/50 to-orange-900/50',
     mockupContent: {
-      label: 'BKK → Tokyo (NRT)',
-      items: ['Mar 20: $189', 'Mar 21: $145 — Cheapest!', 'Mar 22: $210'],
+      label: 'Your Travel Personality',
+      items: ['Type: Cultural Explorer', 'Top Match: Kyoto, Japan', 'Share with friends'],
     },
   },
   {
-    step: 4,
-    title: 'Layover Explorer',
-    subtitle: 'Turn Layovers into Bonus Destinations',
-    href: '/explore',
+    step: 7,
+    title: 'Festival Calendar',
+    subtitle: '110+ Festivals Worldwide',
+    href: '/festivals',
     description:
-      'Compare direct flights vs stopover routes through hub airports with live pricing and visa checks. Find creative routing that adds a bonus city to your trip — often for the same price or less than flying direct.',
+      'Browse 110+ festivals and events from every corner of the globe, organized by month and region. From Songkran in Thailand to Carnival in Brazil, plan your trips around the events that excite you most.',
     howItWorks: [
-      'Enter your origin and final destination',
-      'See direct flight prices alongside stopover options',
-      'Compare hub cities with visa-free transit info',
-      'Book the route that gives you the best value and experience',
+      'Browse festivals by month or region',
+      'See dates, locations, and descriptions for 110+ events',
+      'Filter by type: music, cultural, religious, food, and more',
+      'Plan your trip around the festival you want to experience',
     ],
-    gradient: 'from-teal-600/20 to-green-600/20',
-    border: 'border-teal-400/30',
-    accent: 'text-teal-300',
-    mockupBg: 'bg-gradient-to-br from-teal-900/50 to-green-900/50',
+    gradient: 'from-amber-600/20 to-yellow-600/20',
+    border: 'border-amber-400/30',
+    accent: 'text-amber-300',
+    mockupBg: 'bg-gradient-to-br from-amber-900/50 to-yellow-900/50',
     mockupContent: {
-      label: 'London → Bangkok via Istanbul',
-      items: ['Direct: $620', 'Via Istanbul (2-day stop): $480', 'Save $140 + explore Istanbul'],
+      label: 'April Festivals',
+      items: ['Songkran — Thailand (Apr 13-15)', 'Coachella — USA (Apr 11-20)', 'Hanami — Japan (Mar-Apr)'],
     },
   },
   {
-    step: 5,
-    title: 'Smart Stopovers',
-    subtitle: 'Save Money While Adding Destinations',
-    href: '/stopover',
+    step: 8,
+    title: 'Travel Passport',
+    subtitle: 'Track Your Discoveries',
+    href: '/passport',
     description:
-      'Find flights with multi-day stopovers that save money while adding a visa-free country to your trip. Powered by live Google Flights data, Smart Stopovers identifies hub cities where you can break your journey and explore without needing a visa.',
+      'Earn stamps for every destination you discover through GlobePilots. Unlock badges for milestones like exploring 5 countries in one region, hitting discovery streaks, or finding the cheapest mystery trip of the week. Your passport syncs across devices when you create a free account.',
     howItWorks: [
-      'Enter your origin, destination, and travel dates',
-      'AI finds routes with stopover cities that offer visa-free transit',
-      'Compare savings vs direct flights',
-      'Book a trip that includes a bonus destination at no extra cost',
+      'Discover destinations through any GlobePilots tool',
+      'Earn stamps automatically for each new destination',
+      'Unlock badges for streaks, milestones, and achievements',
+      'Create an account to sync your passport across devices',
     ],
-    gradient: 'from-emerald-600/20 to-cyan-600/20',
-    border: 'border-emerald-400/30',
-    accent: 'text-emerald-300',
-    mockupBg: 'bg-gradient-to-br from-emerald-900/50 to-cyan-900/50',
+    gradient: 'from-lime-600/20 to-emerald-600/20',
+    border: 'border-lime-400/30',
+    accent: 'text-lime-300',
+    mockupBg: 'bg-gradient-to-br from-lime-900/50 to-emerald-900/50',
     mockupContent: {
-      label: 'NYC → Bali via Dubai',
-      items: ['Direct: $890', '3-day Dubai stopover: $720', 'Visa-free transit — no visa needed'],
+      label: 'Your Travel Passport',
+      items: ['12 stamps collected', 'Badge: Asia Explorer (5/5)', 'Current streak: 4 days'],
     },
   },
 ]
@@ -118,27 +184,27 @@ const features = [
 const faqs = [
   {
     q: 'How do I find the cheapest flights?',
-    a: "Use our Smart Flight Search with the calendar view to compare prices across different days. The monthly calendar highlights the cheapest dates in green. You can also search with destination set to 'Anywhere' to find the cheapest places to fly from your airport.",
+    a: "Use our Flight Search with the calendar view to compare prices across different days. The monthly calendar highlights the cheapest dates in green. You can also search with destination set to 'Anywhere' to find the cheapest places to fly from your airport. All prices come live from Google Flights.",
   },
   {
     q: 'What is a layover hack?',
-    a: 'A layover hack involves booking a multi-city itinerary through a hub airport instead of a direct flight. You get to explore a bonus city during your connection, often for the same price or less. Our Layover Explorer automates this comparison for you.',
+    a: 'A layover hack involves booking a multi-city itinerary through a hub airport instead of a direct flight. You get to explore a bonus city during your connection, often for the same price or less. Our Layover Explorer and Smart Stopover Finder automate this comparison with live pricing and visa checks.',
   },
   {
-    q: 'Is GlobePilot really free?',
-    a: 'Yes! All tools are completely free to use. No sign-up, no subscription, no hidden fees. We earn a small commission when you book through our partner links, which keeps everything free for you.',
+    q: 'Is GlobePilots really free?',
+    a: 'Yes! All 8 tools are completely free to use. No sign-up required, no subscription, no hidden fees. We earn a small commission when you book through our partner links, which keeps everything free for you.',
   },
   {
     q: 'How does the Mystery Vacation work?',
-    a: 'Set your budget, departure airport, and travel preferences (like beach, culture, or adventure). Our AI analyzes real flight data and destination costs to surprise you with a vacation that fits your budget — including flights, accommodation, and activity suggestions.',
+    a: 'Set your budget, departure airport, and travel vibes. Google Travel Explore finds matching destinations with live pricing. Your destination reveals in 2-3 seconds, then a detailed AI itinerary streams in with budget breakdowns, local tips, and a clue-guessing game.',
   },
   {
-    q: 'How can I plan a multi-city trip on a budget?',
-    a: "Use our Mystery Vacation tool — it supports multi-city trips. Set your total budget and add 2-5 cities. AI optimizes the route order for the cheapest flights, allocates your budget based on each city's costs, and finds the best connections between stops.",
+    q: 'Are the flight prices accurate?',
+    a: 'Prices marked LIVE are pulled directly from Google Flights in real time and reflect actual current fares. Cached estimates from TravelPayouts are clearly marked as estimated. We always show you which type you are looking at.',
   },
   {
-    q: 'How accurate are the prices?',
-    a: 'We use real-time data from major flight search APIs. Prices shown are actual fares available at the time of search. We link directly to booking partners so you can lock in the price you see.',
+    q: 'Do I need an account?',
+    a: 'No, all features work without logging in. Creating a free account (Google OAuth or email) lets you save trips, sync your Travel Passport across devices, and track your discovery history.',
   },
 ]
 
@@ -153,11 +219,11 @@ export default function HowItWorksPage() {
           <div className="text-center mb-20">
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
               How{' '}
-              <span className="text-skyblue">GlobePilot</span>{' '}
+              <span className="text-skyblue">GlobePilots</span>{' '}
               Works
             </h1>
             <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
-              5 core tools that help you plan trips,
+              8 free tools that help you find cheap flights,
               discover destinations, and plan unforgettable adventures. Here is
               exactly how each one works.
             </p>

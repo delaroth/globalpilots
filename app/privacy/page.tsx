@@ -12,7 +12,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="text-skyblue-light mb-12">
-            Last updated: March 2026
+            Last updated: March 16, 2026
           </p>
 
           <div className="space-y-10 text-skyblue-light/90 leading-relaxed">
@@ -39,24 +39,35 @@ export default function PrivacyPage() {
               </p>
 
               <h3 className="text-lg font-semibold text-skyblue mb-2">
+                Account Data
+              </h3>
+              <p className="mb-4">
+                If you create a GlobePilot account, we collect the following information depending on your sign-up method:
+              </p>
+              <ul className="list-disc list-inside space-y-2 mb-4">
+                <li><span className="font-semibold text-white">Google OAuth</span> &mdash; Your name, email address, and profile picture as provided by Google.</li>
+                <li><span className="font-semibold text-white">Email/password</span> &mdash; Your email address, display name, and a bcrypt hash of your password. We never store your password in plain text.</li>
+              </ul>
+
+              <h3 className="text-lg font-semibold text-skyblue mb-2">
+                Saved Activity &amp; Profile Data
+              </h3>
+              <p className="mb-4">
+                When you use GlobePilot while signed in, we store your saved trips, Travel Passport stamps, badges, streak data, destination quiz results, and leaderboard entries in our database so they persist across sessions and devices.
+              </p>
+
+              <h3 className="text-lg font-semibold text-skyblue mb-2">
                 Local Storage (Browser-Side Only)
               </h3>
               <p className="mb-4">
-                We use your browser&apos;s localStorage to save your preferences, recent searches, and tool settings. This data never leaves your device and is not transmitted to our servers. You can clear this data at any time through your browser settings.
+                We use your browser&apos;s localStorage to save preferences and session data that never leaves your device. This includes your preferred currency, default origin airport, recent search history (origin airports, budget preferences), and trip history. You can clear this data at any time through your browser settings.
               </p>
 
               <h3 className="text-lg font-semibold text-skyblue mb-2">
-                Account Information
+                Search History
               </h3>
               <p className="mb-4">
-                If you create a GlobePilot account, we collect your email address and basic profile information. This data is stored securely via Supabase, our authentication and database provider.
-              </p>
-
-              <h3 className="text-lg font-semibold text-skyblue mb-2">
-                Cookies
-              </h3>
-              <p>
-                GlobePilot does not currently use cookies for tracking or advertising purposes. If this changes in the future, we will update this policy and notify you accordingly.
+                When you use our tools, we may temporarily cache your search parameters (origin airports, destination preferences, budget ranges, travel dates) on our server to improve performance. Server-side search caches are automatically cleared after 1 hour.
               </p>
             </div>
 
@@ -71,17 +82,67 @@ export default function PrivacyPage() {
 
               <ul className="space-y-4">
                 <li className="pl-4 border-l-2 border-skyblue/30">
-                  <span className="font-semibold text-white">TravelPayouts</span> &mdash; We use TravelPayouts to provide flight search results and booking links. When you click an affiliate link and make a booking, TravelPayouts may collect data in accordance with their own privacy policy.
+                  <span className="font-semibold text-white">SerpApi</span> &mdash; Provides Google Flights and Google Travel Explore data including live flight prices and destination suggestions. We send origin/destination airports, dates, and budget parameters. No personal data is shared.{' '}
+                  <a href="https://serpapi.com/privacy" target="_blank" rel="noopener noreferrer" className="text-skyblue hover:underline">SerpApi Privacy Policy</a>.
                 </li>
                 <li className="pl-4 border-l-2 border-skyblue/30">
-                  <span className="font-semibold text-white">Amadeus</span> &mdash; We use the Amadeus API to retrieve flight data, airport information, and travel analytics. Amadeus processes search queries but does not receive your personal information from us.
+                  <span className="font-semibold text-white">TravelPayouts</span> &mdash; Provides affiliate flight search results and booking links. We send origin/destination airports and travel dates. TravelPayouts may set cookies when you click booking links.
                 </li>
                 <li className="pl-4 border-l-2 border-skyblue/30">
-                  <span className="font-semibold text-white">DeepSeek AI</span> &mdash; We use DeepSeek AI to power intelligent features such as the Mystery Vacation generator and trip suggestions. Search parameters may be sent to DeepSeek for processing, but no personally identifiable information is shared.
+                  <span className="font-semibold text-white">DeepSeek AI</span> &mdash; Generates mystery destination itineraries, hotel recommendations, and local tips. We send destination names, budget tier, and travel preferences. No personal data (name, email, account info) is sent to DeepSeek.
                 </li>
                 <li className="pl-4 border-l-2 border-skyblue/30">
-                  <span className="font-semibold text-white">Supabase</span> &mdash; We use Supabase for user authentication and database storage. If you create an account, your email and profile data are stored securely on Supabase infrastructure.
+                  <span className="font-semibold text-white">Supabase</span> &mdash; Our database and infrastructure provider (PostgreSQL). Stores user accounts, saved trips, and activity feed data. All data is encrypted at rest and in transit.
                 </li>
+                <li className="pl-4 border-l-2 border-skyblue/30">
+                  <span className="font-semibold text-white">Google OAuth</span> &mdash; Powers &ldquo;Sign in with Google&rdquo; authentication. We receive your name, email address, and profile picture from Google. We do not access your Google contacts, calendar, or any other Google data.
+                </li>
+                <li className="pl-4 border-l-2 border-skyblue/30">
+                  <span className="font-semibold text-white">Frankfurter API</span> &mdash; Provides currency exchange rates (free, open-source). No user data is sent &mdash; only currency codes.
+                </li>
+                <li className="pl-4 border-l-2 border-skyblue/30">
+                  <span className="font-semibold text-white">Open-Meteo</span> &mdash; Provides weather forecast data for destinations. No user data is sent &mdash; only destination coordinates.
+                </li>
+                <li className="pl-4 border-l-2 border-skyblue/30">
+                  <span className="font-semibold text-white">Wikipedia</span> &mdash; Provides nearby attraction information. No user data is sent &mdash; only destination coordinates.
+                </li>
+                <li className="pl-4 border-l-2 border-skyblue/30">
+                  <span className="font-semibold text-white">Pexels</span> &mdash; Provides destination photos. No user data is sent &mdash; only destination names.
+                </li>
+                <li className="pl-4 border-l-2 border-skyblue/30">
+                  <span className="font-semibold text-white">Resend</span> &mdash; Handles transactional emails including contact form replies and price alert notifications. We send your email address to Resend for delivery purposes only.
+                </li>
+              </ul>
+            </div>
+
+            {/* Cookies */}
+            <div>
+              <h2 className="text-2xl font-semibold text-white mb-4">
+                Cookies &amp; Local Storage
+              </h2>
+              <p className="mb-4">
+                GlobePilot uses a cookie consent banner to give you control over cookie usage. Here is how we use cookies and browser storage:
+              </p>
+              <ul className="list-disc list-inside space-y-2">
+                <li><span className="font-semibold text-white">Essential cookies</span> &mdash; Used for authentication sessions when you sign in to your account.</li>
+                <li><span className="font-semibold text-white">Affiliate cookies</span> &mdash; Third-party booking partners (e.g., TravelPayouts) may set cookies when you click affiliate links.</li>
+                <li><span className="font-semibold text-white">localStorage</span> &mdash; We store your preferred currency, default origin airport, and trip history in your browser&apos;s localStorage. This data never leaves your device and can be cleared at any time via your browser settings.</li>
+              </ul>
+              <p className="mt-4">
+                We do not use cookies for advertising or behavioral tracking purposes.
+              </p>
+            </div>
+
+            {/* Data Retention */}
+            <div>
+              <h2 className="text-2xl font-semibold text-white mb-4">
+                Data Retention
+              </h2>
+              <ul className="list-disc list-inside space-y-2">
+                <li><span className="font-semibold text-white">Account data</span> &mdash; Retained until you request deletion of your account. You can request account deletion at any time by emailing us.</li>
+                <li><span className="font-semibold text-white">Saved trips &amp; profile data</span> &mdash; Retained as long as your account is active. Deleted when your account is deleted.</li>
+                <li><span className="font-semibold text-white">Server-side search cache</span> &mdash; Automatically cleared after 1 hour.</li>
+                <li><span className="font-semibold text-white">localStorage data</span> &mdash; Controlled entirely by you. Persists until you clear it through your browser settings or our in-app controls.</li>
               </ul>
             </div>
 
@@ -111,7 +172,7 @@ export default function PrivacyPage() {
                 Data Security
               </h2>
               <p>
-                We take reasonable measures to protect your information. Browser-stored data remains on your device, and any server-side data (such as account information) is protected through industry-standard encryption and security practices provided by our infrastructure partners.
+                We take reasonable measures to protect your information. Browser-stored data remains on your device. Server-side data (account information, saved trips) is protected through industry-standard encryption and security practices provided by Supabase. Passwords are hashed using bcrypt and are never stored in plain text.
               </p>
             </div>
 
@@ -126,12 +187,14 @@ export default function PrivacyPage() {
               <ul className="list-disc list-inside space-y-2">
                 <li><span className="font-semibold text-white">Right of Access</span> &mdash; You may request a copy of the personal data we hold about you.</li>
                 <li><span className="font-semibold text-white">Right to Rectification</span> &mdash; You may request that we correct inaccurate or incomplete data.</li>
-                <li><span className="font-semibold text-white">Right to Erasure</span> &mdash; You may request that we delete your personal data. For locally stored data, you can clear your browser&apos;s localStorage at any time.</li>
+                <li><span className="font-semibold text-white">Right to Erasure</span> &mdash; You may request that we delete your personal data, including your account and all associated data. For locally stored data, you can clear your browser&apos;s localStorage at any time.</li>
                 <li><span className="font-semibold text-white">Right to Data Portability</span> &mdash; You may request your data in a structured, machine-readable format.</li>
                 <li><span className="font-semibold text-white">Right to Object</span> &mdash; You may object to the processing of your personal data at any time.</li>
               </ul>
               <p className="mt-4">
-                To exercise any of these rights, please contact us at the email address listed below.
+                To exercise any of these rights, including account deletion, please email us at{' '}
+                <span className="text-skyblue font-semibold">privacy@globepilots.com</span>.
+                We will respond to all requests within 30 days.
               </p>
             </div>
 
