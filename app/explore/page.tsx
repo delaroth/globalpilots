@@ -44,7 +44,7 @@ function ExplorePageContent() {
   const [error, setError] = useState('')
   const [directPrice, setDirectPrice] = useState<number | null>(null)
   const [layoverRoutes, setLayoverRoutes] = useState<LayoverRoute[]>([])
-  const [priceSource, setPriceSource] = useState<'travelpayouts-cached' | 'kiwi-live' | 'flightapi-live'>('travelpayouts-cached')
+  const [priceSource, setPriceSource] = useState<'travelpayouts-cached' | 'kiwi-live' | 'flightapi-live' | 'serpapi-live'>('travelpayouts-cached')
   const [searched, setSearched] = useState(false)
 
   const today = new Date().toISOString().split('T')[0]

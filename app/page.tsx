@@ -47,29 +47,18 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Labs — features that need real-time data */}
-          <div className="mt-12">
-            <p className="text-xs uppercase tracking-widest text-white/30 text-center mb-4">Labs — coming soon with live pricing</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-              <Link href="/search" className="group bg-white/[0.03] backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-skyblue/30 transition-all text-left">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">✈️</span>
-                  <div>
-                    <h3 className="text-sm font-medium text-white/60 group-hover:text-white/80 transition">Flight Search</h3>
-                    <p className="text-xs text-white/30">Cached estimates &middot; best with live API</p>
-                  </div>
-                </div>
-              </Link>
-              <Link href="/explore" className="group bg-white/[0.03] backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:border-skyblue/30 transition-all text-left">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">🌍</span>
-                  <div>
-                    <h3 className="text-sm font-medium text-white/60 group-hover:text-white/80 transition">Layover Explorer</h3>
-                    <p className="text-xs text-white/30">Stopover routes &middot; best with live API</p>
-                  </div>
-                </div>
-              </Link>
-            </div>
+          {/* Flight Tools */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 max-w-2xl mx-auto">
+            <Link href="/search" className="group bg-gradient-to-br from-sky-600/30 to-blue-600/30 backdrop-blur-sm rounded-xl p-5 border border-sky-400/20 hover:border-sky-400/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
+              <div className="text-3xl mb-2">&#x2708;&#xFE0F;</div>
+              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-sky-300 transition">Flight Search</h3>
+              <p className="text-skyblue-light text-xs">Real-time Google Flights data &middot; Compare dates &middot; Search Anywhere</p>
+            </Link>
+            <Link href="/explore" className="group bg-gradient-to-br from-teal-600/30 to-green-600/30 backdrop-blur-sm rounded-xl p-5 border border-teal-400/20 hover:border-teal-400/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
+              <div className="text-3xl mb-2">&#x1F30D;</div>
+              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-teal-300 transition">Layover Explorer</h3>
+              <p className="text-skyblue-light text-xs">Real-time Google Flights data &middot; Stopover routes &middot; Visa checks</p>
+            </Link>
           </div>
         </div>
       </section>

@@ -21,7 +21,7 @@ interface RouteComparisonProps {
   departDate: string
   directPrice: number | null
   layoverRoutes: LayoverRoute[]
-  priceSource?: 'travelpayouts-cached' | 'kiwi-live' | 'flightapi-live'
+  priceSource?: 'travelpayouts-cached' | 'kiwi-live' | 'flightapi-live' | 'serpapi-live'
 }
 
 // Fun taglines for layover cities
@@ -49,7 +49,8 @@ export default function RouteComparison({
   layoverRoutes,
   priceSource = 'travelpayouts-cached',
 }: RouteComparisonProps) {
-  const priceLabel = 'Estimated Price'
+  const isLiveSource = priceSource === 'kiwi-live' || priceSource === 'flightapi-live' || priceSource === 'serpapi-live'
+  const priceLabel = isLiveSource ? 'Live Price' : 'Estimated Price'
   const handleBookDirect = () => {
     const { action } = resolveFlightBooking({ origin, destination, departDate, price: directPrice ?? undefined })
     if (action.type === 'affiliate-redirect') window.open(action.url, '_blank')
@@ -131,7 +132,9 @@ export default function RouteComparison({
               <div className="bg-gray-50 rounded-lg p-4 mb-6 text-center">
                 <p className="text-sm text-gray-600 mb-1">{priceLabel}</p>
                 <p className="text-4xl font-bold text-gray-700">~${directPrice}</p>
-                <p className="text-xs text-gray-400 mt-1">Cached estimate — actual price may differ</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {isLiveSource ? 'Live price — may vary at time of booking' : 'Cached estimate — actual price may differ'}
+                </p>
               </div>
 
               <button
@@ -318,7 +321,9 @@ export default function RouteComparison({
           Use the layover as a chance to explore a bonus destination for a couple days - essentially getting two trips for {directPrice !== null ? 'less than the price of one' : 'the price of one'}!
         </p>
         <p className="text-skyblue-light/60 text-xs mt-3">
-          Prices shown are cached estimates and may differ from booking prices. Click &quot;Search&quot; to see current prices on Aviasales.
+          {isLiveSource
+            ? 'Prices shown are live but may change at time of booking. Click "Search" to confirm the latest fare.'
+            : 'Prices shown are cached estimates and may differ from booking prices. Click "Search" to see current prices on Aviasales.'}
         </p>
       </div>
     </div>

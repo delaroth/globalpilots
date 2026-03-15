@@ -236,6 +236,11 @@ export function buildFlightLinkForSource(
   date: string,
   returnDate?: string
 ): string {
+  // Google Flights (from SerpApi live search)
+  if (source === 'google-flights' || source === 'serpapi') {
+    const retParam = returnDate ? `+returning+${returnDate}` : ''
+    return `https://www.google.com/travel/flights?q=flights+from+${origin}+to+${dest}+on+${date}${retParam}`
+  }
   // Kiwi affiliate
   if (source === 'kiwi' && isAffiliateActive('kiwi')) {
     return buildKiwiFlightLink(origin, dest, date)

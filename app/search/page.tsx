@@ -130,7 +130,7 @@ function SearchPageContent() {
   // Results
   const [calendarData, setCalendarData] = useState<Record<string, unknown> | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [exactDateResult, setExactDateResult] = useState<{ price: number; dayData: any; source?: string; deepLink?: string } | null>(null)
+  const [exactDateResult, setExactDateResult] = useState<{ price: number; dayData: any; source?: string; deepLink?: string; isLive?: boolean } | null>(null)
   const [weekendDeals, setWeekendDeals] = useState<WeekendDeal[]>([])
   const [discoverResults, setDiscoverResults] = useState<{ destination: string; city: string; price: number; departDate: string; returnDate: string }[]>([])
   const [emptyRoute, setEmptyRoute] = useState(false)
@@ -195,25 +195,31 @@ function SearchPageContent() {
         }
 
       } else if (dateMode === 'exact-date') {
-        // Priority 1: Try Kiwi (best LCC coverage, has deep links)
-        let gotKiwiPrice = false
+        let gotPrice = false
+
+        // Priority 1: SerpApi Google Flights (live data) via our unified endpoint
         try {
-          let kiwiUrl = `/api/kiwi/search?origin=${origin}&destination=${destination}&departure_date=${exactDate}&max=3`
+          let flightUrl = `/api/search/flights?origin=${origin}&destination=${destination}&departDate=${exactDate}`
           if (isRoundTrip && returnDate) {
-            kiwiUrl += `&return_date=${returnDate}`
+            flightUrl += `&returnDate=${returnDate}`
           }
-          const kiwiRes = await fetch(kiwiUrl)
-          if (kiwiRes.ok) {
-            const kiwiData = await kiwiRes.json()
-            if (kiwiData.offers?.length > 0) {
-              const offer = kiwiData.offers[0]
+          const flightRes = await fetch(flightUrl)
+          if (flightRes.ok) {
+            const flightData = await flightRes.json()
+            if (flightData.success && flightData.flight) {
               setExactDateResult({
-                price: offer.price,
-                dayData: { ...offer, airlines: offer.airlines, stops: offer.stops },
-                source: 'kiwi',
-                deepLink: offer.deepLink,
+                price: flightData.flight.price,
+                dayData: {
+                  airlines: flightData.flight.airlines,
+                  stops: flightData.flight.stops,
+                  duration: flightData.flight.duration,
+                  priceLevel: flightData.flight.priceLevel,
+                  typicalRange: flightData.flight.typicalRange,
+                },
+                source: flightData.source, // 'google-flights' or 'travelpayouts'
+                isLive: flightData.isLive,
               })
-              gotKiwiPrice = true
+              gotPrice = true
               const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
               saveRecentSearch({
                 origin, destination, date: exactDate, mode: 'exact-date',
@@ -222,12 +228,45 @@ function SearchPageContent() {
               })
             }
           }
-        } catch (kiwiErr) {
-          console.log('[Search] Kiwi unavailable, falling back to cached:', kiwiErr)
+        } catch (serpErr) {
+          console.log('[Search] SerpApi flight search failed, trying Kiwi:', serpErr)
         }
 
-        // Priority 2: Fallback to TravelPayouts cached price
-        if (!gotKiwiPrice) {
+        // Priority 2: Kiwi (LCC coverage, deep links)
+        if (!gotPrice) {
+          try {
+            let kiwiUrl = `/api/kiwi/search?origin=${origin}&destination=${destination}&departure_date=${exactDate}&max=3`
+            if (isRoundTrip && returnDate) {
+              kiwiUrl += `&return_date=${returnDate}`
+            }
+            const kiwiRes = await fetch(kiwiUrl)
+            if (kiwiRes.ok) {
+              const kiwiData = await kiwiRes.json()
+              if (kiwiData.offers?.length > 0) {
+                const offer = kiwiData.offers[0]
+                setExactDateResult({
+                  price: offer.price,
+                  dayData: { ...offer, airlines: offer.airlines, stops: offer.stops },
+                  source: 'kiwi',
+                  deepLink: offer.deepLink,
+                  isLive: true,
+                })
+                gotPrice = true
+                const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                saveRecentSearch({
+                  origin, destination, date: exactDate, mode: 'exact-date',
+                  label: `${origin} → ${destination} · ${dateLabel}`,
+                  url: `/search?origin=${origin}&dest=${destination}&date=${exactDate}&mode=exact-date`,
+                })
+              }
+            }
+          } catch (kiwiErr) {
+            console.log('[Search] Kiwi unavailable, falling back to cached:', kiwiErr)
+          }
+        }
+
+        // Priority 3: TravelPayouts cached price
+        if (!gotPrice) {
           const monthStr = exactDate.slice(0, 7)
           const res = await fetch(`/api/travelpayouts/calendar?origin=${origin}&destination=${destination}&depart_date=${monthStr}`)
           if (!res.ok) throw new Error(`API error: ${res.status}`)
@@ -239,7 +278,7 @@ function SearchPageContent() {
           if (!price) {
             setEmptyRoute(true)
           } else {
-            setExactDateResult({ price, dayData, source: 'travelpayouts' })
+            setExactDateResult({ price, dayData, source: 'travelpayouts', isLive: false })
             const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
             saveRecentSearch({
               origin, destination, date: exactDate, mode: 'exact-date',
@@ -517,21 +556,43 @@ function SearchPageContent() {
             {exactDateResult && (
               <div className="max-w-md mx-auto">
                 <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-                  <div className="px-6 py-5 text-center bg-gradient-to-r from-skyblue to-skyblue-dark">
+                  <div className="px-6 py-5 text-center bg-gradient-to-r from-skyblue to-skyblue-dark relative">
+                    {exactDateResult.isLive && (
+                      <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg animate-pulse">
+                        <span className="w-2 h-2 bg-white rounded-full"></span>
+                        LIVE
+                      </span>
+                    )}
                     <p className="text-navy font-semibold text-sm uppercase tracking-wide">
-                      Estimated Price
+                      {exactDateResult.isLive ? 'Live Price' : 'Estimated Price'}
                     </p>
                     <p className="text-navy text-6xl font-bold mt-1">
-                      ~${exactDateResult.price}
+                      {exactDateResult.isLive ? '' : '~'}${exactDateResult.price}
                     </p>
                     <p className="text-navy/80 text-sm mt-2">
                       {origin} {isRoundTrip ? '↔' : '→'} {destination} · {exactDate}
                       {isRoundTrip && returnDate && ` — ${returnDate}`}
                     </p>
-                    <p className="text-navy/60 text-xs mt-1">Cached estimate — actual price may vary</p>
-                    {exactDateResult.dayData?.airlines && (
+                    <p className="text-navy/60 text-xs mt-1">
+                      {exactDateResult.isLive
+                        ? exactDateResult.source === 'google-flights'
+                          ? 'Live from Google Flights — prices update in real time'
+                          : 'Live price — may vary at time of booking'
+                        : 'Cached estimate — actual price may vary'}
+                    </p>
+                    {exactDateResult.dayData?.airlines && exactDateResult.dayData.airlines.length > 0 && (
                       <p className="text-navy/70 text-xs mt-1">
-                        {exactDateResult.dayData.airlines.join(', ')} · {exactDateResult.dayData.stops === 0 ? 'Direct' : `${exactDateResult.dayData.stops} stop${exactDateResult.dayData.stops > 1 ? 's' : ''}`}
+                        {exactDateResult.dayData.airlines.join(', ')}
+                        {exactDateResult.dayData.stops !== undefined && ` · ${exactDateResult.dayData.stops === 0 ? 'Direct' : `${exactDateResult.dayData.stops} stop${exactDateResult.dayData.stops > 1 ? 's' : ''}`}`}
+                        {exactDateResult.dayData.duration && ` · ${exactDateResult.dayData.duration}`}
+                      </p>
+                    )}
+                    {exactDateResult.dayData?.priceLevel && (
+                      <p className="text-navy/60 text-xs mt-1">
+                        Price level: <span className="font-semibold">{exactDateResult.dayData.priceLevel}</span>
+                        {exactDateResult.dayData.typicalRange && (
+                          <> · Typical: ${exactDateResult.dayData.typicalRange[0]}–${exactDateResult.dayData.typicalRange[1]}</>
+                        )}
                       </p>
                     )}
                   </div>
@@ -549,14 +610,18 @@ function SearchPageContent() {
                       }}
                       className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                     >
-                      {exactDateResult.source === 'kiwi'
-                        ? 'Check This Fare on Kiwi'
-                        : 'Check on Aviasales'}
+                      {exactDateResult.source === 'google-flights'
+                        ? 'Book on Google Flights'
+                        : exactDateResult.source === 'kiwi'
+                          ? 'Check This Fare on Kiwi'
+                          : 'Check on Aviasales'}
                     </button>
                     <p className="text-center text-xs text-gray-500 mt-3">
-                      {exactDateResult.source === 'kiwi'
-                        ? 'Opens Kiwi.com to verify this fare'
-                        : 'Opens Aviasales to see current prices'}
+                      {exactDateResult.source === 'google-flights'
+                        ? 'Opens Google Flights with this route'
+                        : exactDateResult.source === 'kiwi'
+                          ? 'Opens Kiwi.com to verify this fare'
+                          : 'Opens Aviasales to see current prices'}
                     </p>
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <p className="text-xs text-gray-500 mb-2 font-medium text-center">Plan your stay</p>

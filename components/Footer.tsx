@@ -7,8 +7,9 @@ export default function Footer() {
   const features = [
     { href: '/mystery', label: 'Mystery Vacation' },
     { href: '/trip-cost', label: 'Trip Cost Calculator' },
-    { href: '/search', label: 'Flight Search (Labs)' },
-    { href: '/explore', label: 'Layover Explorer (Labs)' },
+    { href: '/search', label: 'Flight Search' },
+    { href: '/explore', label: 'Layover Explorer' },
+    { href: '/stopover', label: 'Smart Stopovers' },
   ]
 
   return (

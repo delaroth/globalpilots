@@ -47,6 +47,72 @@ const features = [
       items: ['Hotel: $15/day  Food: $10/day', 'Transport: $5/day  Activities: $8/day', 'Total: ~$38/day'],
     },
   },
+  {
+    step: 3,
+    title: 'Flight Search',
+    subtitle: 'Real-Time Google Flights Data',
+    href: '/search',
+    description:
+      "Search real-time flight prices powered by Google Flights. Compare dates across a full calendar view, find the cheapest days to fly, or search with destination set to 'Anywhere' to discover the best deals from your airport.",
+    howItWorks: [
+      'Enter your departure airport and destination (or Anywhere)',
+      'Pick your travel dates or browse the calendar view',
+      'Compare prices across flexible date ranges',
+      'Book directly through Google Flights at the price you see',
+    ],
+    gradient: 'from-sky-600/20 to-blue-600/20',
+    border: 'border-sky-400/30',
+    accent: 'text-sky-300',
+    mockupBg: 'bg-gradient-to-br from-sky-900/50 to-blue-900/50',
+    mockupContent: {
+      label: 'BKK → Tokyo (NRT)',
+      items: ['Mar 20: $189', 'Mar 21: $145 — Cheapest!', 'Mar 22: $210'],
+    },
+  },
+  {
+    step: 4,
+    title: 'Layover Explorer',
+    subtitle: 'Turn Layovers into Bonus Destinations',
+    href: '/explore',
+    description:
+      'Compare direct flights vs stopover routes through hub airports with live pricing and visa checks. Find creative routing that adds a bonus city to your trip — often for the same price or less than flying direct.',
+    howItWorks: [
+      'Enter your origin and final destination',
+      'See direct flight prices alongside stopover options',
+      'Compare hub cities with visa-free transit info',
+      'Book the route that gives you the best value and experience',
+    ],
+    gradient: 'from-teal-600/20 to-green-600/20',
+    border: 'border-teal-400/30',
+    accent: 'text-teal-300',
+    mockupBg: 'bg-gradient-to-br from-teal-900/50 to-green-900/50',
+    mockupContent: {
+      label: 'London → Bangkok via Istanbul',
+      items: ['Direct: $620', 'Via Istanbul (2-day stop): $480', 'Save $140 + explore Istanbul'],
+    },
+  },
+  {
+    step: 5,
+    title: 'Smart Stopovers',
+    subtitle: 'Save Money While Adding Destinations',
+    href: '/stopover',
+    description:
+      'Find flights with multi-day stopovers that save money while adding a visa-free country to your trip. Powered by live Google Flights data, Smart Stopovers identifies hub cities where you can break your journey and explore without needing a visa.',
+    howItWorks: [
+      'Enter your origin, destination, and travel dates',
+      'AI finds routes with stopover cities that offer visa-free transit',
+      'Compare savings vs direct flights',
+      'Book a trip that includes a bonus destination at no extra cost',
+    ],
+    gradient: 'from-emerald-600/20 to-cyan-600/20',
+    border: 'border-emerald-400/30',
+    accent: 'text-emerald-300',
+    mockupBg: 'bg-gradient-to-br from-emerald-900/50 to-cyan-900/50',
+    mockupContent: {
+      label: 'NYC → Bali via Dubai',
+      items: ['Direct: $890', '3-day Dubai stopover: $720', 'Visa-free transit — no visa needed'],
+    },
+  },
 ]
 
 const faqs = [
@@ -91,7 +157,7 @@ export default function HowItWorksPage() {
               Works
             </h1>
             <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
-              2 core tools that help you plan trips,
+              5 core tools that help you plan trips,
               discover destinations, and plan unforgettable adventures. Here is
               exactly how each one works.
             </p>
@@ -109,7 +175,7 @@ export default function HowItWorksPage() {
                 {/* Text Side */}
                 <div className="flex-1 space-y-4">
                   <div className={`text-sm font-semibold ${feature.accent} uppercase tracking-wider`}>
-                    Tool {feature.step} of 2
+                    Tool {feature.step} of {features.length}
                   </div>
                   <h2 className="text-3xl font-bold text-white">
                     {feature.title}

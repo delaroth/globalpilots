@@ -58,24 +58,38 @@ const tools = [
     border: 'border-yellow-400/30 hover:border-yellow-400/60',
     accent: 'text-yellow-300',
   },
-]
-
-const labsTools = [
   {
     title: 'Flight Search',
     emoji: '\u2708\uFE0F',
     href: '/search',
     description:
-      'Search flights with cached price estimates. Best results once we integrate a real-time flight API.',
-    cta: 'Try It',
+      "Search real-time flight prices from Google Flights. Compare dates, find the cheapest days, or search 'Anywhere' to discover deals.",
+    cta: 'Search Flights',
+    gradient: 'from-sky-600/30 to-blue-600/30',
+    border: 'border-sky-400/30 hover:border-sky-400/60',
+    accent: 'text-sky-300',
   },
   {
     title: 'Layover Explorer',
     emoji: '\uD83C\uDF0D',
     href: '/explore',
     description:
-      'Compare direct flights vs. stopover routes through hub airports. Needs real-time pricing for accurate comparisons.',
-    cta: 'Try It',
+      'Turn layovers into bonus destinations. Compare direct flights vs stopover routes with live pricing and visa checks.',
+    cta: 'Explore Routes',
+    gradient: 'from-teal-600/30 to-green-600/30',
+    border: 'border-teal-400/30 hover:border-teal-400/60',
+    accent: 'text-teal-300',
+  },
+  {
+    title: 'Smart Stopovers',
+    emoji: '\u2708\uFE0F',
+    href: '/stopover',
+    description:
+      'Find flights with multi-day stopovers that save money while adding a visa-free country to your trip. Powered by live Google Flights data.',
+    cta: 'Find Stopovers',
+    gradient: 'from-emerald-600/30 to-cyan-600/30',
+    border: 'border-emerald-400/30 hover:border-emerald-400/60',
+    accent: 'text-emerald-300',
   },
 ]
 
@@ -120,41 +134,6 @@ export default function ToolsPage() {
                 </span>
               </Link>
             ))}
-          </div>
-
-          {/* Labs Section */}
-          <div className="mt-16">
-            <div className="text-center mb-8">
-              <p className="text-xs uppercase tracking-widest text-white/30 mb-2">Labs</p>
-              <h2 className="text-xl font-bold text-white/60">
-                Waiting for Real-Time Flight Data
-              </h2>
-              <p className="text-sm text-white/30 mt-2 max-w-lg mx-auto">
-                These tools work but use cached price estimates. They&apos;ll become much more useful once we integrate a live flight pricing API.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-              {labsTools.map((tool) => (
-                <Link
-                  key={tool.href}
-                  href={tool.href}
-                  className="group bg-white/[0.03] backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-skyblue/30 transition-all text-left"
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl mt-0.5">{tool.emoji}</span>
-                    <div>
-                      <h3 className="text-base font-semibold text-white/60 group-hover:text-white/80 transition">
-                        {tool.title}
-                      </h3>
-                      <p className="text-xs text-white/30 mt-1">{tool.description}</p>
-                      <span className="inline-flex items-center text-skyblue/40 group-hover:text-skyblue/70 text-xs font-medium mt-2 transition">
-                        {tool.cta} &rarr;
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
           </div>
 
           {/* Bottom CTA */}

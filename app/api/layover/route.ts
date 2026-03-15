@@ -113,7 +113,12 @@ async function fetchMultiProviderRoutes(origin: string, destination: string, sea
 
   // Determine which provider powered the results for the response metadata
   const providerUsed = directResult.provider !== 'none' ? directResult.provider : 'unknown'
-  const priceSource = providerUsed === 'kiwi' ? 'kiwi-live'
+  const priceSource = providerUsed === 'SerpApi Google Flights' ? 'serpapi-live'
+    : providerUsed === 'Kiwi' ? 'kiwi-live'
+    : providerUsed === 'FlightAPI.io' ? 'flightapi-live'
+    : providerUsed === 'TravelPayouts' ? 'travelpayouts-cached'
+    // Legacy lowercase matching
+    : providerUsed === 'kiwi' ? 'kiwi-live'
     : providerUsed === 'flightapi' ? 'flightapi-live'
     : providerUsed === 'travelpayouts' ? 'travelpayouts-cached'
     : 'unknown'
@@ -264,7 +269,10 @@ export async function GET(request: NextRequest) {
     const { directPrice, hubRoutes, priceSource } = await fetchMultiProviderRoutes(origin, destination, searchDate)
 
     // Determine confidence based on the provider that actually returned data
-    const confidence = priceSource === 'travelpayouts-cached' ? 'cached' as const
+    const confidence = priceSource === 'serpapi-live' ? 'live' as const
+      : priceSource === 'kiwi-live' ? 'live' as const
+      : priceSource === 'flightapi-live' ? 'live' as const
+      : priceSource === 'travelpayouts-cached' ? 'cached' as const
       : priceSource === 'unknown' ? 'estimated' as const
       : 'cached' as const
 
