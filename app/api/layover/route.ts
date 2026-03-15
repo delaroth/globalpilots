@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { majorHubs } from '@/lib/hubs'
 import { searchKiwiMultiCity, isKiwiAvailable } from '@/lib/kiwi'
 import { getCheapestRoutePrice } from '@/lib/flight-providers'
+import { findCheapestDestinations, getRouteFlights, dateToMonth } from '@/lib/flight-providers/serpapi-explore'
+import type { ExploreDestination } from '@/lib/flight-providers/serpapi-explore'
 import { getSearchTier } from '@/lib/flight-intelligence'
 import type { SearchTier } from '@/lib/flight-intelligence'
 import { calculateSideQuestValue, type SideQuestCandidate } from '@/lib/flight-intelligence/side-quest'
@@ -122,6 +124,118 @@ async function fetchMultiProviderRoutes(origin: string, destination: string, sea
     : providerUsed === 'flightapi' ? 'flightapi-live'
     : providerUsed === 'travelpayouts' ? 'travelpayouts-cached'
     : 'unknown'
+
+  return { directPrice, hubRoutes, priceSource }
+}
+
+/**
+ * Browse-tier route lookup using SerpApi Explore for hub discovery.
+ *
+ * Strategy (4-5 API calls max instead of 13+):
+ * 1. findCheapestDestinations(origin) → get all reachable destinations with prices (1 call)
+ * 2. getRouteFlights(origin, destination) → direct price baseline (1 call)
+ * 3. For top 3 hub candidates that appear in Explore results, we already have origin→hub prices
+ * 4. Only call getCheapestRoutePrice() for hub→destination legs of top 3 hubs (up to 3 calls)
+ */
+async function fetchExploreRoutes(origin: string, destination: string, searchDate: string) {
+  const month = dateToMonth(searchDate)
+
+  // Step 1 + 2 in parallel: explore destinations from origin + get direct route price
+  const [exploreDests, routeFlights] = await Promise.all([
+    findCheapestDestinations({ origin, month }),
+    getRouteFlights({ origin, destination, month }),
+  ])
+
+  // Direct price: prefer route flights data, fallback to getCheapestRoutePrice
+  let directPrice: number | null = null
+  let priceSource = 'serpapi-explore'
+
+  if (routeFlights.length > 0) {
+    const cheapest = routeFlights.find(f => f.isCheapest) || routeFlights[0]
+    directPrice = cheapest.price
+    console.log(`[Layover API] [explore] Direct price: $${directPrice} (via SerpApi Explore route)`)
+  } else {
+    // Fallback: single getCheapestRoutePrice call for direct price
+    const directResult = await getCheapestRoutePrice(origin, destination, searchDate)
+    directPrice = directResult.price
+    priceSource = directResult.provider !== 'none' ? 'serpapi-explore+fallback' : 'serpapi-explore'
+    console.log(`[Layover API] [explore] Direct price fallback: $${directPrice ?? 'N/A'} (via ${directResult.provider})`)
+  }
+
+  // Step 3: Build a price map from Explore results for origin→hub prices
+  const explorePriceMap = new Map<string, ExploreDestination>()
+  for (const dest of exploreDests) {
+    if (dest.airportCode) {
+      explorePriceMap.set(dest.airportCode, dest)
+    }
+  }
+
+  // Identify hub candidates: hubs that appear in Explore results (we already have origin→hub price)
+  const hubCodes = getHubsByRegion(destination)
+  const hubCandidates: { code: string; city: string; leg1Price: number }[] = []
+
+  for (const hubCode of hubCodes) {
+    if (hubCode === origin || hubCode === destination) continue
+    const exploreData = explorePriceMap.get(hubCode)
+    if (exploreData && exploreData.flightPrice > 0) {
+      const hubInfo = majorHubs.find(h => h.code === hubCode)
+      hubCandidates.push({
+        code: hubCode,
+        city: hubInfo?.city || exploreData.name || hubCode,
+        leg1Price: exploreData.flightPrice,
+      })
+    }
+  }
+
+  // Sort by leg1 price (cheapest first), take top 3
+  hubCandidates.sort((a, b) => a.leg1Price - b.leg1Price)
+  const top3 = hubCandidates.slice(0, 3)
+
+  console.log(`[Layover API] [explore] ${exploreDests.length} explore destinations, ${hubCandidates.length} hub matches, checking top ${top3.length}`)
+
+  // Step 4: Only fetch hub→destination prices for top 3 hubs (up to 3 API calls)
+  const hubRoutes: HubRoute[] = []
+
+  if (top3.length > 0) {
+    const leg2Promises = top3.map(async (hub) => {
+      try {
+        const leg2Result = await getCheapestRoutePrice(hub.code, destination, searchDate)
+        const leg2Price = leg2Result.price
+        if (leg2Price === null) return null
+
+        const totalPrice = hub.leg1Price + leg2Price
+        const savings = directPrice !== null ? directPrice - totalPrice : null
+        const savingsPercent = directPrice !== null && savings !== null ? Math.round((savings / directPrice) * 100) : null
+
+        console.log(`[Layover API] [explore] ${hub.city}: $${hub.leg1Price} + $${leg2Price} = $${totalPrice}${savings !== null ? ` (savings: $${savings})` : ''}`)
+
+        return {
+          hub: hub.code,
+          hubCity: hub.city,
+          leg1Price: hub.leg1Price,
+          leg2Price,
+          totalPrice,
+          savings,
+          savingsPercent,
+        }
+      } catch (error) {
+        console.error(`[Layover API] [explore] Error checking hub ${hub.city}:`, error)
+        return null
+      }
+    })
+
+    const hubResults = await Promise.all(leg2Promises)
+    hubResults.forEach((result) => {
+      if (result) hubRoutes.push(result)
+    })
+  }
+
+  // Sort by savings (best first) or total price
+  if (directPrice !== null) {
+    hubRoutes.sort((a, b) => (b.savings || 0) - (a.savings || 0))
+  } else {
+    hubRoutes.sort((a, b) => a.totalPrice - b.totalPrice)
+  }
 
   return { directPrice, hubRoutes, priceSource }
 }
@@ -261,12 +375,19 @@ export async function GET(request: NextRequest) {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // Tier 1 (Browse) — default, cached/cheap sources only
-    // No expensive Kiwi multi-city search; relies on TravelPayouts
-    // cached data via the multi-provider fallback chain.
+    // Tier 1 (Browse) — SerpApi Explore primary (4-5 calls max),
+    // falls back to multi-provider chain if Explore returns nothing.
     // ═══════════════════════════════════════════════════════════════════
-    console.log('[Layover API] [browse] Using cached/cheap provider lookup')
-    const { directPrice, hubRoutes, priceSource } = await fetchMultiProviderRoutes(origin, destination, searchDate)
+    console.log('[Layover API] [browse] Trying SerpApi Explore for hub discovery')
+    let browseResult = await fetchExploreRoutes(origin, destination, searchDate)
+
+    // Fallback: if Explore found no hub routes, use the old multi-provider chain
+    if (browseResult.hubRoutes.length === 0) {
+      console.log('[Layover API] [browse] Explore found no hubs, falling back to multi-provider chain')
+      browseResult = await fetchMultiProviderRoutes(origin, destination, searchDate)
+    }
+
+    const { directPrice, hubRoutes, priceSource } = browseResult
 
     // Determine confidence based on the provider that actually returned data
     const confidence = priceSource === 'serpapi-live' ? 'live' as const

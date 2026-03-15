@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { majorAirports } from '@/lib/geolocation'
 import { searchCheapestDestinations, isKiwiAvailable } from '@/lib/kiwi'
+import { findCheapestDestinations, dateToMonth } from '@/lib/flight-providers/serpapi-explore'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,54 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // ── Priority 1: Kiwi "fly_to=anywhere" (real-time, includes LCCs) ──
+    // ── Priority 1: SerpApi Explore (1 call → 20-50 destinations with prices) ──
+    try {
+      const month = dateToMonth(departDate || undefined)
+      console.log(`[Discover API] Trying SerpApi Explore from ${origin}, month=${month}`)
+
+      const exploreDests = await findCheapestDestinations({
+        origin,
+        month,
+      })
+
+      if (exploreDests.length > 0) {
+        // Deduplicate by airport code (keep cheapest per city, already sorted by price)
+        const seen = new Set<string>()
+        const unique: typeof exploreDests = []
+        for (const d of exploreDests) {
+          if (!seen.has(d.airportCode) && d.airportCode !== origin && d.airportCode) {
+            seen.add(d.airportCode)
+            unique.push(d)
+          }
+          if (unique.length >= limit) break
+        }
+
+        const results = unique.map(d => ({
+          destination: d.airportCode,
+          city: d.name || getCityName(d.airportCode),
+          price: d.flightPrice,
+          departDate: d.startDate || (departDate && departDate.length === 10 ? departDate : `${departDate || new Date().toISOString().slice(0, 7)}-15`),
+          returnDate: d.endDate || null,
+          airline: d.airline || null,
+        }))
+
+        console.log(`[Discover API] SerpApi Explore returned ${results.length} destinations from ${origin}`)
+
+        return NextResponse.json({
+          origin,
+          results,
+          count: results.length,
+          priceSource: 'serpapi-explore',
+          priceNote: 'Live prices from Google — click to check and book.',
+        })
+      }
+
+      console.log('[Discover API] SerpApi Explore returned 0 results, trying Kiwi')
+    } catch (exploreErr) {
+      console.warn('[Discover API] SerpApi Explore failed, trying Kiwi:', exploreErr instanceof Error ? exploreErr.message : exploreErr)
+    }
+
+    // ── Priority 2: Kiwi "fly_to=anywhere" (real-time, includes LCCs) ──
     if (isKiwiAvailable()) {
       try {
         const searchDate = departDate && departDate.length === 10
@@ -83,7 +131,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // ── Priority 2: TravelPayouts cached prices ──
+    // ── Priority 3: TravelPayouts cached prices ──
     if (!TOKEN) {
       return NextResponse.json({ error: 'No API providers available' }, { status: 500 })
     }

@@ -5,7 +5,7 @@ import { calculateBudgetAllocation, PackageComponents, formatAllocationForAI, ge
 import { supabase } from '@/lib/supabase'
 import { AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { searchKiwiInspiration } from '@/lib/kiwi'
-import { getGoogleFlightsPrice } from '@/lib/flight-providers'
+import { findCheapestDestinations, vibeToInterest, daysToTravelDuration, dateToMonth } from '@/lib/flight-providers/serpapi-explore'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -300,87 +300,126 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    let priceInfo: { destination: string; city?: string; country?: string; price: number }[] = []
+    let priceInfo: { destination: string; city?: string; country?: string; price: number; startDate?: string; endDate?: string; airline?: string; stops?: number }[] = []
     let priceIsEstimate = false
+    let priceIsLive = false
 
     // Parse flexible date ranges
     const isFlexible = dates.startsWith('flexible:')
     const flexibleTimeframe = isFlexible ? dates.replace('flexible:', '') : null
     const flexibleRange = flexibleTimeframe ? calculateFlexibleDateRange(flexibleTimeframe) : null
 
-    // ── Parallel flight price fetching ───────────────────────────
-    // Fire both Kiwi and TravelPayouts in parallel, prefer Kiwi if both succeed
+    // ── Flight price fetching ────────────────────────────────────
+    // PRIMARY: SerpApi Explore (1 call → 20-50 destinations with live prices, dates, airlines)
+    // FALLBACK: Kiwi + TravelPayouts (if Explore returns empty / quota exhausted)
     const maxFlightPrice = Math.floor(budget * (userSplit.flights / 100))
 
-    let kiwiDateFrom: string
-    let kiwiDateTo: string
-    if (flexibleRange) {
-      kiwiDateFrom = flexibleRange.dateFrom
-      kiwiDateTo = flexibleRange.dateTo
-    } else {
-      const departDate = dates.split(' ')[0] || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
-      kiwiDateFrom = departDate
-      kiwiDateTo = new Date(new Date(departDate).getTime() + 30 * 86400000).toISOString().split('T')[0]
+    // Derive Explore params from user inputs
+    const exploreMonth = isFlexible
+      ? dateToMonth(flexibleRange?.dateFrom)
+      : dateToMonth(dates.split(' ')[0])
+    const exploreDuration = daysToTravelDuration(tripDuration)
+    const exploreInterest = vibeToInterest(vibes)
+
+    try {
+      const exploreDestinations = await findCheapestDestinations({
+        origin,
+        maxPrice: maxFlightPrice,
+        month: exploreMonth,
+        travelDuration: exploreDuration,
+        interest: exploreInterest,
+      })
+
+      if (exploreDestinations.length > 0) {
+        console.log(`[AI-Mystery] Using SerpApi Explore results (${exploreDestinations.length} destinations)`)
+        priceIsLive = true
+        priceInfo = exploreDestinations.map(d => ({
+          destination: d.airportCode,
+          city: d.name,
+          country: d.country,
+          price: d.flightPrice,
+          startDate: d.startDate,
+          endDate: d.endDate,
+          airline: d.airline,
+          stops: d.stops,
+        }))
+      }
+    } catch (err) {
+      console.error('[AI-Mystery] SerpApi Explore failed:', err instanceof Error ? err.message : err)
     }
 
-    const kiwiEnabled = AFFILIATE_FLAGS.kiwi && !!process.env.KIWI_API_KEY
-    const tpEnabled = !!TOKEN
+    // FALLBACK: Kiwi + TravelPayouts if Explore returned nothing
+    if (priceInfo.length === 0) {
+      console.log('[AI-Mystery] Explore empty, falling back to Kiwi + TravelPayouts')
 
-    // Build parallel fetch promises
-    const kiwiPromise = kiwiEnabled
-      ? searchKiwiInspiration({
-          origin,
-          dateFrom: kiwiDateFrom,
-          dateTo: kiwiDateTo,
-          maxPrice: maxFlightPrice,
-        }).then(results => results.map(r => ({
-          destination: r.flyTo,
-          city: r.cityTo,
-          country: r.countryTo?.name,
-          price: r.price,
-        })))
-      : Promise.resolve([] as { destination: string; city?: string; country?: string; price: number }[])
+      let kiwiDateFrom: string
+      let kiwiDateTo: string
+      if (flexibleRange) {
+        kiwiDateFrom = flexibleRange.dateFrom
+        kiwiDateTo = flexibleRange.dateTo
+      } else {
+        const departDate = dates.split(' ')[0] || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+        kiwiDateFrom = departDate
+        kiwiDateTo = new Date(new Date(departDate).getTime() + 30 * 86400000).toISOString().split('T')[0]
+      }
 
-    const tpPromise = tpEnabled
-      ? fetch(`${API_BASE}/v2/prices/latest?origin=${origin}&currency=usd&limit=30&token=${TOKEN}`, { next: { revalidate: 3600 } })
-          .then(async res => {
-            if (!res.ok) return []
-            const data = await res.json()
-            const destinations = data.data || []
-            return destinations
-              .filter((d: any) => d.value <= maxFlightPrice)
-              .slice(0, 20)
-              .map((d: any) => ({ destination: d.destination, price: d.value }))
-              .sort((a: any, b: any) => a.price - b.price)
-          })
-      : Promise.resolve([] as { destination: string; city?: string; country?: string; price: number }[])
+      const kiwiEnabled = AFFILIATE_FLAGS.kiwi && !!process.env.KIWI_API_KEY
+      const tpEnabled = !!TOKEN
 
-    // Await both in parallel
-    const [kiwiResult, tpResult] = await Promise.allSettled([kiwiPromise, tpPromise])
+      const kiwiPromise = kiwiEnabled
+        ? searchKiwiInspiration({
+            origin,
+            dateFrom: kiwiDateFrom,
+            dateTo: kiwiDateTo,
+            maxPrice: maxFlightPrice,
+          }).then(results => results.map(r => ({
+            destination: r.flyTo,
+            city: r.cityTo,
+            country: r.countryTo?.name,
+            price: r.price,
+          })))
+        : Promise.resolve([] as { destination: string; city?: string; country?: string; price: number }[])
 
-    const kiwiData = kiwiResult.status === 'fulfilled' ? kiwiResult.value : []
-    const tpData = tpResult.status === 'fulfilled' ? tpResult.value : []
+      const tpPromise = tpEnabled
+        ? fetch(`${API_BASE}/v2/prices/latest?origin=${origin}&currency=usd&limit=30&token=${TOKEN}`, { next: { revalidate: 3600 } })
+            .then(async res => {
+              if (!res.ok) return []
+              const data = await res.json()
+              const destinations = data.data || []
+              return destinations
+                .filter((d: any) => d.value <= maxFlightPrice)
+                .slice(0, 20)
+                .map((d: any) => ({ destination: d.destination, price: d.value }))
+                .sort((a: any, b: any) => a.price - b.price)
+            })
+        : Promise.resolve([] as { destination: string; city?: string; country?: string; price: number }[])
 
-    if (kiwiResult.status === 'rejected') {
-      console.error('[AI-Mystery] Kiwi failed:', kiwiResult.reason)
-    }
-    if (tpResult.status === 'rejected') {
-      console.error('[AI-Mystery] TravelPayouts failed:', tpResult.reason)
-    }
+      const [kiwiResult, tpResult] = await Promise.allSettled([kiwiPromise, tpPromise])
 
-    // Prefer Kiwi (richer data with city/country), fall back to TP
-    if (kiwiData.length > 0) {
-      console.log(`[AI-Mystery] Using Kiwi results (${kiwiData.length} destinations)`)
-      priceInfo = kiwiData
-    } else if (tpData.length > 0) {
-      console.log(`[AI-Mystery] Using TravelPayouts results (${tpData.length} destinations)`)
-      priceInfo = tpData
+      const kiwiData = kiwiResult.status === 'fulfilled' ? kiwiResult.value : []
+      const tpData = tpResult.status === 'fulfilled' ? tpResult.value : []
+
+      if (kiwiResult.status === 'rejected') {
+        console.error('[AI-Mystery] Kiwi failed:', kiwiResult.reason)
+      }
+      if (tpResult.status === 'rejected') {
+        console.error('[AI-Mystery] TravelPayouts failed:', tpResult.reason)
+      }
+
+      if (kiwiData.length > 0) {
+        console.log(`[AI-Mystery] Using Kiwi results (${kiwiData.length} destinations)`)
+        priceInfo = kiwiData
+      } else if (tpData.length > 0) {
+        console.log(`[AI-Mystery] Using TravelPayouts results (${tpData.length} destinations)`)
+        priceInfo = tpData
+      }
     }
 
     // Thin-cache fallback: use hardcoded destinations with estimated prices
     if (priceInfo.length < 5) {
       console.log('[AI-Mystery] Thin cache detected, using hardcoded fallback')
       priceIsEstimate = true
+      priceIsLive = false
       const region = getOriginRegion(origin)
       const fallbacks = FALLBACK_DESTINATIONS[region] || FALLBACK_DESTINATIONS['SE Asia']
 
@@ -412,6 +451,7 @@ export async function POST(request: NextRequest) {
     const systemPrompt = `Travel expert. Respond with valid JSON only.`
 
     const notes: string[] = []
+    if (priceIsLive) notes.push('Flight prices are LIVE from Google Flights. Destinations include best dates (startDate/endDate), airline, and stops — use these to suggest optimal departure/return dates.')
     if (priceIsEstimate) notes.push('Flight prices are estimates — flag with priceIsEstimate.')
     if (exclude.length > 0) notes.push(`Do NOT suggest: ${exclude.join(', ')}. Pick a DIFFERENT destination.`)
     if (flexibleRange) notes.push(`Flexible dates ${flexibleRange.dateFrom} to ${flexibleRange.dateTo}. Include suggestedDepartureDate and suggestedReturnDate (YYYY-MM-DD).`)
@@ -438,7 +478,7 @@ export async function POST(request: NextRequest) {
     if (components.includeTransportation) {
       optionalSections.push(`"local_transportation": {"airport_to_city":"...","daily_transport":"...","estimated_daily_cost":N}`)
     }
-    if (flexibleRange) {
+    if (flexibleRange || priceIsLive) {
       optionalSections.push(`"suggestedDepartureDate": "YYYY-MM-DD", "suggestedReturnDate": "YYYY-MM-DD"`)
     }
 
@@ -468,28 +508,21 @@ Pick ONE destination matching vibes. Explain WHY it matches (not just "affordabl
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.9, 2500)
     const result = parseAIJSON<MysteryResponse>(aiResponse.content)
 
-    // ── Real-time price validation via Google Flights (SerpApi) ────────
-    // Uses 1 of 250 free monthly searches to get live pricing for the chosen destination
-    const iata = result.iata || result.city_code_IATA
-    if (iata && !priceIsEstimate) {
-      const departDate = result.suggestedDepartureDate || dates.split(' ')[0] || kiwiDateFrom
-      const returnDate = result.suggestedReturnDate || (departDate ? new Date(new Date(departDate).getTime() + (tripDuration - 1) * 86400000).toISOString().split('T')[0] : undefined)
-
-      const livePrice = await getGoogleFlightsPrice(origin, iata, departDate, returnDate)
-
-      if (livePrice) {
-        console.log(`[AI-Mystery] Google Flights live price: $${livePrice.price} (${livePrice.airlines.join(', ')}, ${livePrice.stops} stops, ${livePrice.duration})`)
-        result.googleFlightsPrice = livePrice.price
-        result.googleFlightsPriceLevel = livePrice.priceLevel
-        result.googleFlightsTypicalRange = livePrice.typicalRange
-        result.googleFlightsAirlines = livePrice.airlines
-        result.googleFlightsStops = livePrice.stops
-        result.googleFlightsDuration = livePrice.duration
-        // Update the indicative price if Google Flights has real data
-        result.indicativeFlightPrice = livePrice.price
-        result.estimated_flight_cost = livePrice.price
-        result.priceIsLive = true
+    // ── Apply live pricing from Explore data ────────────────────────
+    if (priceIsLive) {
+      // Explore data is already live from Google — no need for a 2nd SerpApi call
+      const iata = result.iata || result.city_code_IATA
+      const matchedExplore = priceInfo.find(d => d.destination === iata)
+      if (matchedExplore) {
+        result.googleFlightsPrice = matchedExplore.price
+        result.googleFlightsAirlines = matchedExplore.airline ? [matchedExplore.airline] : undefined
+        result.googleFlightsStops = matchedExplore.stops
+        result.indicativeFlightPrice = matchedExplore.price
+        result.estimated_flight_cost = matchedExplore.price
+        if (matchedExplore.startDate) result.suggestedDepartureDate = matchedExplore.startDate
+        if (matchedExplore.endDate) result.suggestedReturnDate = matchedExplore.endDate
       }
+      result.priceIsLive = true
     }
 
     // Add priceIsEstimate flag

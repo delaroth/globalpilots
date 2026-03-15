@@ -4,6 +4,7 @@ import { getCached, setCache } from '@/lib/cache'
 import { buildFlightLink } from '@/lib/affiliate'
 import { getDestinationCost, getAllDestinations, type BudgetTier } from '@/lib/destination-costs'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { findCheapestDestinations, dateToMonth, vibeToInterest } from '@/lib/flight-providers/serpapi-explore'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,22 +52,74 @@ interface RealPriceCandidate {
   city: string
   country: string
   region: string
-  flightPrice: number        // Real price from TravelPayouts
+  flightPrice: number        // Real price from SerpApi Explore or TravelPayouts
   dailyCost: number          // From destination-costs.ts
-  source: 'travelpayouts'
+  source: 'serpapi-explore' | 'travelpayouts'
 }
 
 /**
- * Fetch real flight prices from TravelPayouts and cross-reference
- * with destination-costs.ts for daily costs.
+ * Fetch real flight prices from SerpApi Explore (primary) with TravelPayouts fallback,
+ * cross-referenced with destination-costs.ts for daily costs.
  *
  * Returns candidates with REAL flight prices and REAL daily costs.
  */
 async function fetchRealCandidates(
   origin: string,
   budgetTier: BudgetTier,
-  maxFlightPrice?: number
+  maxFlightPrice?: number,
+  departureDate?: string,
+  vibes?: string[]
 ): Promise<RealPriceCandidate[]> {
+  // ── Priority 1: SerpApi Explore (1 call → 20-50 destinations) ──
+  try {
+    const month = dateToMonth(departureDate)
+    const interest = vibes ? vibeToInterest(vibes) : undefined
+
+    console.log(`[Multi-City] Trying SerpApi Explore from ${origin}, month=${month}, interest=${interest || 'none'}`)
+
+    const exploreDests = await findCheapestDestinations({
+      origin,
+      month,
+      interest,
+    })
+
+    if (exploreDests.length > 0) {
+      const candidates: RealPriceCandidate[] = []
+
+      for (const d of exploreDests) {
+        if (!d.airportCode) continue
+        if (maxFlightPrice && d.flightPrice > maxFlightPrice) continue
+
+        // Cross-reference with our cost database for daily costs
+        const costData = getDestinationCost(d.airportCode)
+        if (!costData) continue // Skip cities we don't have daily cost data for
+
+        const daily = costData.dailyCosts[budgetTier]
+        const dailyTotal = daily.hotel + daily.food + daily.transport + daily.activities
+
+        candidates.push({
+          iata: d.airportCode,
+          city: costData.city || d.name,
+          country: costData.country || d.country,
+          region: costData.region,
+          flightPrice: d.flightPrice,
+          dailyCost: dailyTotal,
+          source: 'serpapi-explore' as const,
+        })
+      }
+
+      if (candidates.length > 0) {
+        console.log(`[Multi-City] SerpApi Explore returned ${candidates.length} candidates`)
+        return candidates.sort((a, b) => a.flightPrice - b.flightPrice)
+      }
+    }
+
+    console.log('[Multi-City] SerpApi Explore returned 0 usable candidates, falling back to TravelPayouts')
+  } catch (err) {
+    console.warn('[Multi-City] SerpApi Explore failed, falling back to TravelPayouts:', err instanceof Error ? err.message : err)
+  }
+
+  // ── Priority 2: TravelPayouts cached prices ──
   if (!TRAVELPAYOUTS_TOKEN) return []
 
   try {
@@ -200,10 +253,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(cached)
     }
 
-    // ─── Pre-fetch real prices from TravelPayouts ───
+    // ─── Pre-fetch real prices (SerpApi Explore primary, TravelPayouts fallback) ───
     const budgetTier = accomToBudgetTier(accommodationLevel)
     const maxFlightBudget = Math.floor(totalBudget * 0.5) // Don't show flights over 50% of total budget
-    const realCandidates = await fetchRealCandidates(origin, budgetTier, maxFlightBudget)
+    const realCandidates = await fetchRealCandidates(origin, budgetTier, maxFlightBudget, departureDate, vibe)
 
     // Filter by region if specified
     let filteredCandidates = realCandidates
