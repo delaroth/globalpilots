@@ -309,24 +309,19 @@ export function buildHotelLink(
 
   const formatDate = (d: Date) => d.toISOString().split('T')[0]
 
-  // Include country in the search text so Agoda resolves the correct city
+  // Use Booking.com — works with city names in URL (Agoda requires numeric IDs)
   const searchText = options?.country
     ? `${cityName}, ${options.country}`
     : cityName
 
-  let url = `https://www.agoda.com/search?textToSearch=${encodeURIComponent(searchText)}&checkIn=${formatDate(checkInDate)}&checkOut=${formatDate(checkOutDate)}&adults=1`
+  let url = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(searchText)}&checkin=${formatDate(checkInDate)}&checkout=${formatDate(checkOutDate)}&group_adults=1&no_rooms=1`
 
-  // Budget constraints — align hotel search with Side Quest math
+  // Budget constraints
   if (options?.maxPricePerNight) {
-    url += `&priceTo=${options.maxPricePerNight}`
+    url += `&nflt=price%3DUSD-min-${options.maxPricePerNight}-1`
   }
   if (options?.sortByPrice) {
-    url += `&sort=priceLowToHigh`
-  }
-
-  // Only append affiliate tracking when commissions are allowed
-  if (isAffiliateActive('agoda') && process.env.AGODA_AFFILIATE_ID) {
-    url += `&cid=${process.env.AGODA_AFFILIATE_ID}`
+    url += `&order=price`
   }
 
   return url

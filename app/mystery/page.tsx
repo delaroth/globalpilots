@@ -5,12 +5,10 @@ import Link from 'next/link'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 import CurrencySelector from '@/components/CurrencySelector'
 import { useCurrency } from '@/hooks/useCurrency'
-import MysteryLoading from '@/components/MysteryLoading'
 import MysteryReveal from '@/components/MysteryReveal'
-import ClueReveal from '@/components/ClueReveal'
 import MultiCityResults from '@/components/MultiCityResults'
 import type { TripResult } from '@/components/MultiCityResults'
-import { searchAirports, majorAirports } from '@/lib/geolocation'
+import { searchAirports } from '@/lib/geolocation'
 import SocialProof from '@/components/SocialProof'
 import PassportButton from '@/components/PassportButton'
 import TripHistory from '@/components/TripHistory'
@@ -18,11 +16,11 @@ import CompareReveals from '@/components/CompareReveals'
 import type { SavedTrip } from '@/lib/trip-history'
 
 const vibeOptions = [
-  { emoji: '🏖', label: 'Beach', value: 'beach' },
-  { emoji: '🏙', label: 'City Break', value: 'city' },
-  { emoji: '🏔', label: 'Adventure', value: 'adventure' },
-  { emoji: '🍜', label: 'Food & Culture', value: 'food' },
-  { emoji: '🌿', label: 'Nature', value: 'nature' },
+  { emoji: '\u{1F3D6}', label: 'Beach', value: 'beach' },
+  { emoji: '\u{1F3D9}', label: 'City Break', value: 'city' },
+  { emoji: '\u{1F3D4}', label: 'Adventure', value: 'adventure' },
+  { emoji: '\u{1F35C}', label: 'Food & Culture', value: 'food' },
+  { emoji: '\u{1F33F}', label: 'Nature', value: 'nature' },
 ]
 
 const timeframeOptions = [
@@ -34,11 +32,11 @@ const timeframeOptions = [
 ]
 
 const accommodationLevels = [
-  { label: 'Hostel', value: 'hostel', icon: '🏕️', desc: '$10-30/night', maxPerNight: 30 },
-  { label: 'Budget', value: 'budget', icon: '🏠', desc: '$30-60/night', maxPerNight: 60 },
-  { label: 'Mid-Range', value: 'mid-range', icon: '🏨', desc: '$60-120/night', maxPerNight: 120 },
-  { label: 'Upscale', value: 'upscale', icon: '🏩', desc: '$120-250/night', maxPerNight: 250 },
-  { label: 'Luxury', value: 'luxury', icon: '✨', desc: '$250+/night', maxPerNight: 500 },
+  { label: 'Hostel', value: 'hostel', icon: '\u{1F3D5}\uFE0F', desc: '$10-30/night', maxPerNight: 30 },
+  { label: 'Budget', value: 'budget', icon: '\u{1F3E0}', desc: '$30-60/night', maxPerNight: 60 },
+  { label: 'Mid-Range', value: 'mid-range', icon: '\u{1F3E8}', desc: '$60-120/night', maxPerNight: 120 },
+  { label: 'Upscale', value: 'upscale', icon: '\u{1F3E9}', desc: '$120-250/night', maxPerNight: 250 },
+  { label: 'Luxury', value: 'luxury', icon: '\u2728', desc: '$250+/night', maxPerNight: 500 },
 ]
 
 const budgetPriorities = [
@@ -51,11 +49,11 @@ const budgetPriorities = [
 const travellerTypes = ['Solo', 'Couple', 'Group']
 
 const quickThemes = [
-  { emoji: '🏖️', label: 'Beach Escape', vibes: ['beach'], budgetMin: '500', budgetMax: '800', color: 'from-cyan-400 to-blue-400' },
-  { emoji: '🏙️', label: 'City Culture', vibes: ['city', 'food'], budgetMin: '600', budgetMax: '1000', color: 'from-purple-400 to-pink-400' },
-  { emoji: '🏔️', label: 'Adventure Trip', vibes: ['adventure', 'nature'], budgetMin: '400', budgetMax: '700', color: 'from-green-400 to-emerald-500' },
-  { emoji: '🍜', label: 'Foodie Tour', vibes: ['food'], budgetMin: '500', budgetMax: '900', color: 'from-orange-400 to-red-400' },
-  { emoji: '🎒', label: 'Budget Backpacker', vibes: [], budgetMin: '300', budgetMax: '500', color: 'from-yellow-400 to-amber-500' },
+  { emoji: '\u{1F3D6}\uFE0F', label: 'Beach Escape', vibes: ['beach'], budgetMin: '500', budgetMax: '800', color: 'from-cyan-400 to-blue-400' },
+  { emoji: '\u{1F3D9}\uFE0F', label: 'City Culture', vibes: ['city', 'food'], budgetMin: '600', budgetMax: '1000', color: 'from-purple-400 to-pink-400' },
+  { emoji: '\u{1F3D4}\uFE0F', label: 'Adventure Trip', vibes: ['adventure', 'nature'], budgetMin: '400', budgetMax: '700', color: 'from-green-400 to-emerald-500' },
+  { emoji: '\u{1F35C}', label: 'Foodie Tour', vibes: ['food'], budgetMin: '500', budgetMax: '900', color: 'from-orange-400 to-red-400' },
+  { emoji: '\u{1F392}', label: 'Budget Backpacker', vibes: [], budgetMin: '300', budgetMax: '500', color: 'from-yellow-400 to-amber-500' },
 ]
 
 const regionOptions = [
@@ -79,7 +77,8 @@ export default function MysteryPage() {
 
   const currency = useCurrency()
 
-  const [step, setStep] = useState<'form' | 'loading' | 'loading-clues' | 'reveal'>('form')
+  // New simplified search state: idle | searching | quick-ready | ready
+  const [searchState, setSearchState] = useState<'idle' | 'searching' | 'quick-ready' | 'ready'>('idle')
   const [budget, setBudget] = useState('')
   const [origin, setOrigin] = useState('')
   const [originInputText, setOriginInputText] = useState('') // Track raw input text
@@ -92,9 +91,8 @@ export default function MysteryPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [destination, setDestination] = useState<any>(null)
   const [error, setError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false) // Track button state
   const errorRef = useRef<HTMLDivElement>(null)
-  const revealRef = useRef<HTMLDivElement>(null)
+  const resultsRef = useRef<HTMLDivElement>(null)
 
   // Re-roll state
   const [excludeList, setExcludeList] = useState<string[]>([])
@@ -115,25 +113,14 @@ export default function MysteryPage() {
   const [themeNotification, setThemeNotification] = useState<string | null>(null)
   const originSectionRef = useRef<HTMLDivElement>(null)
 
-  // Loading-clues flow: track whether API data arrived and clue animation finished
-  const [apiDataReady, setApiDataReady] = useState(false)
-  const [clueAnimationDone, setClueAnimationDone] = useState(false)
-
   // Two-phase reveal: quick data (destination name/price) arrives fast, AI details stream in later
   const [detailsLoading, setDetailsLoading] = useState(false)
 
-  // When both the API data and clue animation are done, transition to reveal
-  useEffect(() => {
-    if (step === 'loading-clues' && apiDataReady && clueAnimationDone && destination) {
-      setStep('reveal')
-      setIsSubmitting(false)
-    }
-  }, [step, apiDataReady, clueAnimationDone, destination])
+  // Abort controller for cancellation
+  const abortControllerRef = useRef<AbortController | null>(null)
 
-  // Stable callback for ClueReveal onComplete
-  const handlePreviewClueComplete = useCallback(() => {
-    setClueAnimationDone(true)
-  }, [])
+  // Notification bar dismissed state
+  const [notificationDismissed, setNotificationDismissed] = useState(false)
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -171,16 +158,6 @@ export default function MysteryPage() {
     }
   }, [error])
 
-  // Auto-scroll to reveal section when result arrives
-  useEffect(() => {
-    if (step === 'reveal' && destination && revealRef.current) {
-      // Small delay to ensure DOM is fully rendered
-      setTimeout(() => {
-        revealRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 100)
-    }
-  }, [step, destination])
-
   // Pre-fill origin from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined' && !origin) {
@@ -200,6 +177,10 @@ export default function MysteryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const scrollToResults = useCallback(() => {
+    resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
   const handleVibeToggle = (vibe: string) => {
     if (error) setError('') // Clear error when user interacts
     if (selectedVibes.includes(vibe)) {
@@ -209,11 +190,25 @@ export default function MysteryPage() {
     }
   }
 
+  const handleCancel = () => {
+    // Abort any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+    setSearchState('idle')
+    setDestination(null)
+    setMultiCityResult(null)
+    setDetailsLoading(false)
+    setNotificationDismissed(false)
+    setError('')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     console.log('[Mystery] Form submitted - starting validation...')
     setError('')
-    setIsSubmitting(true) // Show loading state immediately
+    setNotificationDismissed(false)
 
     // Auto-resolve origin if user typed text but didn't select from dropdown
     let resolvedOrigin = origin
@@ -232,11 +227,11 @@ export default function MysteryPage() {
 
         if (exactMatch) {
           resolvedOrigin = exactMatch.code
-          console.log('[Mystery] ✅ Auto-resolved "' + originInputText + '" to ' + resolvedOrigin)
+          console.log('[Mystery] Auto-resolved "' + originInputText + '" to ' + resolvedOrigin)
         } else if (matches.length === 1) {
           // Only one match, use it
           resolvedOrigin = matches[0].code
-          console.log('[Mystery] ✅ Auto-resolved "' + originInputText + '" to ' + resolvedOrigin + ' (single match)')
+          console.log('[Mystery] Auto-resolved "' + originInputText + '" to ' + resolvedOrigin + ' (single match)')
         }
       }
     }
@@ -248,7 +243,6 @@ export default function MysteryPage() {
         : 'Please select your departure city!'
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
-      setIsSubmitting(false)
       return
     }
 
@@ -256,7 +250,6 @@ export default function MysteryPage() {
       const errorMsg = 'Please enter a budget greater than $0!'
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
-      setIsSubmitting(false)
       return
     }
 
@@ -265,7 +258,6 @@ export default function MysteryPage() {
       const errorMsg = `Please enter a budget of at least $${minBudget}!`
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
-      setIsSubmitting(false)
       return
     }
 
@@ -273,7 +265,6 @@ export default function MysteryPage() {
       const errorMsg = 'Please select at least one vibe!'
       console.error('[Mystery] Validation failed:', errorMsg)
       setError(errorMsg)
-      setIsSubmitting(false)
       return
     }
 
@@ -282,7 +273,6 @@ export default function MysteryPage() {
         const errorMsg = 'Please select a departure date!'
         console.error('[Mystery] Validation failed:', errorMsg)
         setError(errorMsg)
-        setIsSubmitting(false)
         return
       }
 
@@ -292,23 +282,27 @@ export default function MysteryPage() {
       today.setHours(0, 0, 0, 0)
 
       if (selectedDate < today) {
-        const errorMsg = 'Please select a future date! Time travel tickets are unfortunately not available yet. 🕰️'
+        const errorMsg = 'Please select a future date! Time travel tickets are unfortunately not available yet. \u{1F570}\uFE0F'
         console.error('[Mystery] Validation failed:', errorMsg)
         setError(errorMsg)
-        setIsSubmitting(false)
         return
       }
     }
 
     console.log('[Mystery] All validations passed! Starting search with:', { origin: resolvedOrigin, budget, vibes: selectedVibes, departDate, numCities })
 
-    // ─── Multi-city mystery flow (uses old MysteryLoading) ───
+    // Create a new abort controller for this request
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
+    // --- Multi-city mystery flow ---
     if (numCities > 1) {
-      setStep('loading')
+      setSearchState('searching')
       try {
         const response = await fetch('/api/multi-city', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: abortController.signal,
           body: JSON.stringify({
             origin: resolvedOrigin,
             totalBudget: parseFloat(budget),
@@ -335,26 +329,27 @@ export default function MysteryPage() {
         }
 
         setMultiCityResult(data)
-        setStep('reveal')
-        setIsSubmitting(false)
+        setSearchState('ready')
+        // Auto-scroll to results
+        setTimeout(() => {
+          resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 100)
       } catch (err) {
+        if ((err as Error).name === 'AbortError') return // User cancelled
         const errorMsg = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
         setError(errorMsg)
-        setStep('form')
-        setIsSubmitting(false)
+        setSearchState('idle')
       }
       return
     }
 
-    // ─── Single-city mystery flow (two-phase: quick pick + AI details) ───
-    // Reset loading-clues tracking state and show clue animation immediately
-    setApiDataReady(false)
-    setClueAnimationDone(false)
+    // --- Single-city mystery flow (two-phase: quick pick + AI details) ---
+    setSearchState('searching')
+    setDestination(null)
     setDetailsLoading(false)
-    setStep('loading-clues')
 
     const requestDates = dateMode === 'specific'
-      ? `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`
+      ? `${departDate}${flexibleDates ? ' (flexible \u00B13 days)' : ''}`
       : `flexible:${timeframe}`
 
     const requestBody = {
@@ -371,11 +366,12 @@ export default function MysteryPage() {
       customSplit: showAdvancedBudget ? customSplit : undefined,
     }
 
-    // Phase 1: Quick pick (fast — only calls SerpApi Explore, no AI)
+    // Phase 1: Quick pick (fast -- only calls SerpApi Explore, no AI)
     console.log('[Mystery] Phase 1: Making quick-pick API call...')
     fetch('/api/ai-mystery/quick', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: abortController.signal,
       body: JSON.stringify(requestBody),
     })
       .then(async (response) => {
@@ -396,11 +392,14 @@ export default function MysteryPage() {
           throw new Error(`Invalid quick pick response: destination=${quickData.destination}, iata=${quickData.city_code_IATA}`)
         }
 
-        // If this was a full cache hit, we have everything — skip phase 2
+        // If this was a full cache hit, we have everything -- skip phase 2
         if (quickData._cacheHit) {
-          console.log('[Mystery] Full cache hit — skipping Phase 2')
+          console.log('[Mystery] Full cache hit -- skipping Phase 2')
           setDestination(quickData)
-          setApiDataReady(true)
+          setSearchState('ready')
+          setTimeout(() => {
+            resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }, 100)
           return
         }
 
@@ -420,7 +419,7 @@ export default function MysteryPage() {
           googleFlightsStops: quickData.googleFlightsStops,
           suggestedDepartureDate: quickData.suggestedDepartureDate,
           suggestedReturnDate: quickData.suggestedReturnDate,
-          // Placeholder fields — will be filled by Phase 2
+          // Placeholder fields -- will be filled by Phase 2
           whyThisPlace: '',
           why_its_perfect: '',
           itinerary: [],
@@ -442,7 +441,7 @@ export default function MysteryPage() {
 
         // Reveal immediately with partial data
         setDestination(partialDestination)
-        setApiDataReady(true)
+        setSearchState('quick-ready')
 
         // Phase 2: Fire AI details in the background
         console.log('[Mystery] Phase 2: Fetching AI details for', quickData.destination, '...')
@@ -451,6 +450,7 @@ export default function MysteryPage() {
         fetch('/api/ai-mystery/details', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: abortController.signal,
           body: JSON.stringify({
             destination: quickData.destination,
             country: quickData.country,
@@ -472,6 +472,7 @@ export default function MysteryPage() {
             if (!detailsResponse.ok) {
               console.warn('[Mystery] Phase 2 failed, continuing with partial data')
               setDetailsLoading(false)
+              setSearchState('ready')
               return
             }
             const detailsData = await detailsResponse.json()
@@ -501,19 +502,25 @@ export default function MysteryPage() {
               }
             })
             setDetailsLoading(false)
+            setSearchState('ready')
           })
           .catch((err) => {
+            if ((err as Error).name === 'AbortError') return
             console.warn('[Mystery] Phase 2 error (non-fatal):', err)
             setDetailsLoading(false)
+            setSearchState('ready')
           })
       })
       .catch((err) => {
-        // Phase 1 failed — fall back to original single-API endpoint
+        if ((err as Error).name === 'AbortError') return // User cancelled
+
+        // Phase 1 failed -- fall back to original single-API endpoint
         console.warn('[Mystery] Quick pick failed, falling back to full API:', err.message, err.stack)
 
         fetch('/api/ai-mystery', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: abortController.signal,
           body: JSON.stringify(requestBody),
         })
           .then(async (response) => {
@@ -528,14 +535,17 @@ export default function MysteryPage() {
             if (!data.destination || !data.city_code_IATA) throw new Error('Invalid response from server.')
 
             setDestination(data)
-            setApiDataReady(true)
+            setSearchState('ready')
+            setTimeout(() => {
+              resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }, 100)
           })
           .catch((fallbackErr) => {
+            if ((fallbackErr as Error).name === 'AbortError') return
             const errorMsg = fallbackErr instanceof Error ? fallbackErr.message : 'Something went wrong. Please try again.'
             console.error('[Mystery] Both quick and fallback APIs failed:', fallbackErr)
             setError(errorMsg)
-            setStep('form')
-            setIsSubmitting(false)
+            setSearchState('idle')
           })
       })
   }
@@ -546,6 +556,7 @@ export default function MysteryPage() {
     excludeListRef.current = []
     setRerollCount(0)
     setDestination(null)
+    setMultiCityResult(null)
     handleSubmit({ preventDefault: () => {} } as React.FormEvent)
   }
 
@@ -568,16 +579,10 @@ export default function MysteryPage() {
   }
 
   const handleReset = () => {
-    setStep('form')
-    setDestination(null)
-    setMultiCityResult(null)
-    setError('')
+    handleCancel()
     setExcludeList([])
     excludeListRef.current = []
     setRerollCount(0)
-    setApiDataReady(false)
-    setClueAnimationDone(false)
-    setDetailsLoading(false)
     setActiveTheme(null)
     setThemeNotification(null)
   }
@@ -633,6 +638,9 @@ export default function MysteryPage() {
     }, 100)
   }
 
+  const isSearching = searchState !== 'idle'
+  const hasResults = (searchState === 'quick-ready' || searchState === 'ready') && (destination || multiCityResult)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
       {/* Navigation */}
@@ -652,7 +660,7 @@ export default function MysteryPage() {
               My Trips
             </button>
             <Link href="/" className="text-skyblue hover:text-skyblue-light transition">
-              ← Back to Home
+              &larr; Back to Home
             </Link>
           </div>
         </div>
@@ -662,7 +670,7 @@ export default function MysteryPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Mystery Vacation ✨
+            Mystery Vacation &#x2728;
           </h1>
           <p className="text-xl text-skyblue-light">
             Let AI surprise you with the perfect destination
@@ -672,58 +680,59 @@ export default function MysteryPage() {
           </div>
         </div>
 
-        {/* Step 1: Form */}
-        {step === 'form' && (
-          <div className="max-w-3xl mx-auto">
-            {/* Quick Picks / Theme Buttons */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-white text-center mb-4">Quick Picks</h2>
-              <div className="flex flex-wrap justify-center gap-3">
-                {quickThemes.map((theme) => (
-                  <button
-                    key={theme.label}
-                    type="button"
-                    onClick={() => handleThemeSelect(theme)}
-                    className={`bg-gradient-to-r ${theme.color} text-white font-semibold px-5 py-2.5 rounded-full shadow-lg transition-all transform hover:scale-105 hover:shadow-xl active:scale-95 text-sm ${
-                      activeTheme === theme.label ? 'ring-4 ring-white/60 scale-105' : ''
-                    }`}
-                  >
-                    {theme.emoji} {theme.label}
-                    <span className="block text-xs font-normal opacity-80">
-                      ${theme.budgetMin}-${theme.budgetMax}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              {activeTheme && (
-                <p className="text-center text-skyblue-light text-sm mt-3">
-                  {activeTheme} selected! Pick your city and dates below, then hit Surprise Me.
-                </p>
-              )}
-            </div>
-
-            {/* Theme auto-fill notification */}
-            {themeNotification && (
-              <div className="mb-4 bg-skyblue/10 border border-skyblue/30 rounded-lg px-4 py-3 flex items-center justify-between animate-fade-in">
-                <p className="text-skyblue-light text-sm font-medium">
-                  {themeNotification}
-                </p>
+        {/* Form -- always visible, greyed out while searching */}
+        <div className="max-w-3xl mx-auto">
+          {/* Quick Picks / Theme Buttons */}
+          <div className={`mb-6 ${isSearching ? 'opacity-50 pointer-events-none' : ''}`}>
+            <h2 className="text-lg font-semibold text-white text-center mb-4">Quick Picks</h2>
+            <div className="flex flex-wrap justify-center gap-3">
+              {quickThemes.map((theme) => (
                 <button
+                  key={theme.label}
                   type="button"
-                  onClick={() => setThemeNotification(null)}
-                  className="text-skyblue-light/70 hover:text-white ml-4 text-lg leading-none"
-                  aria-label="Dismiss notification"
+                  onClick={() => handleThemeSelect(theme)}
+                  disabled={isSearching}
+                  className={`bg-gradient-to-r ${theme.color} text-white font-semibold px-5 py-2.5 rounded-full shadow-lg transition-all transform hover:scale-105 hover:shadow-xl active:scale-95 text-sm ${
+                    activeTheme === theme.label ? 'ring-4 ring-white/60 scale-105' : ''
+                  }`}
                 >
-                  ✕
+                  {theme.emoji} {theme.label}
+                  <span className="block text-xs font-normal opacity-80">
+                    ${theme.budgetMin}-${theme.budgetMax}
+                  </span>
                 </button>
-              </div>
+              ))}
+            </div>
+            {activeTheme && (
+              <p className="text-center text-skyblue-light text-sm mt-3">
+                {activeTheme} selected! Pick your city and dates below, then hit Surprise Me.
+              </p>
             )}
+          </div>
 
-            <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
+          {/* Theme auto-fill notification */}
+          {themeNotification && (
+            <div className="mb-4 bg-skyblue/10 border border-skyblue/30 rounded-lg px-4 py-3 flex items-center justify-between animate-fade-in">
+              <p className="text-skyblue-light text-sm font-medium">
+                {themeNotification}
+              </p>
+              <button
+                type="button"
+                onClick={() => setThemeNotification(null)}
+                className="text-skyblue-light/70 hover:text-white ml-4 text-lg leading-none"
+                aria-label="Dismiss notification"
+              >
+                &#x2715;
+              </button>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className={`bg-white rounded-2xl shadow-2xl p-6 md:p-8 transition-opacity ${isSearching ? 'opacity-60' : ''}`}>
+            <fieldset disabled={isSearching}>
               {/* Number of Destinations */}
               <div className="mb-6">
                 <label className="block text-lg font-semibold text-navy mb-3">
-                  How many destinations? 🗺️
+                  How many destinations? &#x1F5FA;&#xFE0F;
                 </label>
                 <div className="grid grid-cols-5 gap-3">
                   {[1, 2, 3, 4, 5].map((n) => (
@@ -751,7 +760,7 @@ export default function MysteryPage() {
               {/* Budget */}
               <div className="mb-6">
                 <label htmlFor="budget" className="block text-lg font-semibold text-navy mb-2">
-                  What's your budget? 💰
+                  What&apos;s your budget? &#x1F4B0;
                 </label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -782,10 +791,10 @@ export default function MysteryPage() {
                 <p className="text-sm text-gray-600 mt-1">
                   {numCities === 1
                     ? 'Total budget for flights + accommodation + activities'
-                    : `Total budget for all ${numCities} cities — flights + daily expenses`}
+                    : `Total budget for all ${numCities} cities \u2014 flights + daily expenses`}
                   {!currency.isUSD && budget && Number(budget) > 0 && currency.rate && (
                     <span className="text-gray-400 ml-1">
-                      (≈ ${currency.toUSD(Number(budget))} USD)
+                      (\u2248 ${currency.toUSD(Number(budget))} USD)
                     </span>
                   )}
                 </p>
@@ -794,7 +803,7 @@ export default function MysteryPage() {
               {/* Accommodation Level */}
               <div className="mb-6">
                 <label className="block text-lg font-semibold text-navy mb-3">
-                  What kind of stays? 🛏️
+                  What kind of stays? &#x1F6CF;&#xFE0F;
                 </label>
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                   {accommodationLevels.map((level) => (
@@ -819,7 +828,7 @@ export default function MysteryPage() {
               {/* Budget Priority */}
               <div className="mb-6">
                 <label className="block text-lg font-semibold text-navy mb-3">
-                  Where should we focus your budget? 🎯
+                  Where should we focus your budget? &#x1F3AF;
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {budgetPriorities.map((priority) => (
@@ -854,7 +863,7 @@ export default function MysteryPage() {
                   onClick={() => setShowAdvancedBudget(!showAdvancedBudget)}
                   className="mt-3 text-sm text-skyblue hover:text-skyblue/80 transition flex items-center gap-1"
                 >
-                  <span className={`transition-transform ${showAdvancedBudget ? 'rotate-90' : ''}`}>▸</span>
+                  <span className={`transition-transform ${showAdvancedBudget ? 'rotate-90' : ''}`}>&#x25B8;</span>
                   {showAdvancedBudget ? 'Hide custom split' : 'Customize exact split'}
                 </button>
 
@@ -867,9 +876,9 @@ export default function MysteryPage() {
                       </p>
                     )}
                     {[
-                      { key: 'flights' as const, label: 'Flights', emoji: '✈️' },
-                      { key: 'hotels' as const, label: 'Hotels', emoji: '🏨' },
-                      { key: 'activities' as const, label: 'Food & Activities', emoji: '🎭' },
+                      { key: 'flights' as const, label: 'Flights', emoji: '\u2708\uFE0F' },
+                      { key: 'hotels' as const, label: 'Hotels', emoji: '\u{1F3E8}' },
+                      { key: 'activities' as const, label: 'Food & Activities', emoji: '\u{1F3AD}' },
                     ].map(({ key, label, emoji }) => {
                       const pct = customSplit[key]
                       const amount = budget ? Math.floor(Number(budget) * 0.92 * (pct / 100)) : 0
@@ -935,7 +944,7 @@ export default function MysteryPage() {
               {/* Departure City */}
               <div className="mb-6" ref={originSectionRef}>
                 <label htmlFor="origin" className="block text-lg font-semibold text-navy mb-2">
-                  Where are you flying from? ✈️
+                  Where are you flying from? &#x2708;&#xFE0F;
                 </label>
                 <AirportAutocomplete
                   id="origin"
@@ -951,7 +960,7 @@ export default function MysteryPage() {
               {/* Travel Dates */}
               <div className="mb-6">
                 <label className="block text-lg font-semibold text-navy mb-2">
-                  When do you want to go? 📅
+                  When do you want to go? &#x1F4C5;
                 </label>
                 {/* Date Mode Toggle */}
                 <div className="flex rounded-lg overflow-hidden border-2 border-gray-200 mb-4">
@@ -999,7 +1008,7 @@ export default function MysteryPage() {
                         className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
                       />
                       <span className="ml-2 text-gray-700">
-                        My dates are flexible (±3 days)
+                        My dates are flexible (&plusmn;3 days)
                       </span>
                     </label>
                   </>
@@ -1029,7 +1038,7 @@ export default function MysteryPage() {
               {/* Vibes */}
               <div className="mb-6">
                 <label className="block text-lg font-semibold text-navy mb-3">
-                  What's your vibe? 🎭 (Select all that apply)
+                  What&apos;s your vibe? &#x1F3AD; (Select all that apply)
                 </label>
                 <div className="flex flex-wrap gap-3">
                   {vibeOptions.map((vibe) => (
@@ -1049,11 +1058,11 @@ export default function MysteryPage() {
                 </div>
               </div>
 
-              {/* Region — multi-city only */}
+              {/* Region -- multi-city only */}
               {numCities > 1 && (
                 <div className="mb-6">
                   <label htmlFor="region" className="block text-lg font-semibold text-navy mb-2">
-                    Region preference 🌍
+                    Region preference &#x1F30D;
                   </label>
                   <select
                     id="region"
@@ -1068,11 +1077,11 @@ export default function MysteryPage() {
                 </div>
               )}
 
-              {/* Traveller Type — single city only */}
+              {/* Traveller Type -- single city only */}
               {numCities === 1 && (
                 <div className="mb-6">
                   <label className="block text-lg font-semibold text-navy mb-3">
-                    Travelling as... 👥
+                    Travelling as... &#x1F465;
                   </label>
                   <div className="grid grid-cols-3 gap-3">
                     {travellerTypes.map((type) => (
@@ -1096,7 +1105,7 @@ export default function MysteryPage() {
               {/* Trip Duration */}
               <div className="mb-6">
                 <label className="block text-lg font-semibold text-navy mb-2">
-                  Trip Duration: {tripDuration} day{tripDuration !== 1 ? 's' : ''} 🗓️
+                  Trip Duration: {tripDuration} day{tripDuration !== 1 ? 's' : ''} &#x1F5D3;&#xFE0F;
                 </label>
                 <input
                   type="range"
@@ -1112,10 +1121,10 @@ export default function MysteryPage() {
                 </div>
               </div>
 
-              {/* Package Components — single city only */}
+              {/* Package Components -- single city only */}
               {numCities === 1 && (<div className="mb-6">
                 <label className="block text-lg font-semibold text-navy mb-3">
-                  What should we include? 📦
+                  What should we include? &#x1F4E6;
                 </label>
                 <div className="space-y-3">
                   <label className="flex items-center cursor-pointer group">
@@ -1126,7 +1135,7 @@ export default function MysteryPage() {
                       className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
                     />
                     <span className="ml-3 text-gray-700 group-hover:text-navy transition">
-                      ✈️ Flight (TravelPayouts affiliate link)
+                      &#x2708;&#xFE0F; Flight (TravelPayouts affiliate link)
                     </span>
                   </label>
                   <label className="flex items-center cursor-pointer group">
@@ -1137,7 +1146,7 @@ export default function MysteryPage() {
                       className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
                     />
                     <span className="ml-3 text-gray-700 group-hover:text-navy transition">
-                      🏨 Hotel recommendations with prices
+                      &#x1F3E8; Hotel recommendations with prices
                     </span>
                   </label>
                   <label className="flex items-center cursor-pointer group">
@@ -1148,7 +1157,7 @@ export default function MysteryPage() {
                       className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
                     />
                     <span className="ml-3 text-gray-700 group-hover:text-navy transition">
-                      📍 Daily itinerary with activities
+                      &#x1F4CD; Daily itinerary with activities
                     </span>
                   </label>
                   <label className="flex items-center cursor-pointer group">
@@ -1159,17 +1168,17 @@ export default function MysteryPage() {
                       className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
                     />
                     <span className="ml-3 text-gray-700 group-hover:text-navy transition">
-                      🚌 Local transportation tips
+                      &#x1F68C; Local transportation tips
                     </span>
                   </label>
                 </div>
               </div>)}
 
-              {/* Email Capture — single city only */}
+              {/* Email Capture -- single city only */}
               {numCities === 1 && (
                 <div className="mb-8">
                   <label htmlFor="email" className="block text-lg font-semibold text-navy mb-2">
-                    Email (optional) 📧
+                    Email (optional) &#x1F4E7;
                   </label>
                   <input
                     type="email"
@@ -1184,226 +1193,177 @@ export default function MysteryPage() {
                   </p>
                 </div>
               )}
+            </fieldset>
 
-              {/* Error Message - Always visible when present */}
-              {error && (
-                <div
-                  ref={errorRef}
-                  className="mb-6 bg-red-50 border-2 border-red-500 rounded-lg p-4 shadow-lg animate-shake"
-                >
-                  <p className="text-red-700 font-semibold text-center text-lg">❌ {error}</p>
-                </div>
-              )}
-
-              <style jsx>{`
-                @keyframes shake {
-                  0%, 100% { transform: translateX(0); }
-                  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-                  20%, 40%, 60%, 80% { transform: translateX(5px); }
-                }
-                .animate-shake {
-                  animation: shake 0.5s ease-in-out;
-                }
-                @keyframes fade-in {
-                  from { opacity: 0; transform: translateY(-8px); }
-                  to { opacity: 1; transform: translateY(0); }
-                }
-                .animate-fade-in {
-                  animation: fade-in 0.3s ease-out;
-                }
-              `}</style>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-bold text-xl py-5 px-6 rounded-lg transition shadow-2xl hover:shadow-3xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
+            {/* Error Message - Always visible when present */}
+            {error && (
+              <div
+                ref={errorRef}
+                className="mb-6 bg-red-50 border-2 border-red-500 rounded-lg p-4 shadow-lg animate-shake"
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="inline-block w-6 h-6 border-3 border-navy border-t-transparent rounded-full animate-spin"></div>
-                    <span>Finding your perfect destination...</span>
-                  </>
-                ) : numCities === 1 ? (
-                  <>✨ Surprise Me! ✨</>
-                ) : (
-                  <>🗺️ Plan My Mystery Route</>
-                )}
-              </button>
-            </form>
-
-            {/* Info */}
-            <div className="mt-8 text-center">
-              <p className="text-skyblue-light">
-                Our AI will find you a unique destination that matches your preferences and budget
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2a: Loading with clue game (single-city) */}
-        {step === 'loading-clues' && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 bg-navy-dark/95 backdrop-blur-sm">
-            <div className="max-w-3xl w-full mx-4">
-              {/* Show ClueReveal with preview clues while API loads */}
-              {!clueAnimationDone ? (
-                <ClueReveal
-                  clues={[
-                    {
-                      icon: '\uD83D\uDCB0',
-                      label: 'Budget',
-                      value: `$${budget}`,
-                    },
-                    {
-                      icon: '\uD83C\uDFAD',
-                      label: 'Vibe',
-                      value: selectedVibes
-                        .map((v) => {
-                          const match = vibeOptions.find((vo) => vo.value === v)
-                          return match ? match.label : v
-                        })
-                        .join(' & ') || 'Surprise me',
-                    },
-                    {
-                      icon: '\uD83D\uDCC5',
-                      label: 'When',
-                      value: dateMode === 'specific'
-                        ? new Date(departDate + 'T00:00:00').toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          }) + ` (${tripDuration} days)`
-                        : timeframeOptions.find((t) => t.value === timeframe)?.label || timeframe,
-                    },
-                    {
-                      icon: '\u2708\uFE0F',
-                      label: 'Destination',
-                      value: '???',
-                    },
-                  ]}
-                  destinationName="???"
-                  country="???"
-                  onComplete={handlePreviewClueComplete}
-                />
-              ) : (
-                /* Clue animation finished but API still loading — show brief waiting state */
-                <div className="bg-navy-light/80 backdrop-blur-sm rounded-2xl p-12 border-2 border-skyblue/40 shadow-2xl">
-                  <div className="text-center">
-                    <div className="text-6xl mb-6 animate-pulse">🌍</div>
-                    <h2 className="text-2xl font-bold text-white mb-3">
-                      Finding your destination...
-                    </h2>
-                    <p className="text-skyblue-light text-sm mb-6">
-                      Almost there — putting the finishing touches on your mystery trip
-                    </p>
-                    <div className="flex justify-center gap-2">
-                      <div className="w-3 h-3 bg-skyblue rounded-full animate-bounce"></div>
-                      <div className="w-3 h-3 bg-skyblue rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                      <div className="w-3 h-3 bg-skyblue rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Step 2b: Loading fallback (multi-city uses MysteryLoading) */}
-        {step === 'loading' && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 bg-navy-dark/95 backdrop-blur-sm">
-            <div className="max-w-3xl w-full mx-4">
-              <div className="bg-navy-light/80 backdrop-blur-sm rounded-2xl p-12 border-2 border-skyblue/40 shadow-2xl">
-                <div className="text-center mb-8">
-                  <div className="text-7xl mb-6 animate-spin-slow inline-block">🌍</div>
-                  <h2 className="text-3xl font-bold text-white mb-3">
-                    AI is planning your {numCities}-city mystery route...
-                  </h2>
-                  <p className="text-skyblue-light text-lg">
-                    Optimizing your route, checking flights, and calculating budgets
-                  </p>
-                </div>
-                <MysteryLoading
-                  budget={budget}
-                  origin={origin}
-                  vibes={selectedVibes}
-                  numCities={numCities}
-                  tripDuration={tripDuration}
-                />
+                <p className="text-red-700 font-semibold text-center text-lg">&#x274C; {error}</p>
               </div>
-            </div>
+            )}
+
             <style jsx>{`
-              @keyframes spin-slow {
-                from {
-                  transform: rotate(0deg);
-                }
-                to {
-                  transform: rotate(360deg);
-                }
+              @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                20%, 40%, 60%, 80% { transform: translateX(5px); }
               }
-              .animate-spin-slow {
-                animation: spin-slow 3s linear infinite;
+              .animate-shake {
+                animation: shake 0.5s ease-in-out;
+              }
+              @keyframes fade-in {
+                from { opacity: 0; transform: translateY(-8px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+              .animate-fade-in {
+                animation: fade-in 0.3s ease-out;
               }
             `}</style>
-          </div>
-        )}
 
-        {/* Step 3: Multi-city results */}
-        {step === 'reveal' && numCities > 1 && multiCityResult && (
-          <div ref={revealRef}>
-            <MultiCityResults
-              result={multiCityResult}
-              origin={origin}
-              totalBudget={budget}
-              totalDays={tripDuration}
-              onStartOver={handleReset}
-            />
-          </div>
-        )}
-
-        {/* Step 3: Single-city reveal */}
-        {step === 'reveal' && numCities === 1 && destination && destination.destination && destination.city_code_IATA && (
-          <div ref={revealRef}>
-            <MysteryReveal
-              destination={destination}
-              origin={origin}
-              departDate={departDate}
-              tripDuration={tripDuration}
-              onShowAnother={handleShowAnother}
-              onReroll={handleReroll}
-              rerollCount={rerollCount}
-              maxRerolls={MAX_REROLLS}
-              detailsLoading={detailsLoading}
-              currencyFormat={currency.format}
-            />
-            <div className="text-center mt-6">
+            {/* Submit / Cancel Buttons */}
+            {!isSearching ? (
               <button
-                onClick={handleReset}
-                className="text-skyblue-light hover:text-skyblue transition underline"
+                type="submit"
+                className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-bold text-xl py-5 px-6 rounded-lg transition shadow-2xl hover:shadow-3xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
               >
-                ← Start Over
+                {numCities === 1 ? (
+                  <>&#x2728; Find My Destination &#x2728;</>
+                ) : (
+                  <>&#x1F5FA;&#xFE0F; Plan My Mystery Route</>
+                )}
               </button>
-            </div>
-          </div>
-        )}
+            ) : (
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  disabled
+                  className="flex-1 bg-gradient-to-r from-skyblue/50 to-skyblue-dark/50 text-navy/60 font-bold text-xl py-5 px-6 rounded-lg cursor-not-allowed flex items-center justify-center gap-3"
+                >
+                  <div className="inline-block w-6 h-6 border-3 border-navy/40 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Searching...</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-6 py-5 rounded-lg border-2 border-red-300 text-red-600 font-semibold hover:bg-red-50 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </form>
 
-        {/* Error State: If step is reveal but destination is invalid (single-city only) */}
-        {step === 'reveal' && numCities === 1 && (!destination || !destination.destination || !destination.city_code_IATA) && (
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-red-50 border-2 border-red-500 rounded-2xl p-8 shadow-2xl text-center">
-              <div className="text-6xl mb-4">😕</div>
-              <h2 className="text-2xl font-bold text-red-700 mb-4">Oops! Something went wrong</h2>
-              <p className="text-red-600 mb-6">
-                We couldn't generate a valid destination. This might be a temporary issue.
-              </p>
-              <button
-                onClick={handleReset}
-                className="bg-skyblue hover:bg-skyblue-dark text-navy font-bold py-3 px-8 rounded-lg transition"
-              >
-                Try Again
-              </button>
-            </div>
+          {/* Info */}
+          <div className="mt-8 text-center">
+            <p className="text-skyblue-light">
+              Our AI will find you a unique destination that matches your preferences and budget
+            </p>
+          </div>
+        </div>
+
+        {/* Results Section -- shown below form when destination is available */}
+        {hasResults && (
+          <div ref={resultsRef} className="mt-12">
+            {/* Multi-city results */}
+            {numCities > 1 && multiCityResult && (
+              <MultiCityResults
+                result={multiCityResult}
+                origin={origin}
+                totalBudget={budget}
+                totalDays={tripDuration}
+                onStartOver={handleReset}
+              />
+            )}
+
+            {/* Single-city reveal */}
+            {numCities === 1 && destination && destination.destination && destination.city_code_IATA && (
+              <>
+                <MysteryReveal
+                  destination={destination}
+                  origin={origin}
+                  departDate={departDate}
+                  tripDuration={tripDuration}
+                  onShowAnother={handleShowAnother}
+                  onReroll={handleReroll}
+                  rerollCount={rerollCount}
+                  maxRerolls={MAX_REROLLS}
+                  detailsLoading={detailsLoading}
+                  currencyFormat={currency.format}
+                />
+                <div className="text-center mt-6">
+                  <button
+                    onClick={handleReset}
+                    className="text-skyblue-light hover:text-skyblue transition underline"
+                  >
+                    &larr; Start Over
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Error State: If destination is invalid (single-city only) */}
+            {numCities === 1 && destination && (!destination.destination || !destination.city_code_IATA) && (
+              <div className="max-w-3xl mx-auto">
+                <div className="bg-red-50 border-2 border-red-500 rounded-2xl p-8 shadow-2xl text-center">
+                  <div className="text-6xl mb-4">&#x1F615;</div>
+                  <h2 className="text-2xl font-bold text-red-700 mb-4">Oops! Something went wrong</h2>
+                  <p className="text-red-600 mb-6">
+                    We couldn&apos;t generate a valid destination. This might be a temporary issue.
+                  </p>
+                  <button
+                    onClick={handleReset}
+                    className="bg-skyblue hover:bg-skyblue-dark text-navy font-bold py-3 px-8 rounded-lg transition"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Sticky Notification Bar */}
+      {searchState !== 'idle' && !notificationDismissed && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 max-w-lg mx-auto">
+          <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4 shadow-2xl backdrop-blur-lg flex items-center gap-3">
+            {searchState === 'searching' && (
+              <>
+                <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin shrink-0" />
+                <span className="text-white/80 text-sm">Finding your mystery destination...</span>
+                <button
+                  onClick={() => setNotificationDismissed(true)}
+                  className="ml-auto text-white/40 hover:text-white/70 text-sm shrink-0"
+                  aria-label="Dismiss"
+                >
+                  &#x2715;
+                </button>
+              </>
+            )}
+            {searchState === 'quick-ready' && (
+              <>
+                <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin shrink-0" />
+                <span className="text-white/80 text-sm">Destination found! Generating trip details...</span>
+                <button onClick={scrollToResults} className="ml-auto text-emerald-400 text-sm font-medium hover:text-emerald-300 shrink-0">
+                  Preview &#x2193;
+                </button>
+              </>
+            )}
+            {searchState === 'ready' && (
+              <>
+                <span className="text-emerald-400 text-lg shrink-0">&#x2713;</span>
+                <span className="text-white font-medium text-sm">Your mystery destination is ready!</span>
+                <button onClick={scrollToResults} className="ml-auto bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition shrink-0">
+                  View Results
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Floating Passport Button */}
       <PassportButton />
