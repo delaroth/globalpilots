@@ -10,6 +10,7 @@ export default function Navigation() {
 
   const links = [
     { href: '/mystery', label: 'Mystery Vacation' },
+    { href: '/stopover', label: 'Stopovers' },
     { href: '/whats-happening', label: "What's Happening" },
     { href: '/trip-cost', label: 'Trip Costs' },
     { href: '/quiz', label: 'Quiz' },
