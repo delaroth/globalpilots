@@ -396,9 +396,16 @@ export function buildBookingBundle(params: {
 }): { flightUrl: string; hotelUrl: string; activitiesUrl: string } {
   const { origin, destination, cityName, departDate, nights = 3, maxHotelPerNight } = params
 
+  // Calculate return date from depart + nights
+  const returnDate = (() => {
+    const d = new Date(departDate + 'T00:00:00')
+    d.setDate(d.getDate() + nights)
+    return d.toISOString().split('T')[0]
+  })()
+
   const flightUrl = isAffiliateActive('kiwi')
     ? buildKiwiFlightLink(origin, destination, departDate)
-    : buildFlightLink(origin, destination, departDate)
+    : buildFlightLink(origin, destination, departDate, returnDate)
 
   const hotelUrl = buildHotelLink(cityName, departDate, nights, {
     maxPricePerNight: maxHotelPerNight,
