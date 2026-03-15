@@ -18,6 +18,7 @@ interface SerpApiFlight {
   flight_number?: string
   legroom?: string
   travel_class?: string
+  extensions?: string[]
 }
 
 interface SerpApiResult {
@@ -27,7 +28,7 @@ interface SerpApiResult {
   price: number
   type?: string
   departure_token?: string
-  carbon_emissions?: { this_flight: number }
+  carbon_emissions?: { this_flight: number; typical_for_this_route: number; difference_percent: number }
 }
 
 function resetUsageIfNewMonth() {
@@ -130,6 +131,19 @@ function mapToFlightOffers(results: SerpApiResult[], origin: string, destination
     const firstFlight = result.flights[0]
     const lastFlight = result.flights[result.flights.length - 1]
     const airlines = [...new Set(result.flights.map(f => f.airline))]
+    const airlineLogos = result.flights
+      .map(f => f.airline_logo)
+      .filter((url): url is string => !!url)
+      .filter((url, i, arr) => arr.indexOf(url) === i)
+
+    // Convert carbon emissions from grams to kg
+    const carbonEmissions = result.carbon_emissions?.this_flight
+      ? {
+          thisFlightKg: Math.round(result.carbon_emissions.this_flight / 1000),
+          typicalKg: Math.round((result.carbon_emissions.typical_for_this_route || result.carbon_emissions.this_flight) / 1000),
+          differencePercent: result.carbon_emissions.difference_percent || 0,
+        }
+      : undefined
 
     return {
       price: result.price,
@@ -144,6 +158,8 @@ function mapToFlightOffers(results: SerpApiResult[], origin: string, destination
       isLive: true,
       confidence: 'live' as const,
       fetchedAt: Date.now(),
+      carbonEmissions,
+      airlineLogos: airlineLogos.length > 0 ? airlineLogos : undefined,
       segments: result.flights.map(f => ({
         origin: f.departure_airport?.id || origin,
         destination: f.arrival_airport?.id || destination,
@@ -155,6 +171,8 @@ function mapToFlightOffers(results: SerpApiResult[], origin: string, destination
         source: 'serpapi' as any,
         bookingUrl: buildBookingUrl(origin, destination, departDate, returnDate),
         aircraft: f.airplane,
+        legroom: f.legroom,
+        extensions: f.extensions,
       })),
     }
   })
@@ -204,9 +222,12 @@ export async function getGoogleFlightsPrice(
   price: number
   priceLevel?: string
   typicalRange?: [number, number]
+  priceHistory?: [number, number][]
   airlines: string[]
   stops: number
   duration: string
+  carbonEmissions?: { thisFlightKg: number; typicalKg: number; differencePercent: number }
+  airlineLogos?: string[]
 } | null> {
   try {
     resetUsageIfNewMonth()
@@ -223,14 +244,35 @@ export async function getGoogleFlightsPrice(
 
     const cheapest = bestFlights[0]
     const airlines = [...new Set(cheapest.flights.map(f => f.airline))]
+    const airlineLogos = cheapest.flights
+      .map(f => f.airline_logo)
+      .filter((url): url is string => !!url)
+      .filter((url, i, arr) => arr.indexOf(url) === i)
+
+    // Convert carbon emissions from grams to kg
+    const carbonEmissions = cheapest.carbon_emissions?.this_flight
+      ? {
+          thisFlightKg: Math.round(cheapest.carbon_emissions.this_flight / 1000),
+          typicalKg: Math.round((cheapest.carbon_emissions.typical_for_this_route || cheapest.carbon_emissions.this_flight) / 1000),
+          differencePercent: cheapest.carbon_emissions.difference_percent || 0,
+        }
+      : undefined
+
+    // Extract price history from price_insights (array of [timestamp, price])
+    const priceHistory: [number, number][] | undefined = priceInsights?.price_history
+      ? priceInsights.price_history
+      : undefined
 
     return {
       price: cheapest.price,
       priceLevel: priceInsights?.price_level,
       typicalRange: priceInsights?.typical_price_range,
+      priceHistory,
       airlines,
       stops: cheapest.layovers?.length || 0,
       duration: formatDuration(cheapest.total_duration),
+      carbonEmissions,
+      airlineLogos: airlineLogos.length > 0 ? airlineLogos : undefined,
     }
   } catch (err) {
     console.warn('[SerpApi] Price check failed:', err instanceof Error ? err.message : err)

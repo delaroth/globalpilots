@@ -102,9 +102,12 @@ interface MysteryResponse {
   googleFlightsPrice?: number
   googleFlightsPriceLevel?: string
   googleFlightsTypicalRange?: [number, number]
+  googleFlightsPriceHistory?: [number, number][]
   googleFlightsAirlines?: string[]
   googleFlightsStops?: number
   googleFlightsDuration?: string
+  googleFlightsCarbonEmissions?: { thisFlightKg: number; typicalKg: number; differencePercent: number }
+  googleFlightsAirlineLogos?: string[]
   priceIsLive?: boolean
 }
 

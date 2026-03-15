@@ -88,9 +88,12 @@ interface Destination {
   googleFlightsPrice?: number
   googleFlightsPriceLevel?: string
   googleFlightsTypicalRange?: [number, number]
+  googleFlightsPriceHistory?: [number, number][]
   googleFlightsAirlines?: string[]
   googleFlightsStops?: number
   googleFlightsDuration?: string
+  googleFlightsCarbonEmissions?: { thisFlightKg: number; typicalKg: number; differencePercent: number }
+  googleFlightsAirlineLogos?: string[]
   priceIsLive?: boolean
 }
 
@@ -678,9 +681,23 @@ export default function MysteryReveal({
                             {isEstimate ? ' est.' : ''}
                           </p>
                           {destination.googleFlightsAirlines && destination.googleFlightsAirlines.length > 0 && (
-                            <p className="text-xs text-white/30 mt-0.5">
-                              {destination.googleFlightsAirlines.join(', ')} · {destination.googleFlightsStops === 0 ? 'Nonstop' : `${destination.googleFlightsStops} stop${destination.googleFlightsStops === 1 ? '' : 's'}`}
+                            <p className="text-xs text-white/30 mt-0.5 flex items-center justify-center gap-1 flex-wrap">
+                              {destination.googleFlightsAirlineLogos && destination.googleFlightsAirlineLogos.map((logo, i) => (
+                                <img key={i} src={logo} alt="" width={16} height={16} className="inline-block rounded-sm" />
+                              ))}
+                              <span>{destination.googleFlightsAirlines.join(', ')} · {destination.googleFlightsStops === 0 ? 'Nonstop' : `${destination.googleFlightsStops} stop${destination.googleFlightsStops === 1 ? '' : 's'}`}</span>
                             </p>
+                          )}
+                          {destination.googleFlightsPriceLevel && (
+                            <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              destination.googleFlightsPriceLevel === 'low'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : destination.googleFlightsPriceLevel === 'high'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                : 'bg-white/10 text-white/50 border border-white/20'
+                            }`}>
+                              {destination.googleFlightsPriceLevel === 'low' ? 'Great Price' : destination.googleFlightsPriceLevel === 'high' ? 'Prices Are High' : 'Typical Price'}
+                            </span>
                           )}
                         </div>
                         <div>
@@ -698,6 +715,19 @@ export default function MysteryReveal({
                           </p>
                         </div>
                       </div>
+                      {/* Carbon emissions badge */}
+                      {destination.googleFlightsCarbonEmissions && (
+                        <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-center gap-2 text-xs">
+                          <span className="text-white/40">{destination.googleFlightsCarbonEmissions.thisFlightKg} kg CO₂</span>
+                          {destination.googleFlightsCarbonEmissions.differencePercent !== 0 && (
+                            <span className={destination.googleFlightsCarbonEmissions.differencePercent < 0 ? 'text-emerald-400' : 'text-white/40'}>
+                              {destination.googleFlightsCarbonEmissions.differencePercent < 0
+                                ? `${Math.abs(destination.googleFlightsCarbonEmissions.differencePercent)}% less CO₂ than typical`
+                                : `${destination.googleFlightsCarbonEmissions.differencePercent}% more CO₂ than typical`}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </motion.div>

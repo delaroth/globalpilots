@@ -29,6 +29,10 @@ export interface FlightSegment {
   aircraft?: string
   /** Operating airline if different from marketing airline */
   operatingAirline?: string
+  /** Legroom info from Google Flights, e.g. "32 in" */
+  legroom?: string
+  /** Amenity extensions from Google Flights, e.g. ["Wi-Fi", "In-seat power"] */
+  extensions?: string[]
 }
 
 export interface FareDetails {
@@ -72,6 +76,10 @@ export interface FlightOffer {
   offerHash?: string
   /** Physical flight hash — identifies same metal tube across providers */
   flightHash?: string
+  /** Carbon emissions data from Google Flights */
+  carbonEmissions?: { thisFlightKg: number; typicalKg: number; differencePercent: number }
+  /** Airline logo URLs from Google Flights */
+  airlineLogos?: string[]
 }
 
 export interface CheapestDestination {
