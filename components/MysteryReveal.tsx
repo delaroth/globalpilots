@@ -106,6 +106,7 @@ interface MysteryRevealProps {
   onReroll?: () => void
   rerollCount?: number
   maxRerolls?: number
+  detailsLoading?: boolean
 }
 
 interface EnrichmentData {
@@ -183,6 +184,23 @@ function ShimmerBlock({ className = '' }: { className?: string }) {
   )
 }
 
+/** Shimmer line placeholder for AI details loading */
+function Shimmer({ className }: { className?: string }) {
+  return <div className={`animate-pulse bg-white/[0.06] rounded ${className || 'h-4 w-full'}`} />
+}
+
+/** Wrapper that fades content in when it becomes available */
+function FadeIn({ visible, children }: { visible: boolean; children: React.ReactNode }) {
+  return (
+    <div
+      className="transition-opacity duration-500 ease-out"
+      style={{ opacity: visible ? 1 : 0 }}
+    >
+      {children}
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -196,6 +214,7 @@ export default function MysteryReveal({
   rerollCount = 0,
   maxRerolls = 3,
   tripDuration = 3,
+  detailsLoading = false,
 }: MysteryRevealProps) {
   const [phase, setPhase] = useState<RevealPhase>('clues')
   const bookingRef = useRef<HTMLDivElement>(null)
@@ -213,6 +232,12 @@ export default function MysteryReveal({
   const [enrichmentLoading, setEnrichmentLoading] = useState(false)
 
   const iata = destination.city_code_IATA || destination.iata || ''
+
+  // AI details availability — true when the AI-generated content has been populated
+  const hasAIDetails = !!(
+    (destination.whyThisPlace || destination.why_its_perfect) &&
+    destination.best_local_food && destination.best_local_food.length > 0
+  )
   const flightPrice =
     destination.indicativeFlightPrice || destination.estimated_flight_cost
   const isEstimate = destination.priceIsEstimate
@@ -750,235 +775,307 @@ export default function MysteryReveal({
                     <h3 className="text-xl font-bold text-white mb-2">
                       Why This Destination?
                     </h3>
-                    <p className="text-white/70">
-                      {destination.whyThisPlace || destination.why_its_perfect}
-                    </p>
+                    {hasAIDetails ? (
+                      <FadeIn visible={true}>
+                        <p className="text-white/70">
+                          {destination.whyThisPlace || destination.why_its_perfect}
+                        </p>
+                      </FadeIn>
+                    ) : detailsLoading ? (
+                      <div className="space-y-2">
+                        <Shimmer className="h-4 w-full" />
+                        <Shimmer className="h-4 w-11/12" />
+                        <Shimmer className="h-4 w-9/12" />
+                      </div>
+                    ) : (
+                      <p className="text-white/70">
+                        {destination.whyThisPlace || destination.why_its_perfect}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
 
                 {/* Best Time to Go */}
-                {destination.bestTimeToGo && (
+                {destination.bestTimeToGo ? (
                   <motion.div {...staggerChild(7)}>
-                    <div className="bg-skyblue/10 border border-skyblue/20 rounded-lg p-4">
-                      <p className="text-sm text-white/80">
-                        <span className="font-semibold text-skyblue-light">
-                          Best time to go:
-                        </span>{' '}
-                        {destination.bestTimeToGo}
-                      </p>
-                    </div>
+                    <FadeIn visible={true}>
+                      <div className="bg-skyblue/10 border border-skyblue/20 rounded-lg p-4">
+                        <p className="text-sm text-white/80">
+                          <span className="font-semibold text-skyblue-light">
+                            Best time to go:
+                          </span>{' '}
+                          {destination.bestTimeToGo}
+                        </p>
+                      </div>
+                    </FadeIn>
                   </motion.div>
-                )}
+                ) : detailsLoading ? (
+                  <motion.div {...staggerChild(7)}>
+                    <Shimmer className="h-12 w-full" />
+                  </motion.div>
+                ) : null}
 
                 {/* Hotel Recommendations */}
                 {destination.hotel_recommendations &&
-                  destination.hotel_recommendations.length > 0 && (
+                  destination.hotel_recommendations.length > 0 ? (
+                    <motion.div {...staggerChild(8)}>
+                      <FadeIn visible={true}>
+                        <h3 className="text-xl font-bold text-white mb-3">
+                          Where to Stay
+                        </h3>
+                        <div className="space-y-3">
+                          {destination.hotel_recommendations.map((hotel, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10"
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-semibold text-white">
+                                  {hotel.name}
+                                </h4>
+                                <p className="text-emerald-400 font-bold whitespace-nowrap ml-4">
+                                  ${hotel.estimated_price_per_night}/night
+                                </p>
+                              </div>
+                              <p className="text-sm text-white/50 mb-1">
+                                {hotel.neighborhood}
+                              </p>
+                              <p className="text-sm text-white/70">
+                                {hotel.why_recommended}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </FadeIn>
+                    </motion.div>
+                  ) : detailsLoading ? (
                     <motion.div {...staggerChild(8)}>
                       <h3 className="text-xl font-bold text-white mb-3">
                         Where to Stay
                       </h3>
                       <div className="space-y-3">
-                        {destination.hotel_recommendations.map((hotel, idx) => (
-                          <div
-                            key={idx}
-                            className="bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <h4 className="font-semibold text-white">
-                                {hotel.name}
-                              </h4>
-                              <p className="text-emerald-400 font-bold whitespace-nowrap ml-4">
-                                ${hotel.estimated_price_per_night}/night
-                              </p>
-                            </div>
-                            <p className="text-sm text-white/50 mb-1">
-                              {hotel.neighborhood}
-                            </p>
-                            <p className="text-sm text-white/70">
-                              {hotel.why_recommended}
-                            </p>
-                          </div>
-                        ))}
+                        <Shimmer className="h-24 w-full" />
+                        <Shimmer className="h-24 w-full" />
                       </div>
                     </motion.div>
-                  )}
+                  ) : null}
 
                 {/* ---- Itinerary ---- */}
                 <motion.div {...staggerChild(9)}>
                   {destination.daily_itinerary &&
                   destination.daily_itinerary.length > 0 ? (
-                    <div>
-                      <h3 className="text-xl font-bold text-white mb-4">
-                        Your Daily Itinerary
-                      </h3>
-                      <div className="space-y-4">
-                        {destination.daily_itinerary.map((day) => (
-                          <div
-                            key={day.day}
-                            className="bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10"
-                          >
-                            <div className="flex justify-between items-center mb-3">
-                              <h4 className="font-semibold text-white">
-                                Day {day.day}
-                              </h4>
-                              <span className="text-sm font-semibold text-emerald-400">
-                                Daily total: ${day.total_day_cost}
-                              </span>
-                            </div>
-                            <div className="space-y-2">
-                              {day.activities.map((activity, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex justify-between items-start"
-                                >
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium text-skyblue-light">
-                                      {activity.time}
-                                    </p>
-                                    <p className="text-white/70">
-                                      {activity.activity}
+                    <FadeIn visible={true}>
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">
+                          Your Daily Itinerary
+                        </h3>
+                        <div className="space-y-4">
+                          {destination.daily_itinerary.map((day) => (
+                            <div
+                              key={day.day}
+                              className="bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10"
+                            >
+                              <div className="flex justify-between items-center mb-3">
+                                <h4 className="font-semibold text-white">
+                                  Day {day.day}
+                                </h4>
+                                <span className="text-sm font-semibold text-emerald-400">
+                                  Daily total: ${day.total_day_cost}
+                                </span>
+                              </div>
+                              <div className="space-y-2">
+                                {day.activities.map((activity, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex justify-between items-start"
+                                  >
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-skyblue-light">
+                                        {activity.time}
+                                      </p>
+                                      <p className="text-white/70">
+                                        {activity.activity}
+                                      </p>
+                                    </div>
+                                    <p className="text-sm font-semibold text-white/50 ml-4">
+                                      ${activity.estimated_cost}
                                     </p>
                                   </div>
-                                  <p className="text-sm font-semibold text-white/50 ml-4">
-                                    ${activity.estimated_cost}
-                                  </p>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    </FadeIn>
                   ) : destination.itinerary &&
                     destination.itinerary.length > 0 ? (
-                    <div>
-                      <h3 className="text-xl font-bold text-white mb-4">
-                        Your Itinerary
-                      </h3>
-                      <div className="space-y-4">
-                        {destination.itinerary.map((day) => (
-                          <div
-                            key={day.day}
-                            className="bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10"
-                          >
-                            <h4 className="font-semibold text-white mb-2">
-                              Day {day.day}
-                            </h4>
-                            <ul className="space-y-1">
-                              {day.activities.map((activity, idx) => (
-                                <li
-                                  key={idx}
-                                  className="text-white/70 flex items-start"
-                                >
-                                  <span className="text-skyblue mr-2">
-                                    &bull;
-                                  </span>
-                                  {activity}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
+                    <FadeIn visible={true}>
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">
+                          Your Itinerary
+                        </h3>
+                        <div className="space-y-4">
+                          {destination.itinerary.map((day) => (
+                            <div
+                              key={day.day}
+                              className="bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10"
+                            >
+                              <h4 className="font-semibold text-white mb-2">
+                                Day {day.day}
+                              </h4>
+                              <ul className="space-y-1">
+                                {day.activities.map((activity, idx) => (
+                                  <li
+                                    key={idx}
+                                    className="text-white/70 flex items-start"
+                                  >
+                                    <span className="text-skyblue mr-2">
+                                      &bull;
+                                    </span>
+                                    {activity}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
+                    </FadeIn>
+                  ) : destination.day1 && destination.day1.length > 0 ? (
+                    <FadeIn visible={true}>
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-4">
+                          Your {tripDuration}-Day Adventure
+                        </h3>
+                        <div className="space-y-4">
+                          {[
+                            { label: 'Day 1', items: destination.day1 },
+                            { label: 'Day 2', items: destination.day2 },
+                            { label: 'Day 3', items: destination.day3 },
+                          ].map(({ label, items }) => (
+                            <div
+                              key={label}
+                              className="bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10"
+                            >
+                              <h4 className="font-semibold text-white mb-2">
+                                {label}
+                              </h4>
+                              <ul className="space-y-1">
+                                {items?.map((activity, idx) => (
+                                  <li
+                                    key={idx}
+                                    className="text-white/70 flex items-start"
+                                  >
+                                    <span className="text-skyblue mr-2">
+                                      &bull;
+                                    </span>
+                                    {activity}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </FadeIn>
+                  ) : detailsLoading ? (
                     <div>
                       <h3 className="text-xl font-bold text-white mb-4">
                         Your {tripDuration}-Day Adventure
                       </h3>
                       <div className="space-y-4">
-                        {[
-                          { label: 'Day 1', items: destination.day1 },
-                          { label: 'Day 2', items: destination.day2 },
-                          { label: 'Day 3', items: destination.day3 },
-                        ].map(({ label, items }) => (
-                          <div
-                            key={label}
-                            className="bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10"
-                          >
-                            <h4 className="font-semibold text-white mb-2">
-                              {label}
-                            </h4>
-                            <ul className="space-y-1">
-                              {items?.map((activity, idx) => (
-                                <li
-                                  key={idx}
-                                  className="text-white/70 flex items-start"
-                                >
-                                  <span className="text-skyblue mr-2">
-                                    &bull;
-                                  </span>
-                                  {activity}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
+                        <Shimmer className="h-28 w-full" />
+                        <Shimmer className="h-28 w-full" />
+                        <Shimmer className="h-28 w-full" />
                       </div>
                     </div>
-                  )}
+                  ) : null}
                 </motion.div>
 
                 {/* Local Transportation */}
-                {destination.local_transportation && (
+                {destination.local_transportation ? (
                   <motion.div {...staggerChild(10)}>
-                    <div className="bg-skyblue/10 border border-skyblue/20 rounded-lg p-4">
-                      <h3 className="text-lg font-bold text-white mb-3">
-                        Getting Around
-                      </h3>
-                      <div className="space-y-2 text-sm">
-                        <div>
-                          <p className="font-semibold text-white/70">
-                            Airport to City:
-                          </p>
-                          <p className="text-white/50">
-                            {destination.local_transportation.airport_to_city}
+                    <FadeIn visible={true}>
+                      <div className="bg-skyblue/10 border border-skyblue/20 rounded-lg p-4">
+                        <h3 className="text-lg font-bold text-white mb-3">
+                          Getting Around
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          <div>
+                            <p className="font-semibold text-white/70">
+                              Airport to City:
+                            </p>
+                            <p className="text-white/50">
+                              {destination.local_transportation.airport_to_city}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white/70">
+                              Daily Transport:
+                            </p>
+                            <p className="text-white/50">
+                              {destination.local_transportation.daily_transport}
+                            </p>
+                          </div>
+                          <p className="text-emerald-400 font-semibold">
+                            Estimated daily cost: $
+                            {destination.local_transportation.estimated_daily_cost}
                           </p>
                         </div>
-                        <div>
-                          <p className="font-semibold text-white/70">
-                            Daily Transport:
-                          </p>
-                          <p className="text-white/50">
-                            {destination.local_transportation.daily_transport}
-                          </p>
-                        </div>
-                        <p className="text-emerald-400 font-semibold">
-                          Estimated daily cost: $
-                          {destination.local_transportation.estimated_daily_cost}
-                        </p>
                       </div>
-                    </div>
+                    </FadeIn>
                   </motion.div>
-                )}
+                ) : null}
 
                 {/* Food */}
                 <motion.div {...staggerChild(11)}>
                   <h3 className="text-xl font-bold text-white mb-3">
                     Must-Try Local Food
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {destination.best_local_food?.map((food, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-amber-500/10 border border-amber-500/20 text-amber-300 px-4 py-2 rounded-full text-sm font-medium"
-                      >
-                        {food}
-                      </span>
-                    ))}
-                  </div>
+                  {destination.best_local_food && destination.best_local_food.length > 0 ? (
+                    <FadeIn visible={true}>
+                      <div className="flex flex-wrap gap-2">
+                        {destination.best_local_food.map((food, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-amber-500/10 border border-amber-500/20 text-amber-300 px-4 py-2 rounded-full text-sm font-medium"
+                          >
+                            {food}
+                          </span>
+                        ))}
+                      </div>
+                    </FadeIn>
+                  ) : detailsLoading ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Shimmer className="h-9 w-24 rounded-full" />
+                      <Shimmer className="h-9 w-32 rounded-full" />
+                      <Shimmer className="h-9 w-28 rounded-full" />
+                    </div>
+                  ) : null}
                 </motion.div>
 
                 {/* Insider Tip */}
                 <motion.div {...staggerChild(12)}>
-                  <div className="bg-amber-500/10 border-l-4 border-amber-500/40 p-4 rounded-r-lg">
-                    <h3 className="font-semibold text-white mb-1">
-                      Insider Tip
-                    </h3>
-                    <p className="text-white/70">
-                      {destination.localTip || destination.insider_tip}
-                    </p>
-                  </div>
+                  {(destination.localTip || destination.insider_tip) ? (
+                    <FadeIn visible={true}>
+                      <div className="bg-amber-500/10 border-l-4 border-amber-500/40 p-4 rounded-r-lg">
+                        <h3 className="font-semibold text-white mb-1">
+                          Insider Tip
+                        </h3>
+                        <p className="text-white/70">
+                          {destination.localTip || destination.insider_tip}
+                        </p>
+                      </div>
+                    </FadeIn>
+                  ) : detailsLoading ? (
+                    <div className="bg-amber-500/10 border-l-4 border-amber-500/40 p-4 rounded-r-lg">
+                      <h3 className="font-semibold text-white mb-1">
+                        Insider Tip
+                      </h3>
+                      <Shimmer className="h-4 w-10/12" />
+                    </div>
+                  ) : null}
                 </motion.div>
 
                 {/* Daily Costs Mini-Breakdown from destination-costs data */}

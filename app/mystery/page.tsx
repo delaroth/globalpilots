@@ -115,6 +115,9 @@ export default function MysteryPage() {
   const [apiDataReady, setApiDataReady] = useState(false)
   const [clueAnimationDone, setClueAnimationDone] = useState(false)
 
+  // Two-phase reveal: quick data (destination name/price) arrives fast, AI details stream in later
+  const [detailsLoading, setDetailsLoading] = useState(false)
+
   // When both the API data and clue animation are done, transition to reveal
   useEffect(() => {
     if (step === 'loading-clues' && apiDataReady && clueAnimationDone && destination) {
@@ -336,66 +339,189 @@ export default function MysteryPage() {
       return
     }
 
-    // ─── Single-city mystery flow (uses ClueReveal during loading) ───
+    // ─── Single-city mystery flow (two-phase: quick pick + AI details) ───
     // Reset loading-clues tracking state and show clue animation immediately
     setApiDataReady(false)
     setClueAnimationDone(false)
+    setDetailsLoading(false)
     setStep('loading-clues')
 
-    // Fire API call in the background (don't await — let clues play while it loads)
-    console.log('[Mystery] Making API call to /api/ai-mystery...')
-    fetch('/api/ai-mystery', {
+    const requestDates = dateMode === 'specific'
+      ? `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`
+      : `flexible:${timeframe}`
+
+    const requestBody = {
+      origin: resolvedOrigin,
+      budget: parseFloat(budget),
+      vibes: selectedVibes,
+      dates: requestDates,
+      tripDuration,
+      packageComponents,
+      email: emailForUpdates || undefined,
+      exclude: excludeListRef.current.length > 0 ? excludeListRef.current : undefined,
+      accommodationLevel,
+      budgetPriority,
+    }
+
+    // Phase 1: Quick pick (fast — only calls SerpApi Explore, no AI)
+    console.log('[Mystery] Phase 1: Making quick-pick API call...')
+    fetch('/api/ai-mystery/quick', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        origin: resolvedOrigin,
-        budget: parseFloat(budget),
-        vibes: selectedVibes,
-        dates: dateMode === 'specific'
-          ? `${departDate}${flexibleDates ? ' (flexible ±3 days)' : ''}`
-          : `flexible:${timeframe}`,
-        tripDuration,
-        packageComponents,
-        email: emailForUpdates || undefined,
-        exclude: excludeListRef.current.length > 0 ? excludeListRef.current : undefined,
-        accommodationLevel,
-        budgetPriority,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
     })
       .then(async (response) => {
-        console.log('[Mystery] API response status:', response.status)
-
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
-          const errorMsg = errorData.error || `Failed to generate destination (HTTP ${response.status})`
-          console.error('[Mystery] API error response:', errorData)
-          throw new Error(errorMsg)
+          throw new Error(errorData.error || `Quick pick failed (HTTP ${response.status})`)
+        }
+        const quickData = await response.json()
+        console.log('[Mystery] Phase 1 success:', quickData.destination)
+
+        if (!quickData.destination || !quickData.city_code_IATA) {
+          throw new Error('Invalid quick pick response.')
         }
 
-        const data = await response.json()
-        console.log('[Mystery] API success! Received destination:', data.destination)
-
-        if (data.error) {
-          console.error('[Mystery] API returned error in data:', data.error)
-          throw new Error(data.error)
+        // If this was a full cache hit, we have everything — skip phase 2
+        if (quickData._cacheHit) {
+          console.log('[Mystery] Full cache hit — skipping Phase 2')
+          setDestination(quickData)
+          setApiDataReady(true)
+          return
         }
 
-        if (!data.destination || !data.city_code_IATA) {
-          console.error('[Mystery] API returned invalid data structure:', data)
-          throw new Error('Invalid response from server. Please try again.')
+        // Build a partial destination object with what we know from quick pick
+        const partialDestination = {
+          destination: quickData.destination,
+          country: quickData.country,
+          iata: quickData.iata,
+          city_code_IATA: quickData.city_code_IATA,
+          estimated_flight_cost: quickData.estimated_flight_cost,
+          indicativeFlightPrice: quickData.indicativeFlightPrice,
+          estimated_hotel_per_night: quickData.estimated_hotel_per_night,
+          priceIsLive: quickData.priceIsLive,
+          priceIsEstimate: quickData.priceIsEstimate,
+          googleFlightsPrice: quickData.googleFlightsPrice,
+          googleFlightsAirlines: quickData.googleFlightsAirlines,
+          googleFlightsStops: quickData.googleFlightsStops,
+          suggestedDepartureDate: quickData.suggestedDepartureDate,
+          suggestedReturnDate: quickData.suggestedReturnDate,
+          // Placeholder fields — will be filled by Phase 2
+          whyThisPlace: '',
+          why_its_perfect: '',
+          itinerary: [],
+          bestTimeToGo: '',
+          localTip: '',
+          insider_tip: '',
+          best_local_food: [],
+          day1: [],
+          day2: [],
+          day3: [],
+          budgetBreakdown: {
+            flights: quickData.estimated_flight_cost,
+            hotel: quickData.estimated_hotel_per_night * tripDuration,
+            activities: 0,
+            food: 0,
+            total: quickData.estimated_flight_cost + quickData.estimated_hotel_per_night * tripDuration,
+          },
         }
 
-        setDestination(data)
+        // Reveal immediately with partial data
+        setDestination(partialDestination)
         setApiDataReady(true)
+
+        // Phase 2: Fire AI details in the background
+        console.log('[Mystery] Phase 2: Fetching AI details for', quickData.destination, '...')
+        setDetailsLoading(true)
+
+        fetch('/api/ai-mystery/details', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            destination: quickData.destination,
+            country: quickData.country,
+            iata: quickData.iata,
+            origin: resolvedOrigin,
+            budget: parseFloat(budget),
+            vibes: selectedVibes,
+            dates: requestDates,
+            tripDuration,
+            flightPrice: quickData.estimated_flight_cost,
+            accommodationLevel,
+            budgetPriority,
+            packageComponents,
+            hotelEstimate: quickData.estimated_hotel_per_night,
+          }),
+        })
+          .then(async (detailsResponse) => {
+            if (!detailsResponse.ok) {
+              console.warn('[Mystery] Phase 2 failed, continuing with partial data')
+              setDetailsLoading(false)
+              return
+            }
+            const detailsData = await detailsResponse.json()
+            console.log('[Mystery] Phase 2 success: AI details received')
+
+            // Merge AI details into the destination object
+            setDestination((prev: any) => {
+              if (!prev) return prev
+              return {
+                ...prev,
+                ...detailsData,
+                // Keep the quick-pick values for these fields (more accurate)
+                destination: prev.destination,
+                country: prev.country,
+                iata: prev.iata,
+                city_code_IATA: prev.city_code_IATA,
+                estimated_flight_cost: prev.estimated_flight_cost,
+                indicativeFlightPrice: prev.indicativeFlightPrice,
+                estimated_hotel_per_night: prev.estimated_hotel_per_night,
+                priceIsLive: prev.priceIsLive,
+                priceIsEstimate: prev.priceIsEstimate,
+                googleFlightsPrice: prev.googleFlightsPrice,
+                googleFlightsAirlines: prev.googleFlightsAirlines,
+                googleFlightsStops: prev.googleFlightsStops,
+                suggestedDepartureDate: prev.suggestedDepartureDate,
+                suggestedReturnDate: prev.suggestedReturnDate,
+              }
+            })
+            setDetailsLoading(false)
+          })
+          .catch((err) => {
+            console.warn('[Mystery] Phase 2 error (non-fatal):', err)
+            setDetailsLoading(false)
+          })
       })
       .catch((err) => {
-        const errorMsg = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
-        console.error('[Mystery] Error during mystery destination generation:', err)
-        setError(errorMsg)
-        setStep('form')
-        setIsSubmitting(false)
+        // Phase 1 failed — fall back to original single-API endpoint
+        console.warn('[Mystery] Quick pick failed, falling back to full API:', err.message)
+
+        fetch('/api/ai-mystery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        })
+          .then(async (response) => {
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+              throw new Error(errorData.error || `Failed to generate destination (HTTP ${response.status})`)
+            }
+            const data = await response.json()
+            console.log('[Mystery] Fallback API success:', data.destination)
+
+            if (data.error) throw new Error(data.error)
+            if (!data.destination || !data.city_code_IATA) throw new Error('Invalid response from server.')
+
+            setDestination(data)
+            setApiDataReady(true)
+          })
+          .catch((fallbackErr) => {
+            const errorMsg = fallbackErr instanceof Error ? fallbackErr.message : 'Something went wrong. Please try again.'
+            console.error('[Mystery] Both quick and fallback APIs failed:', fallbackErr)
+            setError(errorMsg)
+            setStep('form')
+            setIsSubmitting(false)
+          })
       })
   }
 
@@ -436,6 +562,7 @@ export default function MysteryPage() {
     setRerollCount(0)
     setApiDataReady(false)
     setClueAnimationDone(false)
+    setDetailsLoading(false)
     setActiveTheme(null)
     setThemeNotification(null)
   }
@@ -1124,6 +1251,7 @@ export default function MysteryPage() {
               onReroll={handleReroll}
               rerollCount={rerollCount}
               maxRerolls={MAX_REROLLS}
+              detailsLoading={detailsLoading}
             />
             <div className="text-center mt-6">
               <button
