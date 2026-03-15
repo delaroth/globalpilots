@@ -8,7 +8,7 @@ export default function WeekendPage() {
       <div className="bg-skyblue/20 border-b border-skyblue/30 px-6 py-3 text-center">
         <p className="text-sm text-white">
           This page has moved.
-          <Link href="/search?mode=day-windows" className="text-skyblue font-semibold ml-1 underline">
+          <Link href="/search" className="text-skyblue font-semibold ml-1 underline">
             Try the new unified Search page &rarr;
           </Link>
         </p>
@@ -32,7 +32,7 @@ export default function WeekendPage() {
           The Weekend Deals page has been merged into our new unified Search page.
         </p>
         <Link
-          href="/search?mode=day-windows"
+          href="/search"
           className="inline-block bg-skyblue hover:bg-skyblue-dark text-navy font-bold py-4 px-8 rounded-lg transition shadow-lg"
         >
           Go to Search Page

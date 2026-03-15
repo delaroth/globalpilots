@@ -27,7 +27,16 @@ const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
   ),
 })
 
-type DateMode = 'exact-date' | 'flexible-month' | 'day-windows' | 'multi-city'
+// ── Types ──────────────────────────────────────────────────────────────────
+
+type TripType = 'one-way' | 'round-trip' | 'multi-city'
+type DateFlexType = 'exact' | 'month' | 'anytime'
+
+interface FlexibleDateValue {
+  type: DateFlexType
+  exactDate?: string    // YYYY-MM-DD
+  month?: string        // YYYY-MM (e.g., "2026-04")
+}
 
 interface WeekendDeal {
   value: number
@@ -86,14 +95,111 @@ function getNextWeekendDate(): string {
   return d.toISOString().split('T')[0]
 }
 
+// ── FlexibleDateInput Component ────────────────────────────────────────────
+
+function FlexibleDateInput({
+  label,
+  value,
+  onChange,
+  minDate,
+  minMonth,
+}: {
+  label: string
+  value: FlexibleDateValue
+  onChange: (v: FlexibleDateValue) => void
+  minDate?: string
+  minMonth?: string
+}) {
+  const typeOptions: { value: DateFlexType; label: string }[] = [
+    { value: 'exact', label: 'Exact Date' },
+    { value: 'month', label: 'Month' },
+    { value: 'anytime', label: 'Anytime' },
+  ]
+
+  // Generate month options: current month through 12 months out
+  const monthOptions: { value: string; label: string }[] = []
+  const now = new Date()
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+    const val = d.toISOString().slice(0, 7)
+    const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    monthOptions.push({ value: val, label })
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-navy">{label}</label>
+
+      {/* Type selector - compact segmented control */}
+      <div className="flex bg-gray-100 rounded-lg p-0.5">
+        {typeOptions.map(opt => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => {
+              const updated: FlexibleDateValue = { type: opt.value }
+              if (opt.value === 'exact') {
+                updated.exactDate = value.exactDate || minDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+              } else if (opt.value === 'month') {
+                updated.month = value.month || minMonth || now.toISOString().slice(0, 7)
+              }
+              onChange(updated)
+            }}
+            className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-all ${
+              value.type === opt.value
+                ? 'bg-white text-navy shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Input area based on selected type */}
+      {value.type === 'exact' && (
+        <input
+          type="date"
+          value={value.exactDate || ''}
+          onChange={e => onChange({ ...value, exactDate: e.target.value })}
+          min={minDate || new Date().toISOString().split('T')[0]}
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+          required
+        />
+      )}
+
+      {value.type === 'month' && (
+        <select
+          value={value.month || ''}
+          onChange={e => onChange({ ...value, month: e.target.value })}
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+          required
+        >
+          {monthOptions.map(opt => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      )}
+
+      {value.type === 'anytime' && (
+        <div className="px-4 py-3 bg-skyblue/5 border-2 border-skyblue/20 rounded-lg text-sm text-gray-600">
+          Best price in the next 6 months
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main Search Component ──────────────────────────────────────────────────
+
 function SearchPageContent() {
   const searchParams = useSearchParams()
-  // Form
+  // Form state
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
-  const [dateMode, setDateMode] = useState<DateMode>('flexible-month')
+  const [tripType, setTripType] = useState<TripType>('round-trip')
 
-  // Pre-fill from URL params (e.g., /search?dest=BKK or /search?origin=CNX&destination=NRT)
+  // Pre-fill from URL params
   useEffect(() => {
     const o = searchParams.get('origin')
     const d = searchParams.get('destination') || searchParams.get('dest')
@@ -101,27 +207,16 @@ function SearchPageContent() {
     if (d) setDestination(d.toUpperCase())
   }, [searchParams])
 
-  // Exact date
-  const [exactDate, setExactDate] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() + 14)
-    return d.toISOString().split('T')[0]
-  })
+  // Flexible date states
+  const [departureDate, setDepartureDate] = useState<FlexibleDateValue>(() => ({
+    type: 'exact',
+    exactDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+  }))
 
-  // Round trip
-  const [isRoundTrip, setIsRoundTrip] = useState(false)
-  const [returnDate, setReturnDate] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() + 21)
-    return d.toISOString().split('T')[0]
-  })
-
-  // Flexible month
-  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
-
-  // Day windows
-  const [departDay, setDepartDay] = useState('friday')
-  const [returnDay, setReturnDay] = useState('sunday')
-  const [flexibleDays, setFlexibleDays] = useState(1)
-  const [timeframe, setTimeframe] = useState('3months')
+  const [returnDateFlex, setReturnDateFlex] = useState<FlexibleDateValue>(() => ({
+    type: 'exact',
+    exactDate: new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0],
+  }))
 
   // Loading
   const [loading, setLoading] = useState(false)
@@ -130,8 +225,9 @@ function SearchPageContent() {
   // Results
   const [calendarData, setCalendarData] = useState<Record<string, unknown> | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [exactDateResult, setExactDateResult] = useState<{ price: number; dayData: any; source?: string; deepLink?: string; isLive?: boolean } | null>(null)
-  const [weekendDeals, setWeekendDeals] = useState<WeekendDeal[]>([])
+  const [exactDateResult, setExactDateResult] = useState<{ price: number; dayData: any; source?: string; deepLink?: string; isLive?: boolean; departDate?: string; returnDate?: string } | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [flexResult, setFlexResult] = useState<any>(null)
   const [discoverResults, setDiscoverResults] = useState<{ destination: string; city: string; price: number; departDate: string; returnDate: string }[]>([])
   const [emptyRoute, setEmptyRoute] = useState(false)
   const [showPopularSuggestions, setShowPopularSuggestions] = useState(false)
@@ -143,22 +239,43 @@ function SearchPageContent() {
     date: string
   }
   const [legs, setLegs] = useState<FlightLeg[]>([
-    { from: '', to: '', date: exactDate },
+    { from: '', to: '', date: departureDate.exactDate || '' },
     { from: '', to: '', date: '' },
   ])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [multiCityResults, setMultiCityResults] = useState<any>(null)
 
   const today = new Date().toISOString().split('T')[0]
-  const currentMonth = new Date().toISOString().slice(0, 7)
+
+  // Auto-adjust return date if departure date is set after return
+  useEffect(() => {
+    if (
+      tripType === 'round-trip' &&
+      departureDate.type === 'exact' &&
+      returnDateFlex.type === 'exact' &&
+      departureDate.exactDate &&
+      returnDateFlex.exactDate &&
+      departureDate.exactDate > returnDateFlex.exactDate
+    ) {
+      const d = new Date(departureDate.exactDate)
+      d.setDate(d.getDate() + 7)
+      setReturnDateFlex({ ...returnDateFlex, exactDate: d.toISOString().split('T')[0] })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [departureDate.exactDate])
+
+  // Compute derived values for display/search
+  const isRoundTrip = tripType === 'round-trip'
+  const effectiveDepartDate = departureDate.type === 'exact' ? departureDate.exactDate : undefined
+  const effectiveReturnDate = returnDateFlex.type === 'exact' ? returnDateFlex.exactDate : undefined
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    setCalendarData(null); setExactDateResult(null); setWeekendDeals([]); setDiscoverResults([])
+    setCalendarData(null); setExactDateResult(null); setFlexResult(null); setDiscoverResults([])
     setError(''); setEmptyRoute(false); setShowPopularSuggestions(false); setMultiCityResults(null)
 
-    // Multi-city validation is different
-    if (dateMode === 'multi-city') {
+    // ── Multi-city validation ──
+    if (tripType === 'multi-city') {
       if (legs.length < 2) { setError('Add at least 2 flight legs'); return }
       for (let i = 0; i < legs.length; i++) {
         if (!legs[i].from || !legs[i].to || !legs[i].date) {
@@ -170,18 +287,22 @@ function SearchPageContent() {
       }
     } else {
       if (!origin) { setError('Please select a departure airport'); return }
-      if ((dateMode === 'exact-date' || dateMode === 'flexible-month') && !destination && destination !== 'ANYWHERE') {
-        setError('Please select a destination for this search mode'); return
+      if (!destination && destination !== 'ANYWHERE') {
+        setError('Please select a destination'); return
       }
       if (destination && destination !== 'ANYWHERE' && origin === destination) { setError('Departure and destination must be different'); return }
     }
 
     setLoading(true)
     try {
-      // "Anywhere" mode — find cheapest destinations
+      // ── "Anywhere" mode — find cheapest destinations ──
       if (destination === 'ANYWHERE') {
-        const dateParam = dateMode === 'exact-date' ? exactDate : `${month}-01`
-        const res = await fetch(`/api/discover?origin=${origin}&depart_date=${dateParam}&limit=5`)
+        const dateParam = departureDate.type === 'exact'
+          ? departureDate.exactDate
+          : departureDate.type === 'month'
+            ? `${departureDate.month}-01`
+            : undefined
+        const res = await fetch(`/api/discover?origin=${origin}${dateParam ? `&depart_date=${dateParam}` : ''}&limit=5`)
         if (!res.ok) {
           const data = await res.json()
           throw new Error(data.error || `API error: ${res.status}`)
@@ -192,10 +313,14 @@ function SearchPageContent() {
           setEmptyRoute(true)
         } else {
           setDiscoverResults(results)
-          const dateLabel = new Date(dateParam + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          const label = departureDate.type === 'exact'
+            ? new Date(departureDate.exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : departureDate.type === 'month'
+              ? new Date(departureDate.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+              : 'Anytime'
           saveRecentSearch({
-            origin, mode: 'discover', date: dateParam,
-            label: `${origin} → anywhere · ${dateLabel}`,
+            origin, mode: 'discover', date: dateParam || 'anytime',
+            label: `${origin} → anywhere · ${label}`,
             url: `/search?origin=${origin}&dest=ANYWHERE`,
           })
         }
@@ -203,144 +328,8 @@ function SearchPageContent() {
         return
       }
 
-      if (dateMode === 'flexible-month') {
-        const res = await fetch(`/api/travelpayouts/calendar?origin=${origin}&destination=${destination}&depart_date=${month}`)
-        if (!res.ok) throw new Error(`API error: ${res.status}`)
-        const data = await res.json()
-        if (data.error) throw new Error(data.error)
-        if (!data.data || Object.keys(data.data).length === 0) {
-          setEmptyRoute(true)
-        } else {
-          setCalendarData(data.data)
-          const monthLabel = new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-          saveRecentSearch({
-            origin, destination, date: month, mode: 'flexible-month',
-            label: `${origin} → ${destination} · ${monthLabel}`,
-            url: `/search?origin=${origin}&dest=${destination}&date=${month}&mode=flexible-month`,
-          })
-        }
-
-      } else if (dateMode === 'exact-date') {
-        let gotPrice = false
-
-        // Priority 1: SerpApi Google Flights (live data) via our unified endpoint
-        try {
-          let flightUrl = `/api/search/flights?origin=${origin}&destination=${destination}&departDate=${exactDate}`
-          if (isRoundTrip && returnDate) {
-            flightUrl += `&returnDate=${returnDate}`
-          }
-          const flightRes = await fetch(flightUrl)
-          if (flightRes.ok) {
-            const flightData = await flightRes.json()
-            if (flightData.success && flightData.flight) {
-              setExactDateResult({
-                price: flightData.flight.price,
-                dayData: {
-                  airlines: flightData.flight.airlines,
-                  stops: flightData.flight.stops,
-                  duration: flightData.flight.duration,
-                  priceLevel: flightData.flight.priceLevel,
-                  typicalRange: flightData.flight.typicalRange,
-                },
-                source: flightData.source, // 'google-flights' or 'travelpayouts'
-                isLive: flightData.isLive,
-              })
-              gotPrice = true
-              const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-              saveRecentSearch({
-                origin, destination, date: exactDate, mode: 'exact-date',
-                label: `${origin} → ${destination} · ${dateLabel}`,
-                url: `/search?origin=${origin}&dest=${destination}&date=${exactDate}&mode=exact-date`,
-              })
-            }
-          }
-        } catch (serpErr) {
-          console.log('[Search] SerpApi flight search failed, trying Kiwi:', serpErr)
-        }
-
-        // Priority 2: Kiwi (LCC coverage, deep links)
-        if (!gotPrice) {
-          try {
-            let kiwiUrl = `/api/kiwi/search?origin=${origin}&destination=${destination}&departure_date=${exactDate}&max=3`
-            if (isRoundTrip && returnDate) {
-              kiwiUrl += `&return_date=${returnDate}`
-            }
-            const kiwiRes = await fetch(kiwiUrl)
-            if (kiwiRes.ok) {
-              const kiwiData = await kiwiRes.json()
-              if (kiwiData.offers?.length > 0) {
-                const offer = kiwiData.offers[0]
-                setExactDateResult({
-                  price: offer.price,
-                  dayData: { ...offer, airlines: offer.airlines, stops: offer.stops },
-                  source: 'kiwi',
-                  deepLink: offer.deepLink,
-                  isLive: true,
-                })
-                gotPrice = true
-                const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                saveRecentSearch({
-                  origin, destination, date: exactDate, mode: 'exact-date',
-                  label: `${origin} → ${destination} · ${dateLabel}`,
-                  url: `/search?origin=${origin}&dest=${destination}&date=${exactDate}&mode=exact-date`,
-                })
-              }
-            }
-          } catch (kiwiErr) {
-            console.log('[Search] Kiwi unavailable, falling back to cached:', kiwiErr)
-          }
-        }
-
-        // Priority 3: TravelPayouts cached price
-        if (!gotPrice) {
-          const monthStr = exactDate.slice(0, 7)
-          const res = await fetch(`/api/travelpayouts/calendar?origin=${origin}&destination=${destination}&depart_date=${monthStr}`)
-          if (!res.ok) throw new Error(`API error: ${res.status}`)
-          const data = await res.json()
-          if (data.error) throw new Error(data.error)
-          const dayData = data.data?.[exactDate] ||
-            data.data?.[exactDate.replace(/-0(\d)/g, '-$1')]
-          const price = dayData?.price || dayData?.value
-          if (!price) {
-            setEmptyRoute(true)
-          } else {
-            setExactDateResult({ price, dayData, source: 'travelpayouts', isLive: false })
-            const dateLabel = new Date(exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-            saveRecentSearch({
-              origin, destination, date: exactDate, mode: 'exact-date',
-              label: `${origin} → ${destination} · ${dateLabel}`,
-              url: `/search?origin=${origin}&dest=${destination}&date=${exactDate}&mode=exact-date`,
-            })
-          }
-        }
-
-      } else if (dateMode === 'day-windows') {
-        let dealsData: WeekendDeal[] = []
-        let flex = flexibleDays
-        while (dealsData.length < 6 && flex <= 3) {
-          const res = await fetch(`/api/travelpayouts/latest?origin=${origin}&limit=200&depart_day=${departDay}&return_day=${returnDay}&timeframe=${timeframe}&flexible_days=${flex}`)
-          if (!res.ok) throw new Error('Failed to fetch deals')
-          const data = await res.json()
-          if (data.error) throw new Error(data.error)
-          dealsData = data.data || []
-          if (dealsData.length >= 6) break
-          flex++
-        }
-        if (dealsData.length < 3) setShowPopularSuggestions(true)
-        if (dealsData.length > 0) {
-          setWeekendDeals(dealsData.slice(0, 12))
-          const capDepart = departDay.charAt(0).toUpperCase() + departDay.slice(1, 3)
-          const capReturn = returnDay.charAt(0).toUpperCase() + returnDay.slice(1, 3)
-          saveRecentSearch({
-            origin, destination: destination || undefined, mode: 'day-windows',
-            label: `${origin} → anywhere · ${capDepart}–${capReturn}`,
-            url: `/search?origin=${origin}&mode=day-windows&depart=${departDay}&return=${returnDay}`,
-          })
-        } else {
-          setShowPopularSuggestions(true)
-        }
-
-      } else if (dateMode === 'multi-city') {
+      // ── Multi-city ──
+      if (tripType === 'multi-city') {
         const res = await fetch('/api/search/flights/multi-city', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -362,12 +351,229 @@ function SearchPageContent() {
             url: `/search?origin=${legs[0].from}&mode=multi-city`,
           })
         }
+        setLoading(false)
+        return
       }
+
+      // ── Standard search: use flexible API ──
+      const returnType = isRoundTrip ? returnDateFlex.type : 'none'
+
+      // Determine if this is a simple exact+exact or exact+none case that
+      // should use the existing direct flight search for maximum compatibility
+      const isSimpleExact = departureDate.type === 'exact' &&
+        (returnType === 'exact' || returnType === 'none')
+
+      if (isSimpleExact) {
+        // Use existing proven flow: direct SerpApi → Kiwi → TravelPayouts
+        await searchExactFlow(returnType === 'exact')
+      } else {
+        // Use new flexible search API for month/anytime combos
+        await searchFlexibleFlow(returnType)
+      }
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  // ── Exact date search flow (proven pipeline) ──
+  const searchExactFlow = async (roundTrip: boolean) => {
+    const depDate = departureDate.exactDate!
+    const retDate = roundTrip ? returnDateFlex.exactDate : undefined
+    let gotPrice = false
+
+    // Priority 1: SerpApi Google Flights
+    try {
+      let flightUrl = `/api/search/flights?origin=${origin}&destination=${destination}&departDate=${depDate}`
+      if (roundTrip && retDate) {
+        flightUrl += `&returnDate=${retDate}`
+      }
+      const flightRes = await fetch(flightUrl)
+      if (flightRes.ok) {
+        const flightData = await flightRes.json()
+        if (flightData.success && flightData.flight) {
+          setExactDateResult({
+            price: flightData.flight.price,
+            dayData: {
+              airlines: flightData.flight.airlines,
+              stops: flightData.flight.stops,
+              duration: flightData.flight.duration,
+              priceLevel: flightData.flight.priceLevel,
+              typicalRange: flightData.flight.typicalRange,
+            },
+            source: flightData.source,
+            isLive: flightData.isLive,
+            departDate: depDate,
+            returnDate: retDate,
+          })
+          gotPrice = true
+          const dateLabel = new Date(depDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          saveRecentSearch({
+            origin, destination, date: depDate, mode: 'exact-date',
+            label: `${origin} → ${destination} · ${dateLabel}`,
+            url: `/search?origin=${origin}&dest=${destination}&date=${depDate}&mode=exact-date`,
+          })
+        }
+      }
+    } catch (serpErr) {
+      console.log('[Search] SerpApi flight search failed, trying Kiwi:', serpErr)
+    }
+
+    // Priority 2: Kiwi
+    if (!gotPrice) {
+      try {
+        let kiwiUrl = `/api/kiwi/search?origin=${origin}&destination=${destination}&departure_date=${depDate}&max=3`
+        if (roundTrip && retDate) {
+          kiwiUrl += `&return_date=${retDate}`
+        }
+        const kiwiRes = await fetch(kiwiUrl)
+        if (kiwiRes.ok) {
+          const kiwiData = await kiwiRes.json()
+          if (kiwiData.offers?.length > 0) {
+            const offer = kiwiData.offers[0]
+            setExactDateResult({
+              price: offer.price,
+              dayData: { ...offer, airlines: offer.airlines, stops: offer.stops },
+              source: 'kiwi',
+              deepLink: offer.deepLink,
+              isLive: true,
+              departDate: depDate,
+              returnDate: retDate,
+            })
+            gotPrice = true
+            const dateLabel = new Date(depDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            saveRecentSearch({
+              origin, destination, date: depDate, mode: 'exact-date',
+              label: `${origin} → ${destination} · ${dateLabel}`,
+              url: `/search?origin=${origin}&dest=${destination}&date=${depDate}&mode=exact-date`,
+            })
+          }
+        }
+      } catch (kiwiErr) {
+        console.log('[Search] Kiwi unavailable, falling back to cached:', kiwiErr)
+      }
+    }
+
+    // Priority 3: TravelPayouts cached
+    if (!gotPrice) {
+      const monthStr = depDate.slice(0, 7)
+      const res = await fetch(`/api/travelpayouts/calendar?origin=${origin}&destination=${destination}&depart_date=${monthStr}`)
+      if (!res.ok) throw new Error(`API error: ${res.status}`)
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      const dayData = data.data?.[depDate] ||
+        data.data?.[depDate.replace(/-0(\d)/g, '-$1')]
+      const price = dayData?.price || dayData?.value
+      if (!price) {
+        setEmptyRoute(true)
+      } else {
+        setExactDateResult({
+          price, dayData, source: 'travelpayouts', isLive: false,
+          departDate: depDate, returnDate: retDate,
+        })
+        const dateLabel = new Date(depDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        saveRecentSearch({
+          origin, destination, date: depDate, mode: 'exact-date',
+          label: `${origin} → ${destination} · ${dateLabel}`,
+          url: `/search?origin=${origin}&dest=${destination}&date=${depDate}&mode=exact-date`,
+        })
+      }
+    }
+  }
+
+  // ── Flexible date search flow (month/anytime) ──
+  const searchFlexibleFlow = async (returnType: string) => {
+    const params = new URLSearchParams({
+      origin,
+      destination,
+      departType: departureDate.type,
+      returnType,
+    })
+
+    if (departureDate.type === 'exact' && departureDate.exactDate) {
+      params.set('departDate', departureDate.exactDate)
+    }
+    if (departureDate.type === 'month' && departureDate.month) {
+      params.set('departMonth', departureDate.month)
+    }
+    if (returnType === 'exact' && returnDateFlex.exactDate) {
+      params.set('returnDate', returnDateFlex.exactDate)
+    }
+    if (returnType === 'month' && returnDateFlex.month) {
+      params.set('returnMonth', returnDateFlex.month)
+    }
+
+    const res = await fetch(`/api/search/flights/flexible?${params.toString()}`)
+    if (!res.ok) {
+      const data = await res.json()
+      throw new Error(data.error || `API error: ${res.status}`)
+    }
+    const data = await res.json()
+
+    if (!data.success) {
+      throw new Error(data.message || 'Search returned no results')
+    }
+
+    // If the flexible API returned calendar data (TravelPayouts month fallback), show it
+    if (data.calendarData) {
+      setCalendarData(data.calendarData)
+      const monthLabel = departureDate.month
+        ? new Date(departureDate.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+        : 'Flexible'
+      saveRecentSearch({
+        origin, destination, date: departureDate.month || 'flex', mode: 'flexible-month',
+        label: `${origin} → ${destination} · ${monthLabel}`,
+        url: `/search?origin=${origin}&dest=${destination}`,
+      })
+      return
+    }
+
+    // For exact searchType results, map to exactDateResult format
+    if (data.searchType === 'exact' && data.price) {
+      setExactDateResult({
+        price: data.price,
+        dayData: {
+          airlines: data.airlines || [],
+          stops: data.stops,
+          duration: data.duration,
+          priceLevel: data.priceLevel,
+          typicalRange: data.typicalRange,
+        },
+        source: data.source,
+        isLive: data.isLive,
+        departDate: data.departDate,
+        returnDate: data.returnDate,
+      })
+      return
+    }
+
+    // For flexible/mixed results
+    if (data.price || data.departure?.price || data.totalEstimate) {
+      setFlexResult(data)
+      const label = departureDate.type === 'month'
+        ? new Date(departureDate.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+        : 'Anytime'
+      saveRecentSearch({
+        origin, destination, date: data.bestDepartDate || 'flex', mode: 'flexible-month',
+        label: `${origin} → ${destination} · ${label}`,
+        url: `/search?origin=${origin}&dest=${destination}`,
+      })
+    } else {
+      setEmptyRoute(true)
+    }
+  }
+
+  // Helper: get a display-friendly date label for the effective departure
+  const getDepartLabel = () => {
+    if (departureDate.type === 'exact' && departureDate.exactDate) {
+      return new Date(departureDate.exactDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+    if (departureDate.type === 'month' && departureDate.month) {
+      return new Date(departureDate.month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    }
+    return 'Anytime'
   }
 
   return (
@@ -378,166 +584,72 @@ function SearchPageContent() {
         {/* Page header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">Smart Flight Search</h1>
-          <p className="text-xl text-skyblue-light">Search by exact dates, browse cheapest days, or set destination to &quot;Anywhere&quot; to find the cheapest places to fly</p>
+          <p className="text-xl text-skyblue-light">Search by exact dates, browse a month, or find the cheapest time to fly</p>
         </div>
 
         {/* FORM CARD */}
         <form onSubmit={handleSearch} className="max-w-3xl mx-auto mb-10">
           <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
 
+            {/* Trip type toggle */}
+            <div className="flex items-center gap-2">
+              {([
+                { value: 'one-way' as TripType, label: 'One-way' },
+                { value: 'round-trip' as TripType, label: 'Round-trip' },
+                { value: 'multi-city' as TripType, label: 'Multi-city' },
+              ]).map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => { setTripType(opt.value); setError('') }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    tripType === opt.value
+                      ? 'bg-skyblue text-navy shadow-sm'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             {/* Origin + Destination (hidden in multi-city mode) */}
-            {dateMode !== 'multi-city' && (
+            {tripType !== 'multi-city' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <AirportAutocomplete id="origin" label="From" value={origin} onChange={setOrigin} placeholder="Departure city or code..." />
                 <AirportAutocomplete
                   id="destination" label="To"
                   value={destination} onChange={setDestination}
-                  placeholder={dateMode === 'day-windows' ? 'Any destination (optional)' : 'City, code, or "Anywhere"...'}
+                  placeholder='City, code, or "Anywhere"...'
                   allowAnywhere
                 />
               </div>
             )}
 
-            {/* Date mode tabs */}
-            <div>
-              <p className="text-sm font-medium text-navy mb-2">How do you want to search?</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {([
-                  { mode: 'exact-date', emoji: '📌', label: 'Exact Date', desc: 'Know your date' },
-                  { mode: 'flexible-month', emoji: '📅', label: 'Browse Month', desc: 'See all prices' },
-                  { mode: 'day-windows', emoji: '🗓', label: 'My Days Off', desc: 'Thu–Sun, etc.' },
-                  { mode: 'multi-city', emoji: '🗺️', label: 'Multi-city', desc: 'Multiple stops' },
-                ] as const).map(({ mode, emoji, label, desc }) => (
-                  <button key={mode} type="button"
-                    onClick={() => { setDateMode(mode); setError('') }}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${
-                      dateMode === mode
-                        ? 'border-skyblue bg-skyblue/10 shadow-md'
-                        : 'border-gray-200 hover:border-skyblue/40 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="text-lg mb-0.5">{emoji}</div>
-                    <div className={`font-semibold text-sm ${dateMode === mode ? 'text-skyblue' : 'text-navy'}`}>{label}</div>
-                    <div className="text-xs text-gray-500 hidden sm:block">{desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* EXACT DATE MODE */}
-            {dateMode === 'exact-date' && (
-              <div className="space-y-4">
-                {/* Round-trip toggle */}
-                <div className="flex items-center gap-4">
-                  <button type="button" onClick={() => setIsRoundTrip(false)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${!isRoundTrip ? 'bg-skyblue text-navy' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                    One-way
-                  </button>
-                  <button type="button" onClick={() => setIsRoundTrip(true)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${isRoundTrip ? 'bg-skyblue text-navy' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                    Round-trip
-                  </button>
-                </div>
-
-                <div className={`grid gap-4 ${isRoundTrip ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-                  <div className="space-y-2">
-                    <label htmlFor="exactDate" className="block text-sm font-medium text-navy">
-                      {isRoundTrip ? 'Departure' : 'Travel Date'}
-                    </label>
-                    <input type="date" id="exactDate" value={exactDate}
-                      onChange={e => {
-                        setExactDate(e.target.value)
-                        // Auto-adjust return date if it's before departure
-                        if (isRoundTrip && e.target.value > returnDate) {
-                          const d = new Date(e.target.value); d.setDate(d.getDate() + 7)
-                          setReturnDate(d.toISOString().split('T')[0])
-                        }
-                      }}
-                      min={today}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
-                      required
-                    />
-                  </div>
-                  {isRoundTrip && (
-                    <div className="space-y-2">
-                      <label htmlFor="returnDate" className="block text-sm font-medium text-navy">Return</label>
-                      <input type="date" id="returnDate" value={returnDate}
-                        onChange={e => setReturnDate(e.target.value)}
-                        min={exactDate}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
-                        required
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* FLEXIBLE MONTH MODE */}
-            {dateMode === 'flexible-month' && (
-              <div className="space-y-2">
-                <label htmlFor="month" className="block text-sm font-medium text-navy">Month</label>
-                <input type="month" id="month" value={month}
-                  onChange={e => setMonth(e.target.value)}
-                  min={currentMonth}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
-                  required
+            {/* DATE INPUTS (not multi-city) */}
+            {tripType !== 'multi-city' && (
+              <div className={`grid gap-4 ${tripType === 'round-trip' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                <FlexibleDateInput
+                  label={tripType === 'round-trip' ? 'Departure' : 'Travel Date'}
+                  value={departureDate}
+                  onChange={setDepartureDate}
+                  minDate={today}
+                  minMonth={new Date().toISOString().slice(0, 7)}
                 />
-              </div>
-            )}
-
-            {/* DAY WINDOWS MODE */}
-            {dateMode === 'day-windows' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label htmlFor="departDay" className="block text-sm font-medium text-navy">Depart on</label>
-                    <select id="departDay" value={departDay} onChange={e => setDepartDay(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy">
-                      {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d => (
-                        <option key={d} value={d.toLowerCase()}>{d}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label htmlFor="returnDay" className="block text-sm font-medium text-navy">Return on</label>
-                    <select id="returnDay" value={returnDay} onChange={e => setReturnDay(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy">
-                      {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d => (
-                        <option key={d} value={d.toLowerCase()}>{d}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="timeframe" className="block text-sm font-medium text-navy">Search within</label>
-                  <select id="timeframe" value={timeframe} onChange={e => setTimeframe(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy">
-                    <option value="thisweek">This week</option>
-                    <option value="thismonth">This month</option>
-                    <option value="3months">Next 3 months</option>
-                    <option value="6months">Next 6 months</option>
-                    <option value="thisyear">This year</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-navy">
-                    Date flexibility: ±{flexibleDays} day{flexibleDays !== 1 ? 's' : ''}
-                  </label>
-                  <input type="range" min="0" max="3" value={flexibleDays}
-                    onChange={e => setFlexibleDays(parseInt(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
+                {tripType === 'round-trip' && (
+                  <FlexibleDateInput
+                    label="Return"
+                    value={returnDateFlex}
+                    onChange={setReturnDateFlex}
+                    minDate={departureDate.type === 'exact' ? departureDate.exactDate : today}
+                    minMonth={departureDate.type === 'month' ? departureDate.month : new Date().toISOString().slice(0, 7)}
                   />
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>Exact days only</span>
-                    <span>Very flexible</span>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
             {/* MULTI-CITY MODE */}
-            {dateMode === 'multi-city' && (
+            {tripType === 'multi-city' && (
               <div className="space-y-3">
                 <p className="text-sm font-medium text-navy">Flight legs</p>
                 {legs.map((leg, idx) => (
@@ -635,10 +747,10 @@ function SearchPageContent() {
             <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-skyblue"></div>
             <p className="text-white mt-4 text-lg">
               {destination === 'ANYWHERE' && 'Finding cheapest destinations...'}
-              {destination !== 'ANYWHERE' && dateMode === 'flexible-month' && 'Loading cheapest days...'}
-              {destination !== 'ANYWHERE' && dateMode === 'exact-date' && 'Checking flight prices...'}
-              {destination !== 'ANYWHERE' && dateMode === 'day-windows' && `Finding ${departDay}–${returnDay} trips...`}
-              {dateMode === 'multi-city' && `Searching ${legs.length} flight legs...`}
+              {destination !== 'ANYWHERE' && tripType === 'multi-city' && `Searching ${legs.length} flight legs...`}
+              {destination !== 'ANYWHERE' && tripType !== 'multi-city' && departureDate.type === 'exact' && 'Checking flight prices...'}
+              {destination !== 'ANYWHERE' && tripType !== 'multi-city' && departureDate.type === 'month' && 'Finding cheapest days this month...'}
+              {destination !== 'ANYWHERE' && tripType !== 'multi-city' && departureDate.type === 'anytime' && 'Finding the cheapest time to fly...'}
             </p>
           </div>
         )}
@@ -650,15 +762,15 @@ function SearchPageContent() {
             {emptyRoute && (
               <div className="max-w-md mx-auto mb-8">
                 <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
-                  <div className="text-5xl mb-4">🔍</div>
+                  <div className="text-5xl mb-4">&#128269;</div>
                   <h3 className="text-xl font-bold text-navy mb-3">No prices found</h3>
                   <p className="text-gray-600 mb-6">
                     Click below to check current prices on Aviasales.
                   </p>
                   <button
                     onClick={() => {
-                      const date = dateMode === 'exact-date' ? exactDate : `${month}-01`
-                      const ret = isRoundTrip ? returnDate : undefined
+                      const date = effectiveDepartDate || `${departureDate.month || new Date().toISOString().slice(0, 7)}-01`
+                      const ret = isRoundTrip ? effectiveReturnDate : undefined
                       const link = buildFlightLink(origin, destination, date, ret)
                       window.open(link, '_blank')
                     }}
@@ -674,7 +786,7 @@ function SearchPageContent() {
             {calendarData && (
               <>
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <CalendarGrid data={calendarData as any} origin={origin} destination={destination} month={month} />
+                <CalendarGrid data={calendarData as any} origin={origin} destination={destination} month={departureDate.month || new Date().toISOString().slice(0, 7)} />
                 <WhatNext origin={origin} destination={destination} context="search" />
               </>
             )}
@@ -697,8 +809,8 @@ function SearchPageContent() {
                       {exactDateResult.isLive ? '' : '~'}${exactDateResult.price}
                     </p>
                     <p className="text-navy/80 text-sm mt-2">
-                      {origin} {isRoundTrip ? '↔' : '→'} {destination} · {exactDate}
-                      {isRoundTrip && returnDate && ` — ${returnDate}`}
+                      {origin} {isRoundTrip ? '<>' : '>'} {destination} · {exactDateResult.departDate || effectiveDepartDate}
+                      {isRoundTrip && (exactDateResult.returnDate || effectiveReturnDate) && ` — ${exactDateResult.returnDate || effectiveReturnDate}`}
                     </p>
                     <p className="text-navy/60 text-xs mt-1">
                       {exactDateResult.isLive
@@ -726,8 +838,8 @@ function SearchPageContent() {
                   <div className="p-6">
                     <button
                       onClick={() => {
-                        const depDate = exactDateResult.dayData?.departure_at || exactDateResult.dayData?.departureTime || exactDate
-                        const ret = isRoundTrip ? returnDate : undefined
+                        const depDate = exactDateResult.dayData?.departure_at || exactDateResult.dayData?.departureTime || effectiveDepartDate || ''
+                        const ret = isRoundTrip ? (exactDateResult.returnDate || effectiveReturnDate) : undefined
                         const { action } = resolveFlightBooking({
                           origin, destination, departDate: depDate, returnDate: ret,
                           price: exactDateResult.price, source: exactDateResult.source,
@@ -747,7 +859,7 @@ function SearchPageContent() {
                     {/* Always show Google Flights as a reliable alternative */}
                     {exactDateResult.source !== 'google-flights' && (
                       <a
-                        href={`https://www.google.com/travel/flights?q=flights+from+${origin}+to+${destination}+on+${exactDate}${isRoundTrip && returnDate ? '+returning+' + returnDate : ''}&curr=USD`}
+                        href={`https://www.google.com/travel/flights?q=flights+from+${origin}+to+${destination}+on+${effectiveDepartDate}${isRoundTrip && effectiveReturnDate ? '+returning+' + effectiveReturnDate : ''}&curr=USD`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-6 rounded-lg transition mt-2 text-sm"
@@ -765,42 +877,142 @@ function SearchPageContent() {
                       <BookingLinks
                         cityName={majorAirports.find(a => a.code === destination)?.city || destination}
                         iata={destination}
-                        checkIn={exactDate}
-                        nights={isRoundTrip && returnDate ? Math.ceil((new Date(returnDate).getTime() - new Date(exactDate).getTime()) / 86400000) : 3}
+                        checkIn={effectiveDepartDate || ''}
+                        nights={isRoundTrip && effectiveDepartDate && effectiveReturnDate ? Math.ceil((new Date(effectiveReturnDate).getTime() - new Date(effectiveDepartDate).getTime()) / 86400000) : 3}
                       />
                     </div>
                   </div>
                 </div>
-                <WhatNext origin={origin} destination={destination} departDate={exactDate} context="search" />
+                <WhatNext origin={origin} destination={destination} departDate={effectiveDepartDate} context="search" />
               </div>
             )}
 
-            {/* DAY WINDOWS: destination cards grid */}
-            {weekendDeals.length > 0 && (
-              <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-white mb-2">
-                    Top {weekendDeals.length} Destinations
-                  </h2>
-                  <p className="text-skyblue-light">
-                    {departDay.charAt(0).toUpperCase() + departDay.slice(1)} to {returnDay.charAt(0).toUpperCase() + returnDay.slice(1)} trips from {origin}
-                    {flexibleDays > 0 && ` · ±${flexibleDays} day${flexibleDays !== 1 ? 's' : ''} flexible`}
-                  </p>
+            {/* FLEXIBLE RESULT: best price for month/anytime */}
+            {flexResult && (
+              <div className="max-w-md mx-auto">
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                  <div className="px-6 py-5 text-center bg-gradient-to-r from-skyblue to-skyblue-dark relative">
+                    {flexResult.isLive && (
+                      <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg animate-pulse">
+                        <span className="w-2 h-2 bg-white rounded-full"></span>
+                        LIVE
+                      </span>
+                    )}
+                    <p className="text-navy font-semibold text-sm uppercase tracking-wide">
+                      {flexResult.searchType === 'mixed' ? 'Estimated Total' : 'Best Price Found'}
+                    </p>
+                    <p className="text-navy text-6xl font-bold mt-1">
+                      {flexResult.isLive ? '' : '~'}${flexResult.searchType === 'mixed' ? flexResult.totalEstimate : flexResult.price}
+                    </p>
+                    <p className="text-navy/80 text-sm mt-2">
+                      {origin} {isRoundTrip ? '<>' : '>'} {destination}
+                    </p>
+
+                    {/* Show best dates if available */}
+                    {flexResult.bestDepartDate && (
+                      <p className="text-navy/70 text-sm mt-1 font-medium">
+                        Best departure: {new Date(flexResult.bestDepartDate + 'T00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {flexResult.bestReturnDate && (
+                          <> — return {new Date(flexResult.bestReturnDate + 'T00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</>
+                        )}
+                      </p>
+                    )}
+
+                    {/* Mixed search: show departure + return breakdown */}
+                    {flexResult.searchType === 'mixed' && (
+                      <div className="mt-3 space-y-1">
+                        {flexResult.departure?.price && (
+                          <p className="text-navy/60 text-xs">
+                            Outbound: ${flexResult.departure.price}
+                            {flexResult.departure.airlines?.length > 0 && ` · ${flexResult.departure.airlines.join(', ')}`}
+                          </p>
+                        )}
+                        {flexResult.return?.price && (
+                          <p className="text-navy/60 text-xs">
+                            Return: ${flexResult.return.price}
+                            {flexResult.return.airline && ` · ${flexResult.return.airline}`}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Single search: show airline/stops info */}
+                    {flexResult.searchType !== 'mixed' && flexResult.airline && (
+                      <p className="text-navy/70 text-xs mt-1">
+                        {flexResult.airline}
+                        {flexResult.stops !== null && ` · ${flexResult.stops === 0 ? 'Direct' : `${flexResult.stops} stop${flexResult.stops > 1 ? 's' : ''}`}`}
+                      </p>
+                    )}
+
+                    <p className="text-navy/60 text-xs mt-2">
+                      {flexResult.isLive
+                        ? 'Live from Google — prices change frequently'
+                        : 'Cached estimate — verify on booking site'}
+                    </p>
+                  </div>
+
+                  <div className="p-6">
+                    {/* Flight options if available */}
+                    {flexResult.flights && flexResult.flights.length > 1 && (
+                      <div className="mb-4 space-y-2">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Flight options</p>
+                        {flexResult.flights.slice(0, 3).map((f: any, i: number) => (
+                          <div key={i} className={`flex items-center justify-between py-2 px-3 rounded-lg ${i === 0 ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
+                            <div className="text-sm text-gray-700">
+                              {f.airline || 'Unknown'}
+                              {f.stops !== undefined && (
+                                <span className="text-gray-400 ml-2">
+                                  {f.stops === 0 ? 'Direct' : `${f.stops} stop${f.stops > 1 ? 's' : ''}`}
+                                </span>
+                              )}
+                            </div>
+                            <div className={`font-bold ${i === 0 ? 'text-green-600' : 'text-navy'}`}>${f.price}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        const depDate = flexResult.bestDepartDate || effectiveDepartDate || `${departureDate.month || new Date().toISOString().slice(0, 7)}-15`
+                        const retDate = flexResult.bestReturnDate || effectiveReturnDate || undefined
+                        const link = buildFlightLink(origin, destination, depDate, retDate)
+                        window.open(link, '_blank')
+                      }}
+                      className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
+                    >
+                      {flexResult.bestDepartDate
+                        ? `Book for ${new Date(flexResult.bestDepartDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                        : 'Check Prices'}
+                    </button>
+                    <a
+                      href={`https://www.google.com/travel/flights?q=flights+from+${origin}+to+${destination}&curr=USD`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-6 rounded-lg transition mt-2 text-sm"
+                    >
+                      Also check on Google Flights
+                    </a>
+                    <p className="text-center text-xs text-gray-500 mt-3">
+                      Flexible search — actual fares may vary
+                    </p>
+
+                    {flexResult.bestDepartDate && (
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <p className="text-xs text-gray-500 mb-2 font-medium text-center">Plan your stay</p>
+                        <BookingLinks
+                          cityName={majorAirports.find(a => a.code === destination)?.city || destination}
+                          iata={destination}
+                          checkIn={flexResult.bestDepartDate}
+                          nights={flexResult.bestReturnDate
+                            ? Math.ceil((new Date(flexResult.bestReturnDate).getTime() - new Date(flexResult.bestDepartDate).getTime()) / 86400000)
+                            : 3}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {weekendDeals.map((deal, i) => (
-                    <DestinationCard
-                      key={`${deal.destination}-${i}`}
-                      destination={deal.gate}
-                      destinationCode={deal.destination}
-                      origin={deal.origin}
-                      price={deal.value}
-                      departDate={deal.depart_date}
-                      returnDate={deal.return_date}
-                      distance={deal.distance}
-                    />
-                  ))}
-                </div>
+                <WhatNext origin={origin} destination={destination} departDate={flexResult.bestDepartDate} context="search" />
               </div>
             )}
 
@@ -818,7 +1030,7 @@ function SearchPageContent() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-bold text-white bg-navy rounded-full w-5 h-5 flex items-center justify-center">{idx + 1}</span>
-                            <span className="font-bold text-navy text-lg">{leg.from} → {leg.to}</span>
+                            <span className="font-bold text-navy text-lg">{leg.from} &rarr; {leg.to}</span>
                             {leg.isLive && (
                               <span className="inline-flex items-center gap-1 bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
                                 <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
@@ -969,39 +1181,34 @@ function SearchPageContent() {
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="text-white font-semibold text-lg">{sug.city}</p>
-                          <p className="text-skyblue-light text-sm">{origin} → {sug.dest}</p>
+                          <p className="text-skyblue-light text-sm">{origin} &rarr; {sug.dest}</p>
                         </div>
                       </div>
-                      <p className="text-skyblue text-sm mt-3 font-medium">Check prices on Aviasales →</p>
+                      <p className="text-skyblue text-sm mt-3 font-medium">Check prices on Aviasales &rarr;</p>
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Empty state */}
-            {!calendarData && !exactDateResult && weekendDeals.length === 0 && discoverResults.length === 0 && !multiCityResults && !emptyRoute && !error && (
+            {/* Empty state — help cards */}
+            {!calendarData && !exactDateResult && !flexResult && discoverResults.length === 0 && !multiCityResults && !emptyRoute && !error && (
               <div className="max-w-3xl mx-auto mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
-                    <div className="text-4xl mb-3">📌</div>
-                    <h3 className="text-white font-semibold mb-2">Exact Date</h3>
-                    <p className="text-skyblue-light text-sm">Know when you&apos;re flying? Get an estimated price and check on Aviasales.</p>
+                    <div className="text-4xl mb-3">&#128197;</div>
+                    <h3 className="text-white font-semibold mb-2">Exact Dates</h3>
+                    <p className="text-skyblue-light text-sm">Know when you&apos;re flying? Get a live price and book directly.</p>
                   </div>
                   <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
-                    <div className="text-4xl mb-3">📅</div>
-                    <h3 className="text-white font-semibold mb-2">Browse Month</h3>
-                    <p className="text-skyblue-light text-sm">See every day color-coded by price. Spot the cheapest days.</p>
+                    <div className="text-4xl mb-3">&#128198;</div>
+                    <h3 className="text-white font-semibold mb-2">Flexible Month</h3>
+                    <p className="text-skyblue-light text-sm">Set departure or return to &quot;Month&quot; to find the cheapest day.</p>
                   </div>
                   <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
-                    <div className="text-4xl mb-3">🗓</div>
-                    <h3 className="text-white font-semibold mb-2">My Days Off</h3>
-                    <p className="text-skyblue-light text-sm">Free Thursday to Sunday? Find the cheapest destinations for those days.</p>
-                  </div>
-                  <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
-                    <div className="text-4xl mb-3">🗺️</div>
-                    <h3 className="text-white font-semibold mb-2">Multi-city</h3>
-                    <p className="text-skyblue-light text-sm">Plan a multi-stop trip with separate flights for each leg.</p>
+                    <div className="text-4xl mb-3">&#9992;&#65039;</div>
+                    <h3 className="text-white font-semibold mb-2">Anytime</h3>
+                    <p className="text-skyblue-light text-sm">Set to &quot;Anytime&quot; to find the absolute cheapest time in the next 6 months.</p>
                   </div>
                 </div>
               </div>
