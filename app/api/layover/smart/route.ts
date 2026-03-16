@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { discoverStopovers } from '@/lib/flight-providers/serpapi-layover'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import type { BudgetTier } from '@/lib/destination-costs'
+import { trackFeatureUse } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,6 +55,13 @@ export async function GET(request: NextRequest) {
       passportCountry,
       budgetTier,
       maxStopoverDays,
+    })
+
+    // Fire-and-forget tracking
+    trackFeatureUse('stopover_search', {
+      origin,
+      destination,
+      stopovers_found: result.stopovers?.length ?? 0,
     })
 
     return NextResponse.json(result, {

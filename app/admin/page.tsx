@@ -29,6 +29,15 @@ interface AnalyticsData {
     nodeVersion: string
     timestamp: string
   }
+  featurePopularity?: { event_type: string; count: number }[]
+  topOrigins?: { origin: string; count: number }[]
+  topVibes?: { vibe: string; count: number }[]
+  budgetDistribution?: { under_500: number; range_500_1000: number; range_1000_2000: number; over_2000: number }
+  topPages?: { page: string; count: number }[]
+  conversionFunnel?: { page_views: number; searches: number; reveals: number }
+  feedbackSummary?: { type: string; message: string; rating: number | null; would_recommend: boolean | null; page_url: string | null; created_at: string }[]
+  avgRating?: { avg: number; count: number }
+  topCachedDestinations?: { iata: string; city: string; country: string; reveal_count: number }[]
 }
 
 function formatBytes(bytes: number): string {
@@ -688,6 +697,341 @@ export default function AdminDashboard() {
                       <span className="text-xs text-gray-600 shrink-0 whitespace-nowrap">
                         {formatTimeAgo(entry.created_at)}
                       </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Row 5: Feature Popularity + Top Pages */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card title="Feature Popularity (7d)">
+            {!data.featurePopularity || data.featurePopularity.length === 0 ? (
+              <div className="text-gray-500 text-sm py-4">No data yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {data.featurePopularity.map((item, i) => {
+                  const maxCount = data.featurePopularity![0]?.count || 1
+                  const pct = Math.round((item.count / maxCount) * 100)
+                  const eventColors: Record<string, string> = {
+                    mystery_search: '#a855f7',
+                    flight_search: '#3b82f6',
+                    stopover_search: '#06b6d4',
+                    page_view: '#6b7280',
+                    destination_revealed: '#22c55e',
+                    trip_saved: '#eab308',
+                    share: '#ec4899',
+                  }
+                  const color = eventColors[item.event_type] || '#8b5cf6'
+                  return (
+                    <div key={item.event_type} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 w-5 text-right">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm text-gray-200 truncate font-mono">{item.event_type}</span>
+                          <span className="text-xs text-gray-400 ml-2 shrink-0">{item.count}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, backgroundColor: color }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </Card>
+
+          <Card title="Top Pages (24h)">
+            {!data.topPages || data.topPages.length === 0 ? (
+              <div className="text-gray-500 text-sm py-4">No data yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {data.topPages.map((item, i) => {
+                  const maxCount = data.topPages![0]?.count || 1
+                  const pct = Math.round((item.count / maxCount) * 100)
+                  return (
+                    <div key={item.page} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 w-5 text-right">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm text-gray-200 truncate font-mono">{item.page}</span>
+                          <span className="text-xs text-gray-400 ml-2 shrink-0">{item.count}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-cyan-500/70 transition-all duration-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Row 6: User Search Insights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card title="Top Origins (7d)">
+            {!data.topOrigins || data.topOrigins.length === 0 ? (
+              <div className="text-gray-500 text-sm py-4">No data yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {data.topOrigins.map((item, i) => {
+                  const maxCount = data.topOrigins![0]?.count || 1
+                  const pct = Math.round((item.count / maxCount) * 100)
+                  return (
+                    <div key={item.origin} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 w-5 text-right">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm text-gray-200 font-mono">{item.origin}</span>
+                          <span className="text-xs text-gray-400 ml-2 shrink-0">{item.count}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-blue-500/70 transition-all duration-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </Card>
+
+          <Card title="Top Vibes (7d)">
+            {!data.topVibes || data.topVibes.length === 0 ? (
+              <div className="text-gray-500 text-sm py-4">No data yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {data.topVibes.map((item, i) => {
+                  const maxCount = data.topVibes![0]?.count || 1
+                  const pct = Math.round((item.count / maxCount) * 100)
+                  return (
+                    <div key={item.vibe} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 w-5 text-right">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm text-gray-200">{item.vibe}</span>
+                          <span className="text-xs text-gray-400 ml-2 shrink-0">{item.count}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-purple-500/70 transition-all duration-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </Card>
+
+          <Card title="Budget Distribution">
+            {!data.budgetDistribution ? (
+              <div className="text-gray-500 text-sm py-4">No data yet.</div>
+            ) : (() => {
+              const bd = data.budgetDistribution
+              const total = bd.under_500 + bd.range_500_1000 + bd.range_1000_2000 + bd.over_2000
+              if (total === 0) return <div className="text-gray-500 text-sm py-4">No data yet.</div>
+              const segments = [
+                { label: 'Under $500', value: bd.under_500, color: '#22c55e' },
+                { label: '$500 - $1K', value: bd.range_500_1000, color: '#3b82f6' },
+                { label: '$1K - $2K', value: bd.range_1000_2000, color: '#eab308' },
+                { label: '$2K+', value: bd.over_2000, color: '#ef4444' },
+              ]
+              return (
+                <div className="space-y-4">
+                  {/* Segmented bar */}
+                  <div className="w-full h-6 bg-white/5 rounded-full overflow-hidden flex">
+                    {segments.map((seg) => {
+                      const pct = total > 0 ? (seg.value / total) * 100 : 0
+                      if (pct === 0) return null
+                      return (
+                        <div
+                          key={seg.label}
+                          className="h-full transition-all duration-500 first:rounded-l-full last:rounded-r-full"
+                          style={{ width: `${pct}%`, backgroundColor: seg.color }}
+                          title={`${seg.label}: ${seg.value} (${Math.round(pct)}%)`}
+                        />
+                      )
+                    })}
+                  </div>
+                  {/* Legend */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {segments.map((seg) => (
+                      <div key={seg.label} className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+                        <span className="text-xs text-gray-400">{seg.label}</span>
+                        <span className="text-xs text-white font-medium ml-auto">{seg.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-xs text-gray-500 pt-1 border-t border-white/5">
+                    {total} total searches
+                  </div>
+                </div>
+              )
+            })()}
+          </Card>
+        </div>
+
+        {/* Row 7: Conversion Funnel */}
+        {data.conversionFunnel && (
+          <div className="grid grid-cols-1 gap-4">
+            <Card title="Conversion Funnel (7d)">
+              {(() => {
+                const funnel = data.conversionFunnel!
+                const steps = [
+                  { label: 'Mystery Page Views', value: funnel.page_views, color: '#6b7280' },
+                  { label: 'Searches', value: funnel.searches, color: '#3b82f6' },
+                  { label: 'Reveals', value: funnel.reveals, color: '#22c55e' },
+                ]
+                const maxVal = Math.max(...steps.map(s => s.value), 1)
+                return (
+                  <div className="flex items-end gap-6 justify-center py-2">
+                    {steps.map((step, i) => {
+                      const heightPct = Math.max((step.value / maxVal) * 100, 8)
+                      const convRate = i > 0 && steps[i - 1].value > 0
+                        ? Math.round((step.value / steps[i - 1].value) * 100)
+                        : null
+                      return (
+                        <div key={step.label} className="flex flex-col items-center gap-2 flex-1 max-w-[200px]">
+                          {convRate !== null && (
+                            <div className="text-xs text-gray-500">{convRate}% conv.</div>
+                          )}
+                          <div className="w-full flex justify-center">
+                            <div
+                              className="w-16 rounded-t-lg transition-all duration-500"
+                              style={{
+                                height: `${heightPct}px`,
+                                minHeight: '8px',
+                                maxHeight: '100px',
+                                backgroundColor: step.color,
+                              }}
+                            />
+                          </div>
+                          <div className="text-lg font-bold text-white">{step.value}</div>
+                          <div className="text-xs text-gray-400 text-center">{step.label}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </Card>
+          </div>
+        )}
+
+        {/* Row 8: Feedback + Top Cached Destinations */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card title="Feedback Summary">
+            <div className="space-y-4">
+              {/* Average rating */}
+              {data.avgRating && data.avgRating.count > 0 ? (
+                <div className="flex items-center gap-4 pb-3 border-b border-white/5">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span
+                        key={star}
+                        className="text-lg"
+                        style={{ color: star <= Math.round(data.avgRating!.avg) ? '#eab308' : '#374151' }}
+                      >
+                        &#9733;
+                      </span>
+                    ))}
+                  </div>
+                  <div>
+                    <span className="text-xl font-bold text-white">{data.avgRating.avg}</span>
+                    <span className="text-sm text-gray-500 ml-1">/ 5</span>
+                  </div>
+                  <div className="text-xs text-gray-500 ml-auto">{data.avgRating.count} ratings</div>
+                </div>
+              ) : (
+                <div className="text-gray-500 text-sm pb-3 border-b border-white/5">No ratings yet.</div>
+              )}
+
+              {/* Recent feedback entries */}
+              {!data.feedbackSummary || data.feedbackSummary.length === 0 ? (
+                <div className="text-gray-500 text-sm py-2">No feedback yet.</div>
+              ) : (
+                <div className="space-y-3">
+                  {data.feedbackSummary.slice(0, 5).map((entry, i) => {
+                    const typeBg = entry.type === 'bug'
+                      ? 'rgba(239,68,68,0.15)'
+                      : 'rgba(59,130,246,0.15)'
+                    const typeColor = entry.type === 'bug' ? '#f87171' : '#60a5fa'
+                    return (
+                      <div key={i} className="flex items-start gap-3 py-1">
+                        <span
+                          className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mt-0.5"
+                          style={{ backgroundColor: typeBg, color: typeColor }}
+                        >
+                          {entry.type}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-gray-300 line-clamp-2">{entry.message}</div>
+                          <div className="flex items-center gap-3 mt-1">
+                            {entry.rating && (
+                              <span className="text-xs text-yellow-500">
+                                {Array.from({ length: entry.rating }, () => '\u2605').join('')}
+                              </span>
+                            )}
+                            {entry.page_url && (
+                              <span className="text-xs text-gray-600 truncate max-w-[150px]">{entry.page_url}</span>
+                            )}
+                            <span className="text-xs text-gray-600 shrink-0">
+                              {formatTimeAgo(entry.created_at)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card title="Top Cached Destinations">
+            {!data.topCachedDestinations || data.topCachedDestinations.length === 0 ? (
+              <div className="text-gray-500 text-sm py-4">No data yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {data.topCachedDestinations.map((dest, i) => {
+                  const maxCount = data.topCachedDestinations![0]?.reveal_count || 1
+                  const pct = Math.round((dest.reveal_count / maxCount) * 100)
+                  return (
+                    <div key={dest.iata} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 w-5 text-right">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm text-gray-200">
+                            <span className="font-mono text-sky-400 mr-1.5">{dest.iata}</span>
+                            {dest.city}, {dest.country}
+                          </span>
+                          <span className="text-xs text-gray-400 ml-2 shrink-0">{dest.reveal_count} reveals</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-emerald-500/70 transition-all duration-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   )
                 })}

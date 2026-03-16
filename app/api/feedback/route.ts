@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase'
+import { trackFeatureUse } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
 
@@ -119,6 +120,12 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       )
     }
+
+    // Fire-and-forget tracking
+    trackFeatureUse('feedback_submitted', {
+      type,
+      rating: rating || null,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

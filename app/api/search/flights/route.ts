@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { serpapiProvider, getGoogleFlightsPrice, getSerpApiUsage } from '@/lib/flight-providers/serpapi'
+import { trackFeatureUse } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
 
@@ -93,6 +94,13 @@ export async function GET(request: NextRequest) {
           const usage = getSerpApiUsage()
           console.log(`[Flight Search API] SerpApi success: $${result.price} (${usage.remaining} searches remaining)`)
 
+          trackFeatureUse('flight_search', {
+            origin,
+            destination,
+            source: 'google-flights',
+            isLive: true,
+          })
+
           return NextResponse.json({
             success: true,
             source: 'google-flights',
@@ -156,6 +164,13 @@ export async function GET(request: NextRequest) {
         message: 'No price data available for this date',
       })
     }
+
+    trackFeatureUse('flight_search', {
+      origin,
+      destination,
+      source: 'travelpayouts',
+      isLive: false,
+    })
 
     return NextResponse.json({
       success: true,

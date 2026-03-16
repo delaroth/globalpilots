@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exploreDestinations, dateToMonth, type ExploreDestination } from '@/lib/flight-providers/serpapi-explore'
 import { serpapiProvider, getGoogleFlightsPrice, getSerpApiUsage } from '@/lib/flight-providers/serpapi'
+import { trackFeatureUse } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
 
@@ -93,6 +94,14 @@ export async function GET(request: NextRequest) {
   try {
     const usage = getSerpApiUsage()
     console.log(`[Flexible Search] ${origin} -> ${destination}, depart=${departType}, return=${returnType} (${usage.remaining} SerpApi remaining)`)
+
+    // Fire-and-forget tracking
+    trackFeatureUse('flight_search_flexible', {
+      origin,
+      destination,
+      departure_type: departType,
+      return_type: returnType,
+    })
 
     // ── Case 1: Both exact → standard Google Flights search (1 call) ──
     if (departType === 'exact' && returnType === 'exact') {

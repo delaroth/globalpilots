@@ -96,6 +96,19 @@ interface Destination {
   googleFlightsCarbonEmissions?: { thisFlightKg: number; typicalKg: number; differencePercent: number }
   googleFlightsAirlineLogos?: string[]
   priceIsLive?: boolean
+  cachedBasicInfo?: {
+    climateHint: string
+    languages: string[]
+    currency: string
+    timezone: string
+    dailyCosts: { budget: number; mid: number; comfort: number }
+    topAttractions: string[]
+    bestMonths: number[]
+    localFood: string[]
+    safetyLevel: string
+    plugType: string
+    tippingCustom: string
+  } | null
 }
 
 interface MysteryRevealProps {
@@ -1218,19 +1231,157 @@ export default function MysteryReveal({
 
                 {/* ============================================================
                     DESTINATION INTEL (Enrichment Data)
+                    Shows cached basicInfo instantly, enrichment fills in live data
                 ============================================================ */}
                 <motion.div {...staggerChild(15)}>
-                  {enrichmentLoading ? (
+                  {enrichmentLoading && !enrichment ? (
                     <div className="space-y-3">
                       <h3 className="text-xl font-bold text-white mb-4">
                         Destination Intel
                       </h3>
-                      <div className="grid grid-cols-2 gap-3">
-                        <ShimmerBlock />
-                        <ShimmerBlock />
-                        <ShimmerBlock />
-                        <ShimmerBlock />
-                      </div>
+                      {/* If we have cached basic info, show it instantly instead of shimmers */}
+                      {destination.cachedBasicInfo ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Climate from cache */}
+                          {destination.cachedBasicInfo.climateHint && (
+                            <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-base">🌤️</span>
+                                <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                                  Climate
+                                </span>
+                              </div>
+                              <p className="text-white font-medium text-sm">
+                                {destination.cachedBasicInfo.climateHint}
+                              </p>
+                            </div>
+                          )}
+                          {/* Currency from cache */}
+                          {destination.cachedBasicInfo.currency && (
+                            <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-base">💱</span>
+                                <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                                  Currency
+                                </span>
+                              </div>
+                              <p className="text-white font-medium text-sm">
+                                {destination.cachedBasicInfo.currency}
+                              </p>
+                            </div>
+                          )}
+                          {/* Languages from cache */}
+                          {destination.cachedBasicInfo.languages.length > 0 && (
+                            <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-base">🗣️</span>
+                                <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                                  Language
+                                </span>
+                              </div>
+                              <p className="text-white font-medium text-sm">
+                                {destination.cachedBasicInfo.languages.slice(0, 3).join(', ')}
+                              </p>
+                            </div>
+                          )}
+                          {/* Timezone from cache */}
+                          {destination.cachedBasicInfo.timezone && (
+                            <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-base">🕐</span>
+                                <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                                  Timezone
+                                </span>
+                              </div>
+                              <p className="text-white font-medium text-sm">
+                                {destination.cachedBasicInfo.timezone.replace(/_/g, ' ')}
+                              </p>
+                            </div>
+                          )}
+                          {/* Daily Costs from cache */}
+                          {destination.cachedBasicInfo.dailyCosts && (
+                            <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-base">💰</span>
+                                <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                                  Daily Costs
+                                </span>
+                              </div>
+                              <p className="text-white font-medium text-sm">
+                                ${destination.cachedBasicInfo.dailyCosts.budget} &ndash; ${destination.cachedBasicInfo.dailyCosts.comfort}/day
+                              </p>
+                            </div>
+                          )}
+                          {/* Plug Type from cache */}
+                          {destination.cachedBasicInfo.plugType && (
+                            <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-base">🔌</span>
+                                <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                                  Plug Type
+                                </span>
+                              </div>
+                              <p className="text-white font-medium text-sm">
+                                Type {destination.cachedBasicInfo.plugType}
+                              </p>
+                            </div>
+                          )}
+                          {/* Tipping from cache */}
+                          {destination.cachedBasicInfo.tippingCustom && (
+                            <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06] col-span-2">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-base">🍽️</span>
+                                <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                                  Tipping
+                                </span>
+                              </div>
+                              <p className="text-white font-medium text-sm">
+                                {destination.cachedBasicInfo.tippingCustom}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          <ShimmerBlock />
+                          <ShimmerBlock />
+                          <ShimmerBlock />
+                          <ShimmerBlock />
+                        </div>
+                      )}
+                      {/* Top attractions from cache */}
+                      {destination.cachedBasicInfo && destination.cachedBasicInfo.topAttractions.length > 0 && (
+                        <div className="mt-3 bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-base">📍</span>
+                            <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                              Top Attractions
+                            </span>
+                          </div>
+                          <div className="space-y-1">
+                            {destination.cachedBasicInfo.topAttractions.map((a, idx) => (
+                              <p key={idx} className="text-sm text-white/70">
+                                <span className="text-white/30 mr-1.5">{idx + 1}.</span>
+                                <span className="text-white font-medium">{a}</span>
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Local food from cache */}
+                      {destination.cachedBasicInfo && destination.cachedBasicInfo.localFood.length > 0 && (
+                        <div className="mt-3 bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-base">🍜</span>
+                            <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                              Must-Try Food
+                            </span>
+                          </div>
+                          <p className="text-white font-medium text-sm">
+                            {destination.cachedBasicInfo.localFood.join(', ')}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : enrichment ? (
                     <div>

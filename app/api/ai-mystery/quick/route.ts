@@ -6,6 +6,8 @@ import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { getCached } from '@/lib/cache'
 import { searchKiwiInspiration } from '@/lib/kiwi'
 import { AFFILIATE_FLAGS } from '@/lib/affiliate'
+import { trackFeatureUse } from '@/lib/analytics'
+import { getCachedDestination, cacheDestination, incrementRevealCount, buildBasicInfo } from '@/lib/destination-cache'
 
 export const dynamic = 'force-dynamic'
 
@@ -386,7 +388,41 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Quick] Picked destination: ${result.destination} (${result.iata}) — flight $${result.estimated_flight_cost}, hotel $${result.estimated_hotel_per_night}/night`)
 
-    return NextResponse.json(result)
+    // --- Destination cache: check for cached basic info or build it ---
+    let cachedBasicInfo: any = null
+    try {
+      const cached = await getCachedDestination(result.iata)
+      if (cached) {
+        cachedBasicInfo = cached.basicInfo
+      } else {
+        // Cache miss — build basic info from static data and cache it
+        const basicInfo = buildBasicInfo(result.iata, result.destination, result.country)
+        cachedBasicInfo = basicInfo
+        cacheDestination({
+          iata: result.iata,
+          city: result.destination,
+          country: result.country,
+          basicInfo,
+          aiContent: null,
+          flightStats: null,
+          revealCount: 1,
+        }).catch(() => {})
+      }
+      // Fire-and-forget: increment reveal count
+      incrementRevealCount(result.iata).catch(() => {})
+    } catch {
+      // Cache is non-critical — continue without it
+    }
+
+    // Fire-and-forget: track the mystery search
+    trackFeatureUse('mystery_search', {
+      origin,
+      budget,
+      vibes,
+      destination_found: result.iata,
+    })
+
+    return NextResponse.json({ ...result, cachedBasicInfo })
   } catch (error) {
     console.error('[Quick] Error:', error)
     return NextResponse.json(
