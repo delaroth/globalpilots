@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
+import TripCostBadge from '@/components/TripCostBadge'
+import ValueBadge from '@/components/ValueBadge'
+import { calculateValueScore } from '@/lib/value-score'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -99,6 +102,23 @@ export default function InspirePage() {
   const [origin, setOrigin] = useState('')
   const [budget, setBudget] = useState('')
   const [interest, setInterest] = useState('')
+  const [sortBy, setSortBy] = useState<'price' | 'value'>('price')
+
+  // Sorted destinations
+  const displayDestinations = useMemo(() => {
+    if (sortBy === 'value') {
+      return [...destinations].sort((a, b) => {
+        const aScore = (a.flightPrice && a.dailyCost)
+          ? calculateValueScore({ flightPrice: a.flightPrice, dailyCost: a.dailyCost, airportCode: a.airportCode }).score
+          : 0
+        const bScore = (b.flightPrice && b.dailyCost)
+          ? calculateValueScore({ flightPrice: b.flightPrice, dailyCost: b.dailyCost, airportCode: b.airportCode }).score
+          : 0
+        return bScore - aScore
+      })
+    }
+    return destinations
+  }, [destinations, sortBy])
 
   const fetchDestinations = useCallback(async () => {
     setLoading(true)
@@ -281,6 +301,31 @@ export default function InspirePage() {
           </AnimatePresence>
         </motion.div>
 
+        {/* Sort toggle */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <span className="text-white/40 text-xs">Sort by:</span>
+          <button
+            onClick={() => setSortBy('price')}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+              sortBy === 'price'
+                ? 'bg-sky-500/20 border border-sky-500/30 text-sky-300'
+                : 'bg-white/[0.06] text-white/40 hover:text-white/60 border border-white/10'
+            }`}
+          >
+            Price
+          </button>
+          <button
+            onClick={() => setSortBy('value')}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+              sortBy === 'value'
+                ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
+                : 'bg-white/[0.06] text-white/40 hover:text-white/60 border border-white/10'
+            }`}
+          >
+            Value
+          </button>
+        </div>
+
         {/* Error state */}
         {error && (
           <div className="text-center py-12">
@@ -315,9 +360,9 @@ export default function InspirePage() {
         )}
 
         {/* Card grid */}
-        {!loading && !error && destinations.length > 0 && (
+        {!loading && !error && displayDestinations.length > 0 && (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {destinations.map((d, i) => (
+            {displayDestinations.map((d, i) => (
               <motion.div
                 key={`${d.airportCode}-${i}`}
                 initial={{ opacity: 0, y: 30 }}
@@ -395,6 +440,17 @@ export default function InspirePage() {
                     )}
                   </div>
 
+                  {/* Trip cost badge */}
+                  {d.flightPrice && (
+                    <TripCostBadge iata={d.airportCode} flightPrice={d.flightPrice} />
+                  )}
+
+                  {/* Value Badge */}
+                  {d.flightPrice && d.dailyCost && (() => {
+                    const vs = calculateValueScore({ flightPrice: d.flightPrice, dailyCost: d.dailyCost, airportCode: d.airportCode })
+                    return <ValueBadge score={vs.score} label={vs.label} />
+                  })()}
+
                   {/* Dates */}
                   {d.startDate && d.endDate && (
                     <p className="text-white/40 text-xs flex items-center gap-1">
@@ -429,7 +485,7 @@ export default function InspirePage() {
         )}
 
         {/* Empty state */}
-        {!loading && !error && destinations.length === 0 && (
+        {!loading && !error && displayDestinations.length === 0 && (
           <div className="text-center py-20">
             <div className="text-5xl mb-4">🌍</div>
             <h2 className="text-white text-xl font-semibold mb-2">

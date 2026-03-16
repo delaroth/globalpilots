@@ -14,6 +14,8 @@ import RecentSearches from '@/components/RecentSearches'
 import BookingLinks from '@/components/BookingLinks'
 import DestinationImage from '@/components/DestinationImage'
 import { majorAirports } from '@/lib/geolocation'
+import NearbyAirportPrices from '@/components/NearbyAirportPrices'
+import PriceCalendar from '@/components/PriceCalendar'
 import Link from 'next/link'
 
 // Lazy load CalendarGrid — only rendered after a flexible-month search completes
@@ -231,6 +233,7 @@ function SearchPageContent() {
   const [discoverResults, setDiscoverResults] = useState<{ destination: string; city: string; price: number; departDate: string; returnDate: string }[]>([])
   const [emptyRoute, setEmptyRoute] = useState(false)
   const [showPopularSuggestions, setShowPopularSuggestions] = useState(false)
+  const [showPriceCalendar, setShowPriceCalendar] = useState(false)
 
   // Multi-city
   interface FlightLeg {
@@ -244,6 +247,24 @@ function SearchPageContent() {
   ])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [multiCityResults, setMultiCityResults] = useState<any>(null)
+
+  // Budget mode for multi-city
+  const [budgetMode, setBudgetMode] = useState(false)
+  const [budgetDestinations, setBudgetDestinations] = useState<string[]>(['', ''])
+  const [budgetTotal, setBudgetTotal] = useState('')
+  const [budgetTripDays, setBudgetTripDays] = useState('')
+  const [budgetStartDate, setBudgetStartDate] = useState('')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [budgetOptimizeResult, setBudgetOptimizeResult] = useState<any>(null)
+  const [budgetOptimizeLoading, setBudgetOptimizeLoading] = useState(false)
+
+  // One-way vs round-trip comparison
+  const [oneWayComparison, setOneWayComparison] = useState<{
+    outbound: number
+    inbound: number
+    total: number
+    savings: number
+  } | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -269,20 +290,74 @@ function SearchPageContent() {
   const effectiveDepartDate = departureDate.type === 'exact' ? departureDate.exactDate : undefined
   const effectiveReturnDate = returnDateFlex.type === 'exact' ? returnDateFlex.exactDate : undefined
 
+  // Feature 9: One-way vs round-trip comparison
+  // When a round-trip result is shown, check if 2 one-ways would be cheaper
+  useEffect(() => {
+    if (!exactDateResult || !isRoundTrip || !effectiveDepartDate || !effectiveReturnDate) return
+    if (!origin || !destination) return
+
+    const checkOneWays = async () => {
+      try {
+        // Use TravelPayouts (free) for both one-way checks
+        const [outRes, inRes] = await Promise.all([
+          fetch(`/api/nearby-price?origin=${origin}&destination=${destination}&departDate=${effectiveDepartDate}`),
+          fetch(`/api/nearby-price?origin=${destination}&destination=${origin}&departDate=${effectiveReturnDate}`),
+        ])
+
+        if (!outRes.ok || !inRes.ok) return
+
+        const outData = await outRes.json()
+        const inData = await inRes.json()
+
+        if (outData.price == null || inData.price == null) return
+
+        const oneWayTotal = outData.price + inData.price
+        const roundTripPrice = exactDateResult.price
+        const savings = roundTripPrice - oneWayTotal
+
+        // Only show if savings > $10
+        if (savings > 10) {
+          setOneWayComparison({
+            outbound: outData.price,
+            inbound: inData.price,
+            total: oneWayTotal,
+            savings,
+          })
+        }
+      } catch {
+        // Silently fail — this is a nice-to-have tip
+      }
+    }
+
+    checkOneWays()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exactDateResult?.price])
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
     setCalendarData(null); setExactDateResult(null); setFlexResult(null); setDiscoverResults([])
     setError(''); setEmptyRoute(false); setShowPopularSuggestions(false); setMultiCityResults(null)
+    setOneWayComparison(null); setBudgetOptimizeResult(null)
 
     // ── Multi-city validation ──
     if (tripType === 'multi-city') {
-      if (legs.length < 2) { setError('Add at least 2 flight legs'); return }
-      for (let i = 0; i < legs.length; i++) {
-        if (!legs[i].from || !legs[i].to || !legs[i].date) {
-          setError(`Please fill in all fields for flight ${i + 1}`); return
-        }
-        if (legs[i].from === legs[i].to) {
-          setError(`Flight ${i + 1}: origin and destination must be different`); return
+      if (budgetMode) {
+        // Budget mode validation
+        if (!origin) { setError('Please select an origin airport'); return }
+        const validDests = budgetDestinations.filter(d => d.trim())
+        if (validDests.length < 2) { setError('Add at least 2 destinations'); return }
+        if (validDests.length > 4) { setError('Maximum 4 destinations for budget optimizer'); return }
+        if (!budgetTotal || Number(budgetTotal) <= 0) { setError('Enter a total budget'); return }
+        if (!budgetTripDays || Number(budgetTripDays) <= 0) { setError('Enter total trip days'); return }
+      } else {
+        if (legs.length < 2) { setError('Add at least 2 flight legs'); return }
+        for (let i = 0; i < legs.length; i++) {
+          if (!legs[i].from || !legs[i].to || !legs[i].date) {
+            setError(`Please fill in all fields for flight ${i + 1}`); return
+          }
+          if (legs[i].from === legs[i].to) {
+            setError(`Flight ${i + 1}: origin and destination must be different`); return
+          }
         }
       }
     } else {
@@ -330,6 +405,35 @@ function SearchPageContent() {
 
       // ── Multi-city ──
       if (tripType === 'multi-city') {
+        if (budgetMode) {
+          // Budget optimizer mode
+          setBudgetOptimizeLoading(true)
+          const validDests = budgetDestinations.filter(d => d.trim()).map(d => d.trim().toUpperCase())
+          const res = await fetch('/api/search/flights/multi-city/optimize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              origin: origin.toUpperCase(),
+              destinations: validDests,
+              totalBudget: Number(budgetTotal),
+              tripDays: Number(budgetTripDays),
+            }),
+          })
+          if (!res.ok) {
+            const data = await res.json()
+            throw new Error(data.error || `API error: ${res.status}`)
+          }
+          const data = await res.json()
+          setBudgetOptimizeLoading(false)
+          if (!data.success) {
+            setEmptyRoute(true)
+          } else {
+            setBudgetOptimizeResult(data)
+          }
+          setLoading(false)
+          return
+        }
+
         const res = await fetch('/api/search/flights/multi-city', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -613,16 +717,18 @@ function SearchPageContent() {
               ))}
             </div>
 
-            {/* Origin + Destination (hidden in multi-city mode) */}
-            {tripType !== 'multi-city' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Origin + Destination (hidden in multi-city non-budget mode) */}
+            {(tripType !== 'multi-city' || (tripType === 'multi-city' && budgetMode)) && (
+              <div className={`grid grid-cols-1 ${tripType !== 'multi-city' ? 'md:grid-cols-2' : ''} gap-4`}>
                 <AirportAutocomplete id="origin" label="From" value={origin} onChange={setOrigin} placeholder="Departure city or code..." />
-                <AirportAutocomplete
-                  id="destination" label="To"
-                  value={destination} onChange={setDestination}
-                  placeholder='City, code, or "Anywhere"...'
-                  allowAnywhere
-                />
+                {tripType !== 'multi-city' && (
+                  <AirportAutocomplete
+                    id="destination" label="To"
+                    value={destination} onChange={setDestination}
+                    placeholder='City, code, or "Anywhere"...'
+                    allowAnywhere
+                  />
+                )}
               </div>
             )}
 
@@ -648,76 +754,221 @@ function SearchPageContent() {
               </div>
             )}
 
+            {/* Price Calendar — expandable section */}
+            {tripType !== 'multi-city' &&
+              origin.length === 3 &&
+              destination.length === 3 &&
+              destination !== 'ANYWHERE' &&
+              (departureDate.type === 'exact' || departureDate.type === 'month') && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowPriceCalendar(!showPriceCalendar)}
+                  className="flex items-center gap-2 text-sm text-skyblue hover:text-skyblue-dark font-medium transition"
+                >
+                  <svg
+                    className={`w-3.5 h-3.5 transition-transform ${showPriceCalendar ? 'rotate-90' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  View price calendar
+                </button>
+                {showPriceCalendar && (
+                  <div className="mt-3">
+                    <PriceCalendar
+                      origin={origin}
+                      destination={destination}
+                      month={
+                        departureDate.type === 'month' && departureDate.month
+                          ? departureDate.month
+                          : departureDate.type === 'exact' && departureDate.exactDate
+                            ? departureDate.exactDate.slice(0, 7)
+                            : new Date().toISOString().slice(0, 7)
+                      }
+                      onSelectDate={(date) => {
+                        setDepartureDate({ type: 'exact', exactDate: date })
+                        setShowPriceCalendar(false)
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* MULTI-CITY MODE */}
             {tripType === 'multi-city' && (
               <div className="space-y-3">
-                <p className="text-sm font-medium text-navy">Flight legs</p>
-                {legs.map((leg, idx) => (
-                  <div key={idx} className="flex items-end gap-2">
-                    <div className="flex-1 min-w-0">
-                      <AirportAutocomplete
-                        id={`mc-from-${idx}`}
-                        label={idx === 0 ? 'From' : ''}
-                        value={leg.from}
-                        onChange={(val) => {
-                          const updated = [...legs]
-                          updated[idx] = { ...updated[idx], from: val }
-                          setLegs(updated)
-                        }}
-                        placeholder="Origin"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <AirportAutocomplete
-                        id={`mc-to-${idx}`}
-                        label={idx === 0 ? 'To' : ''}
-                        value={leg.to}
-                        onChange={(val) => {
-                          const updated = [...legs]
-                          updated[idx] = { ...updated[idx], to: val }
-                          setLegs(updated)
-                        }}
-                        placeholder="Destination"
-                      />
-                    </div>
-                    <div className="w-36 shrink-0">
-                      {idx === 0 && <label className="block text-sm font-medium text-navy mb-1">Date</label>}
+                {/* Budget Mode Toggle */}
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-navy">{budgetMode ? 'Budget Optimizer' : 'Flight legs'}</p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="text-xs text-gray-500">Budget Mode</span>
+                    <div className="relative">
                       <input
-                        type="date"
-                        value={leg.date}
-                        onChange={(e) => {
-                          const updated = [...legs]
-                          updated[idx] = { ...updated[idx], date: e.target.value }
-                          setLegs(updated)
-                        }}
-                        min={idx > 0 && legs[idx - 1].date ? legs[idx - 1].date : today}
-                        className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
-                        required
+                        type="checkbox"
+                        checked={budgetMode}
+                        onChange={(e) => setBudgetMode(e.target.checked)}
+                        className="sr-only peer"
                       />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-skyblue"></div>
                     </div>
-                    {idx >= 2 && (
+                  </label>
+                </div>
+
+                {budgetMode ? (
+                  /* Budget Mode Form */
+                  <div className="space-y-3 bg-skyblue/5 border border-skyblue/20 rounded-lg p-4">
+                    <p className="text-xs text-gray-500">Enter your desired cities and let us find the cheapest route order.</p>
+
+                    {/* Destinations */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-navy">Destinations (2-4 cities)</label>
+                      {budgetDestinations.map((dest, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <AirportAutocomplete
+                            id={`budget-dest-${idx}`}
+                            label=""
+                            value={dest}
+                            onChange={(val) => {
+                              const updated = [...budgetDestinations]
+                              updated[idx] = val
+                              setBudgetDestinations(updated)
+                            }}
+                            placeholder={`City ${idx + 1}`}
+                          />
+                          {idx >= 2 && (
+                            <button
+                              type="button"
+                              onClick={() => setBudgetDestinations(budgetDestinations.filter((_, i) => i !== idx))}
+                              className="px-2 py-2 text-red-400 hover:text-red-600 transition text-lg leading-none shrink-0"
+                            >
+                              &times;
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {budgetDestinations.length < 4 && (
+                        <button
+                          type="button"
+                          onClick={() => setBudgetDestinations([...budgetDestinations, ''])}
+                          className="text-sm text-skyblue hover:text-skyblue-dark font-medium transition"
+                        >
+                          + Add city
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Trip starts + total days + budget */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-navy mb-1">Trip starts</label>
+                        <input
+                          type="date"
+                          value={budgetStartDate}
+                          onChange={(e) => setBudgetStartDate(e.target.value)}
+                          min={today}
+                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-navy mb-1">Total days</label>
+                        <input
+                          type="number"
+                          value={budgetTripDays}
+                          onChange={(e) => setBudgetTripDays(e.target.value)}
+                          placeholder="14"
+                          min={2}
+                          max={90}
+                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-navy mb-1">Budget ($)</label>
+                        <input
+                          type="number"
+                          value={budgetTotal}
+                          onChange={(e) => setBudgetTotal(e.target.value)}
+                          placeholder="1500"
+                          min={1}
+                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Standard Multi-city Legs */
+                  <>
+                    {legs.map((leg, idx) => (
+                      <div key={idx} className="flex items-end gap-2">
+                        <div className="flex-1 min-w-0">
+                          <AirportAutocomplete
+                            id={`mc-from-${idx}`}
+                            label={idx === 0 ? 'From' : ''}
+                            value={leg.from}
+                            onChange={(val) => {
+                              const updated = [...legs]
+                              updated[idx] = { ...updated[idx], from: val }
+                              setLegs(updated)
+                            }}
+                            placeholder="Origin"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <AirportAutocomplete
+                            id={`mc-to-${idx}`}
+                            label={idx === 0 ? 'To' : ''}
+                            value={leg.to}
+                            onChange={(val) => {
+                              const updated = [...legs]
+                              updated[idx] = { ...updated[idx], to: val }
+                              setLegs(updated)
+                            }}
+                            placeholder="Destination"
+                          />
+                        </div>
+                        <div className="w-36 shrink-0">
+                          {idx === 0 && <label className="block text-sm font-medium text-navy mb-1">Date</label>}
+                          <input
+                            type="date"
+                            value={leg.date}
+                            onChange={(e) => {
+                              const updated = [...legs]
+                              updated[idx] = { ...updated[idx], date: e.target.value }
+                              setLegs(updated)
+                            }}
+                            min={idx > 0 && legs[idx - 1].date ? legs[idx - 1].date : today}
+                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                            required
+                          />
+                        </div>
+                        {idx >= 2 && (
+                          <button
+                            type="button"
+                            onClick={() => setLegs(legs.filter((_, i) => i !== idx))}
+                            className="px-2 py-2.5 text-red-400 hover:text-red-600 transition text-lg leading-none"
+                            title="Remove leg"
+                          >
+                            &times;
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {legs.length < 5 && (
                       <button
                         type="button"
-                        onClick={() => setLegs(legs.filter((_, i) => i !== idx))}
-                        className="px-2 py-2.5 text-red-400 hover:text-red-600 transition text-lg leading-none"
-                        title="Remove leg"
+                        onClick={() => {
+                          const prevTo = legs[legs.length - 1]?.to || ''
+                          setLegs([...legs, { from: prevTo, to: '', date: '' }])
+                        }}
+                        className="text-sm text-skyblue hover:text-skyblue-dark font-medium transition"
                       >
-                        &times;
+                        + Add flight
                       </button>
                     )}
-                  </div>
-                ))}
-                {legs.length < 5 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const prevTo = legs[legs.length - 1]?.to || ''
-                      setLegs([...legs, { from: prevTo, to: '', date: '' }])
-                    }}
-                    className="text-sm text-skyblue hover:text-skyblue-dark font-medium transition"
-                  >
-                    + Add flight
-                  </button>
+                  </>
                 )}
               </div>
             )}
@@ -883,6 +1134,35 @@ function SearchPageContent() {
                     </div>
                   </div>
                 </div>
+                {/* Feature 9: One-way vs round-trip comparison tip */}
+                {oneWayComparison && isRoundTrip && (
+                  <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <p className="text-amber-300 text-sm font-medium">
+                          Tip: Book as 2 one-way flights and save ${oneWayComparison.savings}
+                        </p>
+                        <p className="text-amber-300/60 text-xs mt-0.5">
+                          Outbound ~${oneWayComparison.outbound} + Return ~${oneWayComparison.inbound} = ${oneWayComparison.total} vs round-trip ${exactDateResult.price}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Feature 6: Nearby airport price comparison */}
+                {effectiveDepartDate && (
+                  <NearbyAirportPrices
+                    origin={origin}
+                    destination={destination}
+                    departDate={effectiveDepartDate}
+                    currentPrice={exactDateResult.price}
+                  />
+                )}
+
                 <WhatNext origin={origin} destination={destination} departDate={effectiveDepartDate} context="search" />
               </div>
             )}
@@ -1082,6 +1362,77 @@ function SearchPageContent() {
               </div>
             )}
 
+            {/* BUDGET OPTIMIZE RESULTS */}
+            {budgetOptimizeResult && budgetOptimizeResult.success && (
+              <div className="max-w-2xl mx-auto">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-2">Cheapest Route Found</h2>
+                  <p className="text-skyblue-light">
+                    Checked {budgetOptimizeResult.permutationsChecked} route permutations
+                  </p>
+                </div>
+
+                {/* Route visualization */}
+                <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                  <div className={`px-6 py-5 text-center ${budgetOptimizeResult.withinBudget ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-skyblue to-skyblue-dark'}`}>
+                    <p className="text-navy/70 text-sm font-medium uppercase tracking-wide">
+                      {budgetOptimizeResult.withinBudget ? 'Within Budget!' : 'Estimated Total'}
+                    </p>
+                    <p className="text-navy text-5xl font-bold mt-1">${budgetOptimizeResult.totalCost}</p>
+                    {budgetOptimizeResult.savings > 0 && (
+                      <p className="text-navy/80 text-sm mt-2 font-medium">
+                        Saves ${budgetOptimizeResult.savings} vs worst route order
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="p-5 space-y-3">
+                    {/* Route path */}
+                    <div className="flex items-center justify-center flex-wrap gap-1 text-sm">
+                      {budgetOptimizeResult.legs.map((leg: { from: string; to: string; price: number | null }, idx: number) => (
+                        <span key={idx} className="flex items-center gap-1">
+                          {idx === 0 && <span className="font-bold text-navy">{leg.from}</span>}
+                          <span className="text-gray-400 mx-1">&rarr;</span>
+                          <span className="font-bold text-navy">{leg.to}</span>
+                          {leg.price != null && (
+                            <span className="text-xs text-gray-400">(${leg.price})</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Day distribution */}
+                    {budgetOptimizeResult.cityDays && budgetOptimizeResult.bestRoute && (
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Suggested itinerary</p>
+                        <div className="space-y-1">
+                          {budgetOptimizeResult.bestRoute.map((city: string, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between text-sm">
+                              <span className="text-navy font-medium">{city}</span>
+                              <span className="text-gray-500">{budgetOptimizeResult.cityDays[idx]} days</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Each leg detail */}
+                    <div className="space-y-2">
+                      {budgetOptimizeResult.legs.map((leg: { from: string; to: string; price: number | null }, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-white bg-navy rounded-full w-5 h-5 flex items-center justify-center">{idx + 1}</span>
+                            <span className="text-sm text-navy font-medium">{leg.from} &rarr; {leg.to}</span>
+                          </div>
+                          <span className="font-bold text-navy">{leg.price != null ? `$${leg.price}` : 'N/A'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ANYWHERE: cheapest destinations */}
             {discoverResults.length > 0 && (
               <div className="max-w-3xl mx-auto">
@@ -1192,7 +1543,7 @@ function SearchPageContent() {
             )}
 
             {/* Empty state — help cards */}
-            {!calendarData && !exactDateResult && !flexResult && discoverResults.length === 0 && !multiCityResults && !emptyRoute && !error && (
+            {!calendarData && !exactDateResult && !flexResult && discoverResults.length === 0 && !multiCityResults && !budgetOptimizeResult && !emptyRoute && !error && (
               <div className="max-w-3xl mx-auto mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">

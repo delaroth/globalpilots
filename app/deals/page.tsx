@@ -1,10 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import Link from 'next/link'
+import TripCostBadge from '@/components/TripCostBadge'
+import ValueBadge from '@/components/ValueBadge'
+import { getDestinationCost } from '@/lib/destination-costs'
+import { calculateValueScore } from '@/lib/value-score'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,6 +59,24 @@ const GRADIENTS = [
   'from-sky-600/80 to-blue-400/80',
 ]
 
+type ViewMode = 'deals' | 'quick-escape'
+
+// ── Trip cost calculator for Quick Escape ───────────────────────────────────
+
+function calcTotalTripCost(d: Deal, nights: number = 5): number | null {
+  if (!d.flightPrice) return null
+  const dest = getDestinationCost(d.airportCode)
+  if (!dest) {
+    // Fallback: use hotelPrice and dailyCost if available
+    const hotel = (d.hotelPrice || 30) * nights
+    const daily = (d.dailyCost || 40) * nights
+    return Math.round(d.flightPrice + hotel + daily)
+  }
+  const budget = dest.dailyCosts.budget
+  const dailyTotal = budget.hotel + budget.food + budget.transport + budget.activities
+  return Math.round(d.flightPrice + dailyTotal * nights)
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string | null): string {
@@ -76,6 +98,32 @@ export default function DealsPage() {
   const [origin, setOrigin] = useState('')
   const [selectedMonth, setSelectedMonth] = useState(0)
   const [monthName, setMonthName] = useState('Anytime')
+  const [viewMode, setViewMode] = useState<ViewMode>('deals')
+  const [sortBy, setSortBy] = useState<'price' | 'value'>('price')
+
+  // Quick Escape: sort by total trip cost (flight + 5 nights of budget living)
+  const displayDeals = useMemo(() => {
+    let result = deals
+
+    if (viewMode === 'quick-escape') {
+      result = [...deals]
+        .map(d => ({ ...d, totalTripCost: calcTotalTripCost(d) }))
+        .filter(d => d.totalTripCost !== null)
+        .sort((a, b) => (a.totalTripCost ?? Infinity) - (b.totalTripCost ?? Infinity))
+    } else if (sortBy === 'value') {
+      result = [...deals].sort((a, b) => {
+        const aScore = (a.flightPrice && a.dailyCost)
+          ? calculateValueScore({ flightPrice: a.flightPrice, dailyCost: a.dailyCost, airportCode: a.airportCode }).score
+          : 0
+        const bScore = (b.flightPrice && b.dailyCost)
+          ? calculateValueScore({ flightPrice: b.flightPrice, dailyCost: b.dailyCost, airportCode: b.airportCode }).score
+          : 0
+        return bScore - aScore
+      })
+    }
+
+    return result
+  }, [deals, viewMode, sortBy])
 
   const fetchDeals = useCallback(async () => {
     setLoading(true)
@@ -176,12 +224,54 @@ export default function DealsPage() {
           </button>
         </motion.div>
 
+        {/* View mode tabs */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.17 }}
+          className="flex justify-center gap-2 mb-4"
+        >
+          <button
+            onClick={() => setViewMode('deals')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              viewMode === 'deals'
+                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/30'
+                : 'bg-white/[0.06] text-white/60 hover:bg-white/[0.1] border border-white/10'
+            }`}
+          >
+            All Deals
+          </button>
+          <button
+            onClick={() => setViewMode('quick-escape')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${
+              viewMode === 'quick-escape'
+                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                : 'bg-white/[0.06] text-white/60 hover:bg-white/[0.1] border border-white/10'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Quick Escape
+          </button>
+        </motion.div>
+
+        {viewMode === 'quick-escape' && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-emerald-400/60 text-xs mb-4"
+          >
+            Sorted by total 5-day trip cost (flight + hotel + food + transport) using budget estimates
+          </motion.p>
+        )}
+
         {/* Month buttons */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className="flex flex-wrap justify-center gap-2 mb-8"
+          className="flex flex-wrap justify-center gap-2 mb-4"
         >
           {MONTHS.map((m) => (
             <button
@@ -198,6 +288,33 @@ export default function DealsPage() {
             </button>
           ))}
         </motion.div>
+
+        {/* Sort toggle */}
+        {viewMode === 'deals' && (
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <span className="text-white/40 text-xs">Sort by:</span>
+            <button
+              onClick={() => setSortBy('price')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                sortBy === 'price'
+                  ? 'bg-sky-500/20 border border-sky-500/30 text-sky-300'
+                  : 'bg-white/[0.06] text-white/40 hover:text-white/60 border border-white/10'
+              }`}
+            >
+              Price
+            </button>
+            <button
+              onClick={() => setSortBy('value')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                sortBy === 'value'
+                  ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
+                  : 'bg-white/[0.06] text-white/40 hover:text-white/60 border border-white/10'
+              }`}
+            >
+              Value
+            </button>
+          </div>
+        )}
 
         {/* Error */}
         {error && (
@@ -235,20 +352,29 @@ export default function DealsPage() {
         )}
 
         {/* Deals grid */}
-        {!loading && !error && deals.length > 0 && (
+        {!loading && !error && displayDeals.length > 0 && (
           <>
             <p className="text-center text-white/40 text-sm mb-6">
-              {deals.length} deal{deals.length !== 1 ? 's' : ''} found for {monthName}
+              {displayDeals.length} deal{displayDeals.length !== 1 ? 's' : ''} found for {monthName}
+              {viewMode === 'quick-escape' && ' (sorted by total trip cost)'}
             </p>
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
               <AnimatePresence>
-                {deals.map((d, i) => (
+                {displayDeals.map((d, i) => {
+                  const totalTripCost = calcTotalTripCost(d)
+                  const isCheapestTrip = viewMode === 'quick-escape' && i === 0
+
+                  return (
                   <motion.div
                     key={`${d.airportCode}-${i}`}
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: Math.min(i * 0.04, 0.6) }}
-                    className="group rounded-2xl overflow-hidden bg-white/[0.04] border border-white/[0.08] hover:border-white/20 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-black/30"
+                    className={`group rounded-2xl overflow-hidden bg-white/[0.04] border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-black/30 ${
+                      isCheapestTrip
+                        ? 'border-emerald-500/40 ring-1 ring-emerald-500/20'
+                        : 'border-white/[0.08] hover:border-white/20'
+                    }`}
                   >
                     {/* Gradient header */}
                     <div className={`h-28 sm:h-32 bg-gradient-to-br ${GRADIENTS[i % GRADIENTS.length]} relative`}>
@@ -269,15 +395,35 @@ export default function DealsPage() {
                           <span className="text-white/40 ml-1">({d.airportCode})</span>
                         </p>
                       </div>
-                      {d.isBestMonth && (
-                        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/30 border border-emerald-500/40 text-emerald-300">
-                          Best Month
-                        </div>
-                      )}
+                      {/* Badges in top-right */}
+                      <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                        {isCheapestTrip && (
+                          <div className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/40 border border-emerald-500/50 text-emerald-200 shadow-lg">
+                            Cheapest Trip
+                          </div>
+                        )}
+                        {d.isBestMonth && (
+                          <div className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/30 border border-emerald-500/40 text-emerald-300">
+                            Best Month
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Card body */}
                     <div className="p-3 sm:p-4 space-y-2.5">
+                      {/* Quick Escape: prominent total trip cost */}
+                      {viewMode === 'quick-escape' && totalTripCost !== null && (
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2.5 py-1.5">
+                          <div className="text-emerald-300 font-bold text-sm sm:text-base">
+                            Total 5-day trip: ${totalTripCost.toLocaleString()}
+                          </div>
+                          <div className="text-emerald-300/50 text-[10px] mt-0.5">
+                            Flight ${d.flightPrice}{d.dailyCost ? ` + ~$${Math.round((totalTripCost - (d.flightPrice || 0)) / 5)}/day x 5` : ''}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Price info */}
                       <div className="flex items-center justify-between">
                         {d.flightPrice ? (
@@ -295,6 +441,17 @@ export default function DealsPage() {
                           </span>
                         )}
                       </div>
+
+                      {/* TripCostBadge in normal mode */}
+                      {viewMode === 'deals' && d.flightPrice && (
+                        <TripCostBadge iata={d.airportCode} flightPrice={d.flightPrice} />
+                      )}
+
+                      {/* Value Badge */}
+                      {d.flightPrice && d.dailyCost && (() => {
+                        const vs = calculateValueScore({ flightPrice: d.flightPrice, dailyCost: d.dailyCost, airportCode: d.airportCode })
+                        return <ValueBadge score={vs.score} label={vs.label} />
+                      })()}
 
                       {/* Dates */}
                       {d.startDate && d.endDate && (
@@ -327,14 +484,15 @@ export default function DealsPage() {
                       </div>
                     </div>
                   </motion.div>
-                ))}
+                  )
+                })}
               </AnimatePresence>
             </div>
           </>
         )}
 
         {/* Empty state */}
-        {!loading && !error && deals.length === 0 && (
+        {!loading && !error && displayDeals.length === 0 && (
           <div className="text-center py-20">
             <div className="text-5xl mb-4">📅</div>
             <h2 className="text-white text-xl font-semibold mb-2">
