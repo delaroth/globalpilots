@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createUser, findUserByEmail, linkAlertsToUser } from '@/lib/auth'
 import { createVerificationToken, sendVerificationEmail } from '@/lib/email-verification'
+import { trackConversion } from '@/lib/analytics'
 import { z } from 'zod'
 
 const signupSchema = z.object({
@@ -38,6 +39,9 @@ export async function POST(request: NextRequest) {
 
     // Link any anonymous alerts to this user
     await linkAlertsToUser(email, user.id)
+
+    // Fire-and-forget conversion tracking
+    trackConversion('account_created', { auth_provider: 'email' })
 
     // Send verification email
     try {

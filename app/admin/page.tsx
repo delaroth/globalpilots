@@ -38,6 +38,15 @@ interface AnalyticsData {
   feedbackSummary?: { type: string; message: string; rating: number | null; would_recommend: boolean | null; page_url: string | null; created_at: string }[]
   avgRating?: { avg: number; count: number }
   topCachedDestinations?: { iata: string; city: string; country: string; reveal_count: number }[]
+  navHeatmap?: { link: string; category: string; count: number }[]
+  detailedFunnel?: {
+    mystery: { page_views: number; searches: number; reveals: number; bookings: number }
+    flights: { page_views: number; searches: number; bookings: number }
+    deals: { page_views: number; views: number; bookings: number }
+  }
+  featureEngagement?: { feature: string; avg_duration: number; completed: number; total: number }[]
+  userRetention?: { total_sessions: number; engaged_sessions: number; avg_pages_per_session: number; bounce_rate: number }
+  dropOffPoints?: { page: string; exits: number; total_views: number; exit_rate: number }[]
 }
 
 function formatBytes(bytes: number): string {
@@ -1039,6 +1048,314 @@ export default function AdminDashboard() {
             )}
           </Card>
         </div>
+
+        {/* Row 9: Navigation Heatmap + User Engagement */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card title="Navigation Heatmap (7d)">
+            {!data.navHeatmap || data.navHeatmap.length === 0 ? (
+              <div className="text-gray-500 text-sm py-4">No navigation click data yet.</div>
+            ) : (
+              <div className="space-y-4">
+                {/* Group by category */}
+                {(() => {
+                  const categories: Record<string, { link: string; count: number }[]> = {}
+                  for (const item of data.navHeatmap) {
+                    if (!categories[item.category]) categories[item.category] = []
+                    categories[item.category].push({ link: item.link, count: item.count })
+                  }
+                  const categoryColors: Record<string, string> = {
+                    Discover: '#a855f7',
+                    Flights: '#3b82f6',
+                    Plan: '#22c55e',
+                    Deals: '#eab308',
+                    other: '#6b7280',
+                  }
+                  const globalMax = data.navHeatmap[0]?.count || 1
+                  return Object.entries(categories).map(([cat, links]) => (
+                    <div key={cat}>
+                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2"
+                        style={{ color: categoryColors[cat] || '#8b5cf6' }}>
+                        {cat}
+                      </div>
+                      <div className="space-y-1.5">
+                        {links.map((item) => {
+                          const pct = Math.round((item.count / globalMax) * 100)
+                          return (
+                            <div key={`${cat}-${item.link}`} className="flex items-center gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center mb-0.5">
+                                  <span className="text-sm text-gray-200 truncate">{item.link}</span>
+                                  <span className="text-xs text-gray-400 ml-2 shrink-0">{item.count}</span>
+                                </div>
+                                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full transition-all duration-500"
+                                    style={{ width: `${pct}%`, backgroundColor: categoryColors[cat] || '#8b5cf6' }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))
+                })()}
+              </div>
+            )}
+          </Card>
+
+          <Card title="User Engagement (7d)">
+            {!data.userRetention ? (
+              <div className="text-gray-500 text-sm py-4">No session data yet.</div>
+            ) : (
+              <div className="space-y-5">
+                {/* Key metrics */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center px-3 py-3 rounded-lg bg-white/5">
+                    <div className="text-2xl font-bold text-white">{data.userRetention.avg_pages_per_session}</div>
+                    <div className="text-xs text-gray-500 mt-1">Avg Pages / Session</div>
+                  </div>
+                  <div className="text-center px-3 py-3 rounded-lg bg-white/5">
+                    <div className="text-2xl font-bold" style={{ color: data.userRetention.bounce_rate > 70 ? '#ef4444' : data.userRetention.bounce_rate > 40 ? '#eab308' : '#22c55e' }}>
+                      {data.userRetention.bounce_rate}%
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">Bounce Rate</div>
+                  </div>
+                </div>
+
+                {/* Session breakdown */}
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-300">Engaged Sessions</span>
+                    <span className="text-white font-medium">
+                      {data.userRetention.engaged_sessions} / {data.userRetention.total_sessions}
+                    </span>
+                  </div>
+                  {(() => {
+                    const pct = data.userRetention!.total_sessions > 0
+                      ? Math.round((data.userRetention!.engaged_sessions / data.userRetention!.total_sessions) * 100)
+                      : 0
+                    return (
+                      <>
+                        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500 bg-sky-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">{pct}% of sessions viewed 2+ pages</div>
+                      </>
+                    )
+                  })()}
+                </div>
+
+                {/* Drop-off points */}
+                {data.dropOffPoints && data.dropOffPoints.length > 0 && (
+                  <div className="pt-3 border-t border-white/5">
+                    <div className="text-sm text-gray-300 mb-2">Top Exit Pages</div>
+                    <div className="space-y-2">
+                      {data.dropOffPoints.slice(0, 5).map((item) => (
+                        <div key={item.page} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-400 truncate font-mono text-xs flex-1 mr-3">{item.page}</span>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="text-xs text-gray-500">{item.exits} exits</span>
+                            <span className="text-xs font-medium" style={{ color: item.exit_rate > 70 ? '#ef4444' : item.exit_rate > 40 ? '#eab308' : '#22c55e' }}>
+                              {item.exit_rate}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Row 10: Detailed Conversion Funnels */}
+        {data.detailedFunnel && (
+          <Card title="Conversion Funnels (7d) — By Feature">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Mystery funnel */}
+              {(() => {
+                const f = data.detailedFunnel!.mystery
+                const steps = [
+                  { label: 'Page Views', value: f.page_views, color: '#6b7280' },
+                  { label: 'Searches', value: f.searches, color: '#3b82f6' },
+                  { label: 'Reveals', value: f.reveals, color: '#a855f7' },
+                  { label: 'Bookings', value: f.bookings, color: '#22c55e' },
+                ]
+                return (
+                  <div>
+                    <div className="text-sm font-medium text-purple-400 mb-3">Mystery Destination</div>
+                    <div className="space-y-2">
+                      {steps.map((step, i) => {
+                        const maxVal = Math.max(steps[0].value, 1)
+                        const widthPct = Math.max((step.value / maxVal) * 100, 4)
+                        const convRate = i > 0 && steps[i - 1].value > 0
+                          ? ((step.value / steps[i - 1].value) * 100).toFixed(1)
+                          : null
+                        return (
+                          <div key={step.label}>
+                            <div className="flex justify-between items-center text-xs mb-0.5">
+                              <span className="text-gray-400">{step.label}</span>
+                              <span className="text-white font-medium">{step.value}</span>
+                            </div>
+                            <div className="w-full h-5 bg-white/5 rounded overflow-hidden relative">
+                              <div
+                                className="h-full rounded transition-all duration-500"
+                                style={{ width: `${widthPct}%`, backgroundColor: step.color }}
+                              />
+                            </div>
+                            {convRate !== null && (
+                              <div className="text-right text-[10px] text-gray-600 mt-0.5">{convRate}% conversion</div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Flights funnel */}
+              {(() => {
+                const f = data.detailedFunnel!.flights
+                const steps = [
+                  { label: 'Page Views', value: f.page_views, color: '#6b7280' },
+                  { label: 'Searches', value: f.searches, color: '#3b82f6' },
+                  { label: 'Bookings', value: f.bookings, color: '#22c55e' },
+                ]
+                return (
+                  <div>
+                    <div className="text-sm font-medium text-blue-400 mb-3">Flight Search</div>
+                    <div className="space-y-2">
+                      {steps.map((step, i) => {
+                        const maxVal = Math.max(steps[0].value, 1)
+                        const widthPct = Math.max((step.value / maxVal) * 100, 4)
+                        const convRate = i > 0 && steps[i - 1].value > 0
+                          ? ((step.value / steps[i - 1].value) * 100).toFixed(1)
+                          : null
+                        return (
+                          <div key={step.label}>
+                            <div className="flex justify-between items-center text-xs mb-0.5">
+                              <span className="text-gray-400">{step.label}</span>
+                              <span className="text-white font-medium">{step.value}</span>
+                            </div>
+                            <div className="w-full h-5 bg-white/5 rounded overflow-hidden relative">
+                              <div
+                                className="h-full rounded transition-all duration-500"
+                                style={{ width: `${widthPct}%`, backgroundColor: step.color }}
+                              />
+                            </div>
+                            {convRate !== null && (
+                              <div className="text-right text-[10px] text-gray-600 mt-0.5">{convRate}% conversion</div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Deals funnel */}
+              {(() => {
+                const f = data.detailedFunnel!.deals
+                const steps = [
+                  { label: 'Page Views', value: f.page_views, color: '#6b7280' },
+                  { label: 'Deals Viewed', value: f.views, color: '#eab308' },
+                  { label: 'Bookings', value: f.bookings, color: '#22c55e' },
+                ]
+                return (
+                  <div>
+                    <div className="text-sm font-medium text-yellow-400 mb-3">Deals</div>
+                    <div className="space-y-2">
+                      {steps.map((step, i) => {
+                        const maxVal = Math.max(steps[0].value, 1)
+                        const widthPct = Math.max((step.value / maxVal) * 100, 4)
+                        const convRate = i > 0 && steps[i - 1].value > 0
+                          ? ((step.value / steps[i - 1].value) * 100).toFixed(1)
+                          : null
+                        return (
+                          <div key={step.label}>
+                            <div className="flex justify-between items-center text-xs mb-0.5">
+                              <span className="text-gray-400">{step.label}</span>
+                              <span className="text-white font-medium">{step.value}</span>
+                            </div>
+                            <div className="w-full h-5 bg-white/5 rounded overflow-hidden relative">
+                              <div
+                                className="h-full rounded transition-all duration-500"
+                                style={{ width: `${widthPct}%`, backgroundColor: step.color }}
+                              />
+                            </div>
+                            {convRate !== null && (
+                              <div className="text-right text-[10px] text-gray-600 mt-0.5">{convRate}% conversion</div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          </Card>
+        )}
+
+        {/* Row 11: Feature Engagement */}
+        {data.featureEngagement && data.featureEngagement.length > 0 && (
+          <Card title="Feature Engagement">
+            <div className="overflow-x-auto -mx-5 px-5">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 text-xs uppercase">
+                    <th className="pb-2 pr-3 font-medium">Feature</th>
+                    <th className="pb-2 pr-3 font-medium text-right">Avg Duration</th>
+                    <th className="pb-2 pr-3 font-medium text-right">Completed</th>
+                    <th className="pb-2 pr-3 font-medium text-right">Total</th>
+                    <th className="pb-2 font-medium text-right">Completion Rate</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {data.featureEngagement.map((item) => {
+                    const completionRate = item.total > 0 ? ((item.completed / item.total) * 100).toFixed(1) : '0.0'
+                    const durationSec = (item.avg_duration / 1000).toFixed(1)
+                    return (
+                      <tr key={item.feature}>
+                        <td className="py-2 pr-3 text-gray-200 font-mono text-xs">{item.feature}</td>
+                        <td className="py-2 pr-3 text-gray-300 text-right">{durationSec}s</td>
+                        <td className="py-2 pr-3 text-green-400 text-right">{item.completed}</td>
+                        <td className="py-2 pr-3 text-gray-300 text-right">{item.total}</td>
+                        <td className="py-2 text-right">
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                            style={{
+                              backgroundColor: parseFloat(completionRate) >= 70
+                                ? 'rgba(34,197,94,0.15)'
+                                : parseFloat(completionRate) >= 40
+                                ? 'rgba(234,179,8,0.15)'
+                                : 'rgba(239,68,68,0.15)',
+                              color: parseFloat(completionRate) >= 70
+                                ? '#4ade80'
+                                : parseFloat(completionRate) >= 40
+                                ? '#facc15'
+                                : '#f87171',
+                            }}
+                          >
+                            {completionRate}%
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
         {/* Footer */}
         <div className="text-center text-xs text-gray-600 pb-8 pt-4">

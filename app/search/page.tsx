@@ -2,6 +2,7 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { motion, AnimatePresence } from 'motion/react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
@@ -16,6 +17,8 @@ import DestinationImage from '@/components/DestinationImage'
 import { majorAirports } from '@/lib/geolocation'
 import NearbyAirportPrices from '@/components/NearbyAirportPrices'
 import PriceCalendar from '@/components/PriceCalendar'
+import CurrencySelector from '@/components/CurrencySelector'
+import { useCurrency } from '@/hooks/useCurrency'
 import Link from 'next/link'
 
 // Lazy load CalendarGrid — only rendered after a flexible-month search completes
@@ -31,7 +34,7 @@ const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type TripType = 'one-way' | 'round-trip' | 'multi-city'
+type TripType = 'one-way' | 'round-trip' | 'multi-city' | 'stopovers'
 type DateFlexType = 'exact' | 'month' | 'anytime'
 
 interface FlexibleDateValue {
@@ -53,6 +56,95 @@ interface WeekendDeal {
   found_at: string
   distance: number
   actual: boolean
+}
+
+// ── Stopover types & constants ──────────────────────────────────────────────
+
+interface StopoverOpportunity {
+  hub: string
+  hubCity: string
+  hubCountry: string
+  visaStatus: 'visa-free' | 'visa-on-arrival' | 'e-visa' | 'visa-required'
+  visaMaxStay?: number
+  visaNote?: string
+  directPrice: number
+  leg1Price: number
+  leg2Price: number
+  totalFlightCost: number
+  savings: number
+  savingsPercent: number
+  leg1Airlines: string[]
+  leg1Duration: string
+  leg1Stops: number
+  leg2Airlines: string[]
+  leg2Duration: string
+  leg2Stops: number
+  stopoverDays: number
+  stopoverDepartDate: string
+  stopoverReturnDate: string
+  dailyCost: number
+  totalGroundCost: number
+  netValue: number
+  verdict: 'free-vacation' | 'worth-it' | 'splurge' | 'skip'
+  pitch: string
+  costBreakdown: { hotel: number; food: number; transport: number; activities: number }
+  priceIsLive: boolean
+  googleFlightsUrl: string
+}
+
+interface StopoverSearchResult {
+  origin: string
+  destination: string
+  departDate: string
+  arrivalDeadline: string
+  passportCountry: string
+  directPrice: number | null
+  directAirlines: string[]
+  directDuration: string
+  directStops: number
+  stopovers: StopoverOpportunity[]
+  serpApiCallsUsed: number
+  serpApiRemaining: number
+}
+
+const PASSPORT_OPTIONS = [
+  { code: 'US', label: 'United States' },
+  { code: 'UK', label: 'United Kingdom' },
+  { code: 'CA', label: 'Canada' },
+  { code: 'AU', label: 'Australia' },
+  { code: 'DE', label: 'Germany' },
+  { code: 'FR', label: 'France' },
+  { code: 'NL', label: 'Netherlands' },
+  { code: 'JP', label: 'Japan' },
+  { code: 'KR', label: 'South Korea' },
+  { code: 'SG', label: 'Singapore' },
+  { code: 'NZ', label: 'New Zealand' },
+  { code: 'IE', label: 'Ireland' },
+  { code: 'IT', label: 'Italy' },
+  { code: 'ES', label: 'Spain' },
+  { code: 'SE', label: 'Sweden' },
+  { code: 'NO', label: 'Norway' },
+  { code: 'DK', label: 'Denmark' },
+  { code: 'CH', label: 'Switzerland' },
+  { code: 'AT', label: 'Austria' },
+  { code: 'IN', label: 'India' },
+  { code: 'TH', label: 'Thailand' },
+  { code: 'BR', label: 'Brazil' },
+  { code: 'MX', label: 'Mexico' },
+]
+
+const VERDICT_CONFIG = {
+  'free-vacation': { emoji: '\uD83C\uDF89', label: 'Free Vacation', color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30' },
+  'worth-it': { emoji: '\uD83D\uDC4D', label: 'Worth It', color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30' },
+  'splurge': { emoji: '\uD83D\uDCB8', label: 'Splurge', color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30' },
+  'skip': { emoji: '\u23ED\uFE0F', label: 'Skip', color: 'text-white/40', bg: 'bg-white/10 border-white/20' },
+}
+
+const VISA_CONFIG = {
+  'visa-free': { emoji: '\u2705', label: 'Visa Free', color: 'text-emerald-400' },
+  'visa-on-arrival': { emoji: '\uD83D\uDEC2', label: 'Visa on Arrival', color: 'text-blue-400' },
+  'e-visa': { emoji: '\uD83D\uDCF1', label: 'E-Visa', color: 'text-amber-400' },
+  'visa-required': { emoji: '\u26A0\uFE0F', label: 'Visa Required', color: 'text-red-400' },
 }
 
 // Popular route suggestions by origin region
@@ -201,12 +293,23 @@ function SearchPageContent() {
   const [destination, setDestination] = useState('')
   const [tripType, setTripType] = useState<TripType>('round-trip')
 
+  // Stopovers state
+  const { format: fmtCurrency, code: currencyCode, setCurrency, currencies } = useCurrency()
+  const [stopoverMaxDays, setStopoverMaxDays] = useState(14)
+  const [stopoverPassport, setStopoverPassport] = useState('US')
+  const [stopoverBudget, setStopoverBudget] = useState<'budget' | 'mid' | 'comfort'>('mid')
+  const [stopoverLoading, setStopoverLoading] = useState(false)
+  const [stopoverError, setStopoverError] = useState('')
+  const [stopoverResult, setStopoverResult] = useState<StopoverSearchResult | null>(null)
+
   // Pre-fill from URL params
   useEffect(() => {
     const o = searchParams.get('origin')
     const d = searchParams.get('destination') || searchParams.get('dest')
+    const tab = searchParams.get('tab')
     if (o) setOrigin(o.toUpperCase())
     if (d) setDestination(d.toUpperCase())
+    if (tab === 'stopovers') setTripType('stopovers')
   }, [searchParams])
 
   // Flexible date states
@@ -337,7 +440,39 @@ function SearchPageContent() {
     e.preventDefault()
     setCalendarData(null); setExactDateResult(null); setFlexResult(null); setDiscoverResults([])
     setError(''); setEmptyRoute(false); setShowPopularSuggestions(false); setMultiCityResults(null)
-    setOneWayComparison(null); setBudgetOptimizeResult(null)
+    setOneWayComparison(null); setBudgetOptimizeResult(null); setStopoverResult(null); setStopoverError('')
+
+    // ── Stopovers mode ──
+    if (tripType === 'stopovers') {
+      if (!origin || !destination) { setError('Please select both origin and destination'); return }
+      if (origin === destination) { setError('Origin and destination must be different'); return }
+
+      setStopoverLoading(true)
+      try {
+        const params = new URLSearchParams({
+          origin: origin.toUpperCase(),
+          destination: destination.toUpperCase(),
+          depart_date: departureDate.exactDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+          max_days: String(stopoverMaxDays),
+          passport: stopoverPassport,
+          budget: stopoverBudget,
+        })
+
+        const res = await fetch(`/api/layover/smart?${params}`)
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Search failed')
+        }
+
+        const data: StopoverSearchResult = await res.json()
+        setStopoverResult(data)
+      } catch (err) {
+        setStopoverError(err instanceof Error ? err.message : 'Search failed')
+      } finally {
+        setStopoverLoading(false)
+      }
+      return
+    }
 
     // ── Multi-city validation ──
     if (tripType === 'multi-city') {
@@ -696,11 +831,12 @@ function SearchPageContent() {
           <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
 
             {/* Trip type toggle */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {([
                 { value: 'one-way' as TripType, label: 'One-way' },
                 { value: 'round-trip' as TripType, label: 'Round-trip' },
                 { value: 'multi-city' as TripType, label: 'Multi-city' },
+                { value: 'stopovers' as TripType, label: 'Stopovers' },
               ]).map(opt => (
                 <button
                   key={opt.value}
@@ -718,7 +854,7 @@ function SearchPageContent() {
             </div>
 
             {/* Origin + Destination (hidden in multi-city non-budget mode) */}
-            {(tripType !== 'multi-city' || (tripType === 'multi-city' && budgetMode)) && (
+            {(tripType !== 'multi-city' || (tripType === 'multi-city' && budgetMode)) && tripType !== 'stopovers' && (
               <div className={`grid grid-cols-1 ${tripType !== 'multi-city' ? 'md:grid-cols-2' : ''} gap-4`}>
                 <AirportAutocomplete id="origin" label="From" value={origin} onChange={setOrigin} placeholder="Departure city or code..." />
                 {tripType !== 'multi-city' && (
@@ -732,8 +868,8 @@ function SearchPageContent() {
               </div>
             )}
 
-            {/* DATE INPUTS (not multi-city) */}
-            {tripType !== 'multi-city' && (
+            {/* DATE INPUTS (not multi-city, not stopovers) */}
+            {tripType !== 'multi-city' && tripType !== 'stopovers' && (
               <div className={`grid gap-4 ${tripType === 'round-trip' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                 <FlexibleDateInput
                   label={tripType === 'round-trip' ? 'Departure' : 'Travel Date'}
@@ -755,7 +891,7 @@ function SearchPageContent() {
             )}
 
             {/* Price Calendar — expandable section */}
-            {tripType !== 'multi-city' &&
+            {tripType !== 'multi-city' && tripType !== 'stopovers' &&
               origin.length === 3 &&
               destination.length === 3 &&
               destination !== 'ANYWHERE' &&
@@ -795,6 +931,67 @@ function SearchPageContent() {
                     />
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* STOPOVERS MODE */}
+            {tripType === 'stopovers' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <AirportAutocomplete id="stopover-origin" label="From" value={origin} onChange={setOrigin} placeholder="Origin airport (e.g. JFK)" persistKey="origin" />
+                  <AirportAutocomplete id="stopover-destination" label="To" value={destination} onChange={setDestination} placeholder="Destination airport (e.g. BKK)" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-navy mb-1">Depart</label>
+                    <input
+                      type="date"
+                      value={departureDate.exactDate || ''}
+                      min={today}
+                      onChange={e => setDepartureDate({ type: 'exact', exactDate: e.target.value })}
+                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-navy mb-1">Max Travel Days</label>
+                    <select
+                      value={stopoverMaxDays}
+                      onChange={e => setStopoverMaxDays(Number(e.target.value))}
+                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                    >
+                      {[5, 7, 10, 14, 21, 30].map(d => (
+                        <option key={d} value={d}>{d} days</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-navy mb-1">Passport</label>
+                    <select
+                      value={stopoverPassport}
+                      onChange={e => setStopoverPassport(e.target.value)}
+                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                    >
+                      {PASSPORT_OPTIONS.map(p => (
+                        <option key={p.code} value={p.code}>{p.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-navy mb-1">Budget</label>
+                    <select
+                      value={stopoverBudget}
+                      onChange={e => setStopoverBudget(e.target.value as 'budget' | 'mid' | 'comfort')}
+                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                    >
+                      <option value="budget">Budget</option>
+                      <option value="mid">Mid-Range</option>
+                      <option value="comfort">Comfort</option>
+                    </select>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 text-center">
+                  Turn layovers into free vacations. Find flights with multi-day stopovers that save money while adding a new country to your trip.
+                </p>
               </div>
             )}
 
@@ -974,9 +1171,18 @@ function SearchPageContent() {
             )}
 
             {/* Search button */}
-            <button type="submit" disabled={loading}
-              className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg">
-              {loading ? 'Searching...' : 'Search Flights'}
+            <button type="submit" disabled={loading || stopoverLoading}
+              className={`w-full font-semibold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg ${
+                tripType === 'stopovers'
+                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white'
+                  : 'bg-skyblue hover:bg-skyblue-dark text-navy'
+              }`}>
+              {stopoverLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Searching real-time flights...
+                </span>
+              ) : loading ? 'Searching...' : tripType === 'stopovers' ? 'Find Stopover Deals' : 'Search Flights'}
             </button>
           </div>
         </form>
@@ -1433,6 +1639,213 @@ function SearchPageContent() {
               </div>
             )}
 
+            {/* STOPOVER RESULTS */}
+            {stopoverError && (
+              <div className="max-w-3xl mx-auto mb-8">
+                <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-4">
+                  <p className="text-red-300 font-semibold text-center">{stopoverError}</p>
+                </div>
+              </div>
+            )}
+
+            {stopoverLoading && (
+              <div className="text-center py-16">
+                <div className="inline-block w-12 h-12 border-[3px] border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4" />
+                <p className="text-white/60">Searching real-time flight prices...</p>
+                <p className="text-white/30 text-sm mt-1">Checking visa requirements & ground costs</p>
+              </div>
+            )}
+
+            {stopoverResult && !stopoverLoading && (
+              <div className="max-w-5xl mx-auto">
+                {/* Direct Flight Baseline */}
+                <div className="bg-white/[0.04] border border-white/10 rounded-xl p-5 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-white/40 uppercase tracking-wide mb-1">Direct Flight</p>
+                      <p className="text-white font-medium">
+                        {stopoverResult.origin} &rarr; {stopoverResult.destination}
+                      </p>
+                      {stopoverResult.directAirlines.length > 0 && (
+                        <p className="text-sm text-white/40">
+                          {stopoverResult.directAirlines.join(', ')} &middot; {stopoverResult.directDuration} &middot; {stopoverResult.directStops === 0 ? 'Nonstop' : `${stopoverResult.directStops} stop${stopoverResult.directStops === 1 ? '' : 's'}`}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      {stopoverResult.directPrice ? (
+                        <>
+                          <p className="text-2xl font-bold text-white">{fmtCurrency(stopoverResult.directPrice)}</p>
+                          <p className="text-xs text-emerald-400">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 border border-emerald-500/30">
+                              LIVE
+                            </span>
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-white/40">No direct flights found</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stopover Cards */}
+                {stopoverResult.stopovers.length > 0 ? (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                      Stopover Opportunities
+                      <span className="text-sm font-normal text-white/40">
+                        ({stopoverResult.stopovers.length} found)
+                      </span>
+                    </h2>
+
+                    {stopoverResult.stopovers.map((stop, i) => {
+                      const vc = VERDICT_CONFIG[stop.verdict]
+                      const visa = VISA_CONFIG[stop.visaStatus]
+
+                      return (
+                        <motion.div
+                          key={stop.hub}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.1 }}
+                          className="bg-white/[0.04] border border-white/10 rounded-xl overflow-hidden"
+                        >
+                          {/* Header */}
+                          <div className="p-5">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="text-lg font-semibold text-white">
+                                    {stop.stopoverDays} days in {stop.hubCity}
+                                  </h3>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${vc.bg}`}>
+                                    {vc.emoji} {vc.label}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-white/40">{stop.hubCountry}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-emerald-400">{fmtCurrency(stop.totalFlightCost)}</p>
+                                {stop.savings > 0 ? (
+                                  <p className="text-xs text-emerald-400">Save {fmtCurrency(stop.savings)} ({stop.savingsPercent}%)</p>
+                                ) : (
+                                  <p className="text-xs text-amber-400">+{fmtCurrency(Math.abs(stop.savings))} more</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Visa Badge */}
+                            <div className="flex items-center gap-3 mb-4">
+                              <span className={`flex items-center gap-1 text-xs ${visa.color}`}>
+                                {visa.emoji} {visa.label}
+                                {stop.visaMaxStay && ` (${stop.visaMaxStay} days)`}
+                              </span>
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                LIVE PRICE
+                              </span>
+                            </div>
+
+                            {/* Flight Legs */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                              <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                                <p className="text-xs text-white/40 mb-1">Leg 1</p>
+                                <p className="text-white font-medium text-sm">{stopoverResult.origin} &rarr; {stop.hub}</p>
+                                <p className="text-xs text-white/40">
+                                  {fmtCurrency(stop.leg1Price)} &middot; {stop.leg1Airlines.join(', ')} &middot; {stop.leg1Duration}
+                                  {stop.leg1Stops > 0 && ` \u00B7 ${stop.leg1Stops} stop`}
+                                </p>
+                              </div>
+                              <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06]">
+                                <p className="text-xs text-white/40 mb-1">Leg 2</p>
+                                <p className="text-white font-medium text-sm">{stop.hub} &rarr; {stopoverResult.destination}</p>
+                                <p className="text-xs text-white/40">
+                                  {fmtCurrency(stop.leg2Price)} &middot; {stop.leg2Airlines.join(', ')} &middot; {stop.leg2Duration}
+                                  {stop.leg2Stops > 0 && ` \u00B7 ${stop.leg2Stops} stop`}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Ground Costs */}
+                            <div className="bg-white/[0.04] rounded-lg p-3 border border-white/[0.06] mb-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs text-white/40">{stop.stopoverDays}-day stay in {stop.hubCity} ({stopoverBudget})</p>
+                                <p className="text-sm font-medium text-white">~{fmtCurrency(stop.totalGroundCost)}</p>
+                              </div>
+                              <div className="grid grid-cols-4 gap-2 text-center">
+                                <div>
+                                  <p className="text-xs text-white/30">Hotel</p>
+                                  <p className="text-xs text-white/60">{fmtCurrency(stop.costBreakdown.hotel)}/d</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-white/30">Food</p>
+                                  <p className="text-xs text-white/60">{fmtCurrency(stop.costBreakdown.food)}/d</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-white/30">Transport</p>
+                                  <p className="text-xs text-white/60">{fmtCurrency(stop.costBreakdown.transport)}/d</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-white/30">Activities</p>
+                                  <p className="text-xs text-white/60">{fmtCurrency(stop.costBreakdown.activities)}/d</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Net Value Summary */}
+                            <div className={`rounded-lg p-3 border ${stop.netValue >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+                              <p className="text-sm">{stop.pitch}</p>
+                            </div>
+                          </div>
+
+                          {/* Action */}
+                          <div className="border-t border-white/[0.06] p-4 flex gap-3">
+                            <a
+                              href={stop.googleFlightsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 text-center bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-medium py-2.5 rounded-lg transition-all text-sm"
+                            >
+                              Book on Google Flights &rarr;
+                            </a>
+                          </div>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-white/60 text-lg">No stopover opportunities found for this route.</p>
+                    <p className="text-white/40 text-sm mt-1">Try a longer travel window or a different route.</p>
+                  </div>
+                )}
+
+                {/* API Usage */}
+                <p className="text-xs text-white/20 text-center mt-6">
+                  {stopoverResult.serpApiCallsUsed} API calls used &middot; {stopoverResult.serpApiRemaining} remaining this month
+                </p>
+              </div>
+            )}
+
+            {/* Stopovers: How it works (pre-search) */}
+            {tripType === 'stopovers' && !stopoverResult && !stopoverLoading && !stopoverError && (
+              <div className="max-w-3xl mx-auto mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[
+                    { emoji: '\uD83D\uDD0D', title: 'Discover Routes', desc: 'We search Google Flights to find which cities airlines naturally route through between your origin and destination.' },
+                    { emoji: '\uD83D\uDEC2', title: 'Check Visas', desc: 'Your passport country is checked against each stopover destination. Visa-free and visa-on-arrival options are prioritized.' },
+                    { emoji: '\uD83D\uDCB0', title: 'Calculate Value', desc: 'We compare the cost of flights + a multi-day stopover against a direct flight to find genuine "free vacation" deals.' },
+                  ].map((step, i) => (
+                    <div key={i} className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
+                      <p className="text-3xl mb-3">{step.emoji}</p>
+                      <h3 className="text-white font-semibold mb-2">{step.title}</h3>
+                      <p className="text-sm text-skyblue-light/70">{step.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* ANYWHERE: cheapest destinations */}
             {discoverResults.length > 0 && (
               <div className="max-w-3xl mx-auto">
@@ -1543,7 +1956,7 @@ function SearchPageContent() {
             )}
 
             {/* Empty state — help cards */}
-            {!calendarData && !exactDateResult && !flexResult && discoverResults.length === 0 && !multiCityResults && !budgetOptimizeResult && !emptyRoute && !error && (
+            {tripType !== 'stopovers' && !calendarData && !exactDateResult && !flexResult && discoverResults.length === 0 && !multiCityResults && !budgetOptimizeResult && !emptyRoute && !error && (
               <div className="max-w-3xl mx-auto mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">

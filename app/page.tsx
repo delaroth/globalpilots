@@ -1,7 +1,47 @@
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import InstallPrompt from '@/components/InstallPrompt'
+import SocialProof from '@/components/SocialProof'
 import Link from 'next/link'
+
+const categoryCards = [
+  {
+    title: 'Discover',
+    tagline: "Don't know where to go? Let us surprise you.",
+    href: '/mystery',
+    gradient: 'from-purple-600 to-pink-600',
+    bgGradient: 'from-purple-600/20 to-pink-600/20',
+    border: 'border-purple-400/30 hover:border-purple-400/60',
+    subFeatures: ['Mystery Vacation', 'Destination Quiz', 'Inspire Me'],
+  },
+  {
+    title: 'Flights',
+    tagline: 'Find the cheapest way to get there.',
+    href: '/search',
+    gradient: 'from-sky-500 to-cyan-500',
+    bgGradient: 'from-sky-500/20 to-cyan-500/20',
+    border: 'border-sky-400/30 hover:border-sky-400/60',
+    subFeatures: ['Search', 'Stopovers', 'Multi-city'],
+  },
+  {
+    title: 'Plan',
+    tagline: "Know what it'll cost before you book.",
+    href: '/trip-cost',
+    gradient: 'from-amber-500 to-orange-500',
+    bgGradient: 'from-amber-500/20 to-orange-500/20',
+    border: 'border-amber-400/30 hover:border-amber-400/60',
+    subFeatures: ['Trip Costs', 'Festival Calendar'],
+  },
+  {
+    title: 'Deals',
+    tagline: "Today's cheapest trips from your airport.",
+    href: '/deals',
+    gradient: 'from-emerald-500 to-green-500',
+    bgGradient: 'from-emerald-500/20 to-green-500/20',
+    border: 'border-emerald-400/30 hover:border-emerald-400/60',
+    subFeatures: ['This Month', 'Quick Escape', 'Leaderboard'],
+  },
+]
 
 export default function Home() {
   return (
@@ -24,45 +64,43 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Hero Feature Card */}
-          <div className="grid grid-cols-1 gap-6 mt-12 max-w-xl mx-auto">
-            <Link href="/mystery" className="group relative bg-gradient-to-br from-purple-600/30 to-pink-600/30 backdrop-blur-sm rounded-2xl p-8 border border-purple-400/30 hover:border-purple-400/60 hover:shadow-2xl transition-all transform hover:scale-[1.03] text-left">
-              <div className="text-5xl mb-4">✨</div>
-              <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-purple-300 transition">Mystery Vacation</h2>
-              <p className="text-skyblue-light text-sm mb-6">
-                Set your budget and let AI surprise you with the perfect destination — single city or multi-city. Includes flights, hotels, and activities.
-              </p>
-              <span className="inline-flex items-center text-purple-300 font-semibold text-sm group-hover:translate-x-1 transition-transform">
-                Surprise Me →
-              </span>
-            </Link>
-          </div>
+          {/* Category Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 max-w-4xl mx-auto">
+            {categoryCards.map((card) => (
+              <Link
+                key={card.title}
+                href={card.href}
+                className={`group relative overflow-hidden bg-gradient-to-br ${card.bgGradient} backdrop-blur-sm rounded-2xl p-8 border ${card.border} hover:shadow-2xl transition-all transform hover:scale-[1.03] text-left`}
+              >
+                {/* Gradient accent bar */}
+                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${card.gradient}`} />
 
-          {/* Trip Cost Calculator */}
-          <div className="grid grid-cols-1 gap-4 mt-6 max-w-md mx-auto">
-            <Link href="/trip-cost" className="group bg-navy-light/50 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
-              <div className="text-3xl mb-2">&#x1F4CA;</div>
-              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-skyblue transition">Trip Cost Calculator</h3>
-              <p className="text-skyblue-light text-xs">Estimate total trip costs for 60+ cities with daily breakdowns</p>
-            </Link>
-          </div>
-
-          {/* Flight Tools */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 max-w-2xl mx-auto">
-            <Link href="/search" className="group bg-gradient-to-br from-sky-600/30 to-blue-600/30 backdrop-blur-sm rounded-xl p-5 border border-sky-400/20 hover:border-sky-400/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
-              <div className="text-3xl mb-2">&#x2708;&#xFE0F;</div>
-              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-sky-300 transition">Flight Search</h3>
-              <p className="text-skyblue-light text-xs">Real-time Google Flights data &middot; Compare dates &middot; Search Anywhere</p>
-            </Link>
-            <Link href="/explore" className="group bg-gradient-to-br from-teal-600/30 to-green-600/30 backdrop-blur-sm rounded-xl p-5 border border-teal-400/20 hover:border-teal-400/50 hover:shadow-xl transition-all transform hover:scale-105 text-left">
-              <div className="text-3xl mb-2">&#x1F30D;</div>
-              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-teal-300 transition">Layover Explorer</h3>
-              <p className="text-skyblue-light text-xs">Real-time Google Flights data &middot; Stopover routes &middot; Visa checks</p>
-            </Link>
+                <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-skyblue transition">
+                  {card.title}
+                </h2>
+                <p className="text-skyblue-light text-sm mb-5">
+                  {card.tagline}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {card.subFeatures.map((sub) => (
+                    <span
+                      key={sub}
+                      className="text-xs bg-white/10 text-white/70 px-2.5 py-1 rounded-full"
+                    >
+                      {sub}
+                    </span>
+                  ))}
+                </div>
+                <span className="inline-flex items-center text-skyblue font-semibold text-sm mt-4 group-hover:translate-x-1 transition-transform">
+                  Explore &rarr;
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
+      <SocialProof />
       <Footer />
       <InstallPrompt />
     </main>

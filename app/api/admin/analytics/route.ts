@@ -289,6 +289,205 @@ export async function GET(request: NextRequest) {
       console.error('[Admin Analytics] topCachedDestinations error:', e)
     }
 
+    // --- Enhanced analytics (Task 4) ---
+
+    // 10. Navigation heatmap — which nav links get clicked most (7d)
+    let navHeatmap: { link: string; category: string; count: number }[] = []
+    try {
+      const { data: navRaw } = await (supabase
+        .from('user_events') as any)
+        .select('event_data')
+        .eq('event_type', 'nav_click')
+        .gte('created_at', sevenDaysAgo)
+      if (navRaw) {
+        const counts: Record<string, { link: string; category: string; count: number }> = {}
+        for (const row of navRaw as any[]) {
+          const label = row.event_data?.label || 'unknown'
+          const category = row.event_data?.category || 'other'
+          const key = `${category}::${label}`
+          if (!counts[key]) counts[key] = { link: label, category, count: 0 }
+          counts[key].count++
+        }
+        navHeatmap = Object.values(counts)
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 20)
+      }
+    } catch (e) {
+      console.error('[Admin Analytics] navHeatmap error:', e)
+    }
+
+    // 11. Detailed conversion funnel — per feature path
+    let detailedFunnel: {
+      mystery: { page_views: number; searches: number; reveals: number; bookings: number }
+      flights: { page_views: number; searches: number; bookings: number }
+      deals: { page_views: number; views: number; bookings: number }
+    } = {
+      mystery: { page_views: 0, searches: 0, reveals: 0, bookings: 0 },
+      flights: { page_views: 0, searches: 0, bookings: 0 },
+      deals: { page_views: 0, views: 0, bookings: 0 },
+    }
+    try {
+      // Fetch all relevant events in one go for the last 7 days
+      const { data: funnelRaw } = await (supabase
+        .from('user_events') as any)
+        .select('event_type, event_data')
+        .gte('created_at', sevenDaysAgo)
+        .in('event_type', [
+          'page_view', 'mystery_search', 'flight_search',
+          'conversion', 'feature_use',
+        ])
+      if (funnelRaw) {
+        for (const row of funnelRaw as any[]) {
+          const url = row.event_data?.url || ''
+          const convType = row.event_data?.conversion_type || ''
+
+          // Mystery funnel
+          if (row.event_type === 'page_view' && url.includes('/mystery')) detailedFunnel.mystery.page_views++
+          if (row.event_type === 'mystery_search') detailedFunnel.mystery.searches++
+          if (row.event_type === 'conversion' && convType === 'mystery_revealed') detailedFunnel.mystery.reveals++
+          if (row.event_type === 'conversion' && convType === 'booking_clicked' && (row.event_data?.source === 'mystery' || url.includes('/mystery'))) {
+            detailedFunnel.mystery.bookings++
+          }
+
+          // Flight search funnel
+          if (row.event_type === 'page_view' && url.includes('/search')) detailedFunnel.flights.page_views++
+          if (row.event_type === 'flight_search') detailedFunnel.flights.searches++
+          if (row.event_type === 'conversion' && convType === 'booking_clicked' && (row.event_data?.source === 'flights' || url.includes('/search'))) {
+            detailedFunnel.flights.bookings++
+          }
+
+          // Deals funnel
+          if (row.event_type === 'page_view' && url.includes('/deals')) detailedFunnel.deals.page_views++
+          if (row.event_type === 'feature_use' && row.event_data?.feature === 'deals_viewed') detailedFunnel.deals.views++
+          if (row.event_type === 'conversion' && convType === 'booking_clicked' && (row.event_data?.source === 'deals' || url.includes('/deals'))) {
+            detailedFunnel.deals.bookings++
+          }
+        }
+      }
+
+      // Also count reveals from activity_feed for mystery funnel if conversion events are sparse
+      if (detailedFunnel.mystery.reveals === 0) {
+        const { count: activityReveals } = await supabase
+          .from('activity_feed')
+          .select('*', { count: 'exact', head: true })
+          .eq('activity_type', 'destination_revealed')
+          .gte('created_at', sevenDaysAgo)
+        detailedFunnel.mystery.reveals = activityReveals || 0
+      }
+    } catch (e) {
+      console.error('[Admin Analytics] detailedFunnel error:', e)
+    }
+
+    // 12. Feature engagement — which features keep users engaged
+    let featureEngagement: { feature: string; avg_duration: number; completed: number; total: number }[] = []
+    try {
+      const { data: engagementRaw } = await (supabase
+        .from('user_events') as any)
+        .select('event_data')
+        .eq('event_type', 'feature_engagement')
+      if (engagementRaw && engagementRaw.length > 0) {
+        const groups: Record<string, { durations: number[]; completed: number; total: number }> = {}
+        for (const row of engagementRaw as any[]) {
+          const feature = row.event_data?.feature || 'unknown'
+          if (!groups[feature]) groups[feature] = { durations: [], completed: 0, total: 0 }
+          groups[feature].total++
+          const dur = parseInt(row.event_data?.durationMs)
+          if (!isNaN(dur)) groups[feature].durations.push(dur)
+          if (row.event_data?.completed === true || row.event_data?.completed === 'true') {
+            groups[feature].completed++
+          }
+        }
+        featureEngagement = Object.entries(groups)
+          .map(([feature, g]) => ({
+            feature,
+            avg_duration: g.durations.length > 0
+              ? Math.round(g.durations.reduce((a, b) => a + b, 0) / g.durations.length)
+              : 0,
+            completed: g.completed,
+            total: g.total,
+          }))
+          .sort((a, b) => b.total - a.total)
+      }
+    } catch (e) {
+      console.error('[Admin Analytics] featureEngagement error:', e)
+    }
+
+    // 13. User retention — sessions with >1 page view
+    let userRetention = { total_sessions: 0, engaged_sessions: 0, avg_pages_per_session: 0, bounce_rate: 0 }
+    try {
+      const { data: sessionRaw } = await (supabase
+        .from('user_events') as any)
+        .select('session_id')
+        .eq('event_type', 'page_view')
+        .gte('created_at', sevenDaysAgo)
+        .not('session_id', 'is', null)
+      if (sessionRaw && sessionRaw.length > 0) {
+        const sessionCounts: Record<string, number> = {}
+        for (const row of sessionRaw as any[]) {
+          const sid = row.session_id
+          if (sid) sessionCounts[sid] = (sessionCounts[sid] || 0) + 1
+        }
+        const sessions = Object.values(sessionCounts)
+        const totalSessions = sessions.length
+        const engagedSessions = sessions.filter(c => c > 1).length
+        const totalPageViews = sessions.reduce((a, b) => a + b, 0)
+        const bounceSessions = sessions.filter(c => c === 1).length
+        userRetention = {
+          total_sessions: totalSessions,
+          engaged_sessions: engagedSessions,
+          avg_pages_per_session: totalSessions > 0
+            ? parseFloat((totalPageViews / totalSessions).toFixed(1))
+            : 0,
+          bounce_rate: totalSessions > 0
+            ? parseFloat(((bounceSessions / totalSessions) * 100).toFixed(1))
+            : 0,
+        }
+      }
+    } catch (e) {
+      console.error('[Admin Analytics] userRetention error:', e)
+    }
+
+    // 14. Drop-off points — pages with high exit rates (last page_view per session)
+    let dropOffPoints: { page: string; exits: number; total_views: number; exit_rate: number }[] = []
+    try {
+      const { data: dropOffRaw } = await (supabase
+        .from('user_events') as any)
+        .select('session_id, event_data, created_at')
+        .eq('event_type', 'page_view')
+        .gte('created_at', sevenDaysAgo)
+        .not('session_id', 'is', null)
+        .order('created_at', { ascending: true })
+      if (dropOffRaw && dropOffRaw.length > 0) {
+        // Track total views per page and last page per session
+        const pageTotalViews: Record<string, number> = {}
+        const lastPagePerSession: Record<string, string> = {}
+        for (const row of dropOffRaw as any[]) {
+          const url = row.event_data?.url || 'unknown'
+          const sid = row.session_id
+          pageTotalViews[url] = (pageTotalViews[url] || 0) + 1
+          if (sid) lastPagePerSession[sid] = url
+        }
+        // Count exits per page
+        const pageExits: Record<string, number> = {}
+        for (const page of Object.values(lastPagePerSession)) {
+          pageExits[page] = (pageExits[page] || 0) + 1
+        }
+        dropOffPoints = Object.entries(pageExits)
+          .map(([page, exits]) => ({
+            page,
+            exits,
+            total_views: pageTotalViews[page] || exits,
+            exit_rate: pageTotalViews[page] > 0
+              ? parseFloat(((exits / pageTotalViews[page]) * 100).toFixed(1))
+              : 0,
+          }))
+          .sort((a, b) => b.exits - a.exits)
+          .slice(0, 10)
+      }
+    } catch (e) {
+      console.error('[Admin Analytics] dropOffPoints error:', e)
+    }
+
     // Aggregate popular destinations from raw data
     const destinationCounts: Record<string, number> = {}
     const destEntries = (popularDestinationsRes.data || []) as any[]
@@ -367,6 +566,11 @@ export async function GET(request: NextRequest) {
       feedbackSummary,
       avgRating,
       topCachedDestinations,
+      navHeatmap,
+      detailedFunnel,
+      featureEngagement,
+      userRetention,
+      dropOffPoints,
     })
   } catch (error) {
     console.error('[Admin Analytics] Error:', error)

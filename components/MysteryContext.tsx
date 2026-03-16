@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { useCurrency } from '@/hooks/useCurrency'
+import { trackConversion } from '@/lib/track-client'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -127,6 +128,12 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
         if (quickData._cacheHit) {
           console.log('[MysteryContext] Full cache hit -- skipping Phase 2')
           setState({ status: 'ready', destination: quickData, detailsLoading: false, error: null })
+          trackConversion('mystery_revealed', {
+            destination: quickData.destination,
+            country: quickData.country,
+            iata: quickData.city_code_IATA,
+            cached: true,
+          })
           return
         }
 
@@ -167,6 +174,13 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
         }
 
         setState({ status: 'quick-ready', destination: partialDestination, detailsLoading: true, error: null })
+
+        // Fire-and-forget conversion tracking
+        trackConversion('mystery_revealed', {
+          destination: quickData.destination,
+          country: quickData.country,
+          iata: quickData.city_code_IATA,
+        })
 
         // Phase 2: AI details
         console.log('[MysteryContext] Phase 2: Fetching AI details for', quickData.destination)

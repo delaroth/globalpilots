@@ -61,3 +61,31 @@ export function trackFeatureUse(feature: string, params?: Record<string, any>) {
 export function trackSearch(feature: string, params: Record<string, any>) {
   trackEvent('search', { feature, ...params })
 }
+
+// ---------------------------------------------------------------------------
+// Enhanced tracking
+// ---------------------------------------------------------------------------
+
+/** Track navigation clicks (which nav category/link users click). */
+export function trackNavClick(category: string, link: string) {
+  trackEvent('nav_click', { category, label: link })
+}
+
+/** Track feature engagement (how long users spend on a feature). */
+export function trackFeatureEngagement(feature: string, durationMs: number, completed: boolean) {
+  trackEvent('feature_engagement', { feature, durationMs, completed })
+}
+
+/**
+ * Track conversion events (user took a meaningful action).
+ * Types: 'mystery_revealed', 'flight_found', 'booking_clicked',
+ *        'trip_saved', 'account_created', 'alert_created'
+ */
+export function trackConversion(type: string, data?: Record<string, any>) {
+  trackEvent('conversion', { conversion_type: type, ...data })
+}
+
+/** Track UI interactions (button clicks, tab switches, filter changes). */
+export function trackUIInteraction(element: string, action: string, value?: string) {
+  trackEvent('ui_interaction', { element, action, value })
+}
