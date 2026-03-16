@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { searchAirports, majorAirports, lookupAirportByCode } from '@/lib/geolocation'
+import { useSmartDefaults } from '@/hooks/useSmartDefaults'
 
 interface AirportAutocompleteProps {
   value: string
@@ -38,6 +39,10 @@ export default function AirportAutocomplete({
 
   const isOriginField = id.toLowerCase().includes('origin')
   const storageKey = persistKey ? `gp_${persistKey}` : (isOriginField ? 'gp_origin' : null)
+
+  // Smart defaults — only for origin fields when nothing is saved
+  const { suggestedAirport } = useSmartDefaults()
+  const showSmartSuggestion = isOriginField && !value && !selectedCity && !showDropdown && suggestedAirport
 
   // Persist airport to localStorage
   const saveToStorage = (code: string, city: string) => {
@@ -296,6 +301,22 @@ export default function AirportAutocomplete({
           />
         )}
       </div>
+
+      {/* Smart default suggestion */}
+      {showSmartSuggestion && (
+        <div className="flex items-center gap-2 mt-1 px-1">
+          <span className="text-xs text-gray-400">
+            Based on your location: {suggestedAirport.city} ({suggestedAirport.code})
+          </span>
+          <button
+            type="button"
+            onClick={() => handleSelect(suggestedAirport.code, suggestedAirport.city)}
+            className="text-xs font-medium text-skyblue hover:text-skyblue/80 bg-skyblue/10 hover:bg-skyblue/20 px-2 py-0.5 rounded-full transition"
+          >
+            Use {suggestedAirport.code}
+          </button>
+        </div>
+      )}
 
       {/* Dropdown */}
       {showDropdown && filteredAirports.length > 0 && (
