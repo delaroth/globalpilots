@@ -24,10 +24,8 @@ const navCategories: NavCategory[] = [
   {
     label: 'AI Trip Planner',
     gradient: true,
-    items: [
-      { href: '/mystery', label: 'Mystery Vacation', description: 'Let AI surprise you with a destination' },
-      { href: '/mystery', label: 'Plan My Trip', description: 'Choose your destination, AI plans the rest' },
-    ],
+    directLink: '/mystery',
+    items: [],
   },
   {
     label: 'Find Flights',
@@ -77,9 +75,11 @@ function DesktopDropdown({
       <Link
         href={category.directLink}
         className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-          isActive
-            ? 'text-sky-400 bg-sky-400/10'
-            : 'text-white/90 hover:text-sky-400 hover:bg-white/[0.04]'
+          category.gradient
+            ? 'bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-bold hover:opacity-80'
+            : isActive
+              ? 'text-sky-400 bg-sky-400/10'
+              : 'text-white/90 hover:text-sky-400 hover:bg-white/[0.04]'
         }`}
       >
         {category.label}
