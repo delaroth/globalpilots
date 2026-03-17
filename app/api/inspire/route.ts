@@ -41,16 +41,13 @@ const COUNTRY_FLAGS: Record<string, string> = {
 }
 
 /**
- * Pick a sensible default origin based on approximate time-of-day heuristic:
- * - Americas awake hours → JFK
- * - Europe/Africa awake hours → LHR
- * - Asia/Oceania awake hours → BKK
+ * Default origin: use BKK as global default since it's a major international hub
+ * with cheap flights to diverse destinations worldwide. The user can override
+ * via ?origin= param. The homepage and inspire page should pass the user's
+ * detected/saved origin when available.
  */
 function defaultOrigin(): string {
-  const hour = new Date().getUTCHours()
-  if (hour >= 12 && hour < 21) return 'JFK' // ~7am-4pm EST
-  if (hour >= 6 && hour < 15) return 'LHR'  // ~6am-3pm GMT
-  return 'BKK'                                // ~1am-10am ICT (evening/night UTC)
+  return 'BKK'
 }
 
 export async function GET(request: NextRequest) {

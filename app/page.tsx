@@ -23,7 +23,19 @@ export default function Home() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetch('/api/inspire')
+    // Use user's saved origin airport if available, otherwise API defaults to BKK
+    const savedOrigin = typeof window !== 'undefined' ? localStorage.getItem('gp_origin') : null
+    let originParam = ''
+    if (savedOrigin) {
+      try {
+        const parsed = JSON.parse(savedOrigin)
+        if (parsed?.code) originParam = `?origin=${parsed.code}`
+      } catch {
+        if (/^[A-Z]{3}$/.test(savedOrigin)) originParam = `?origin=${savedOrigin}`
+      }
+    }
+
+    fetch(`/api/inspire${originParam}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data?.destinations?.length > 0) setTrending(data.destinations.slice(0, 8))

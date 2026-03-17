@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import Navigation from '@/components/Navigation'
+import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
 import CurrencySelector from '@/components/CurrencySelector'
 import { useCurrency } from '@/hooks/useCurrency'
@@ -344,29 +346,8 @@ export default function MysteryPage() {
   const hasMultiCityResults = numCities > 1 && multiCityResult && !multiCitySearching
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
-      {/* Navigation */}
-      <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-skyblue rounded-full flex items-center justify-center">
-              <span className="text-navy text-xl font-bold">G</span>
-            </div>
-            <span className="text-white text-xl font-bold">GlobePilot</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setTripHistoryOpen(true)}
-              className="text-white/60 hover:text-white transition text-sm font-medium"
-            >
-              My Trips
-            </button>
-            <Link href="/" className="text-skyblue hover:text-skyblue-light transition">
-              &larr; Back to Home
-            </Link>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-slate-950">
+      <Navigation />
 
       <div className="container mx-auto px-4 py-12">
         {/* Header */}
@@ -1041,6 +1022,8 @@ export default function MysteryPage() {
           onBook={() => setCompareTrips(null)}
         />
       )}
+
+      <Footer />
     </div>
   )
 }
