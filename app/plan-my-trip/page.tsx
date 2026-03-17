@@ -120,7 +120,7 @@ export default function PlanMyTripPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-sky-950/30 via-[#0a0a0f] to-[#0a0a0f]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-sky-950/30 via-slate-950 to-slate-950" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-r from-sky-600/10 to-cyan-600/10 rounded-full blur-3xl" />
 
         <div className="relative max-w-4xl mx-auto px-6 pt-12 pb-8 text-center">

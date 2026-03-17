@@ -137,10 +137,11 @@ export default function Home() {
   const [budget, setBudget] = useState('')
   const [origin, setOrigin] = useState('')
   const [selectedVibes, setSelectedVibes] = useState<string[]>([])
+  const [tripDuration, setTripDuration] = useState(5)
+  const [accommodation, setAccommodation] = useState('mid-range')
 
   // Plan mode extra state
   const [planDestination, setPlanDestination] = useState('')
-  const [planTripDuration, setPlanTripDuration] = useState(5)
 
   const toggleVibe = (value: string) => {
     setSelectedVibes((prev) =>
@@ -156,14 +157,14 @@ export default function Home() {
       budget: currency.toUSD(parseFloat(budget)),
       vibes: selectedVibes,
       dates: 'flexible:next-3-months',
-      tripDuration: 5,
+      tripDuration,
       packageComponents: {
         includeFlight: true,
         includeHotel: true,
         includeItinerary: true,
         includeTransportation: true,
       },
-      accommodationLevel: 'mid-range',
+      accommodationLevel: accommodation,
       budgetPriority: 'balanced',
     })
   }
@@ -175,7 +176,7 @@ export default function Home() {
       destination: planDestination,
       origin,
       budget,
-      days: String(planTripDuration),
+      days: String(tripDuration),
       vibes: selectedVibes.join(','),
     })
     router.push(`/plan-my-trip?${params.toString()}`)
@@ -198,23 +199,17 @@ export default function Home() {
       <section className="relative overflow-hidden">
         {/* Background gradient pattern */}
         <div className={`absolute inset-0 transition-colors duration-700 ${
-          heroMode === 'surprise'
-            ? 'bg-gradient-to-b from-purple-950/40 via-[#0a0a0f] to-[#0a0a0f]'
-            : 'bg-gradient-to-b from-sky-950/30 via-[#0a0a0f] to-[#0a0a0f]'
+          'bg-gradient-to-b from-sky-950/30 via-slate-950 to-slate-950'
         }`} />
         <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full blur-3xl transition-colors duration-700 ${
-          heroMode === 'surprise'
-            ? 'bg-gradient-to-r from-purple-600/10 to-pink-600/10'
-            : 'bg-gradient-to-r from-sky-600/10 to-cyan-600/10'
+          'bg-gradient-to-r from-sky-600/8 to-cyan-600/8'
         }`} />
 
         <div className="relative max-w-4xl mx-auto px-6 pt-16 pb-20 text-center">
           {/* Headline */}
           <h1 className="text-5xl md:text-7xl font-bold mb-4">
             <span className={`bg-clip-text text-transparent transition-all duration-500 ${
-              heroMode === 'surprise'
-                ? 'bg-gradient-to-r from-purple-400 to-pink-400'
-                : 'bg-gradient-to-r from-sky-400 to-cyan-300'
+              'bg-gradient-to-r from-sky-400 via-cyan-300 to-blue-400'
             }`}>
               {headline}
             </span>
@@ -229,7 +224,7 @@ export default function Home() {
               onClick={() => setHeroMode('surprise')}
               className={`px-5 py-2.5 rounded-l-xl text-sm font-semibold transition-all duration-300 border ${
                 heroMode === 'surprise'
-                  ? 'bg-purple-500/20 border-purple-400/50 text-purple-300'
+                  ? 'bg-sky-500/20 border-sky-400/50 text-sky-300'
                   : 'bg-white/[0.03] border-white/10 text-white/50 hover:text-white/70 hover:bg-white/[0.06]'
               }`}
             >
@@ -268,7 +263,7 @@ export default function Home() {
                           onChange={(e) => setBudget(e.target.value)}
                           placeholder="800"
                           min="100"
-                          className="w-full pl-8 pr-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition text-sm"
+                          className="w-full pl-8 pr-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-sky-500/50 transition text-sm"
                         />
                       </div>
                       <CurrencySelector
@@ -294,7 +289,7 @@ export default function Home() {
                             onClick={() => toggleVibe(vibe.value)}
                             className={`px-3 py-2 rounded-xl text-sm font-medium transition border ${
                               isSelected
-                                ? 'bg-purple-500/20 border-purple-400/50 text-purple-300'
+                                ? 'bg-sky-500/20 border-sky-400/50 text-sky-300'
                                 : 'bg-white/[0.04] border-white/10 text-white/60 hover:bg-white/[0.08] hover:text-white/80'
                             }`}
                           >
@@ -307,7 +302,49 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Row 2: Origin + Surprise Me button */}
+                {/* Row 2: Trip length + Accommodation */}
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-white/60 mb-2">Trip Length</label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min={2}
+                        max={21}
+                        value={tripDuration}
+                        onChange={(e) => setTripDuration(Number(e.target.value))}
+                        className="flex-1 h-2 rounded-full appearance-none cursor-pointer accent-sky-400 bg-white/10"
+                      />
+                      <span className="text-white font-medium text-sm w-16 text-right">{tripDuration} days</span>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-white/60 mb-2">Accommodation</label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: 'hostel', label: 'Hostel' },
+                        { value: 'budget', label: 'Budget' },
+                        { value: 'mid-range', label: 'Mid' },
+                        { value: 'comfort', label: 'Comfort' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setAccommodation(opt.value)}
+                          className={`flex-1 py-2 rounded-lg text-xs font-medium transition border ${
+                            accommodation === opt.value
+                              ? 'bg-sky-500/20 border-sky-400/50 text-sky-300'
+                              : 'bg-white/[0.04] border-white/10 text-white/50 hover:bg-white/[0.08]'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 3: Origin + Surprise Me button */}
                 <div className="flex flex-col md:flex-row gap-4 items-end">
                   <div className="flex-1 w-full">
                     <label className="block text-sm font-medium text-white/60 mb-2">
@@ -416,15 +453,15 @@ export default function Home() {
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-white/60 mb-2">
-                      Trip Length: {planTripDuration} {planTripDuration === 1 ? 'day' : 'days'}
+                      Trip Length: {tripDuration} {tripDuration === 1 ? 'day' : 'days'}
                     </label>
                     <div className="flex items-center gap-3 h-[46px]">
                       <input
                         type="range"
                         min={1}
                         max={30}
-                        value={planTripDuration}
-                        onChange={(e) => setPlanTripDuration(parseInt(e.target.value))}
+                        value={tripDuration}
+                        onChange={(e) => setTripDuration(parseInt(e.target.value))}
                         className="flex-1 accent-sky-400"
                       />
                     </div>
