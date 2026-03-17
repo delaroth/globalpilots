@@ -10,20 +10,14 @@ const config: Config = {
     extend: {
       colors: {
         navy: {
-          DEFAULT: '#0A1F44',
-          dark: '#071630',
-          light: '#0D2B5C',
+          DEFAULT: '#0F172A',
+          dark: '#020617',
+          light: '#1E293B',
         },
         skyblue: {
-          DEFAULT: '#87CEEB',
-          light: '#B0E0F6',
-          dark: '#5FB3D9',
-        },
-        warm: {
-          orange: '#F59E0B',
-          coral: '#FB7185',
-          gold: '#FBBF24',
-          peach: '#FDBA74',
+          DEFAULT: '#38BDF8',
+          light: '#7DD3FC',
+          dark: '#0EA5E9',
         },
       },
       keyframes: {
