@@ -11,11 +11,11 @@ export default function PrivacyPage() {
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Privacy Policy
           </h1>
-          <p className="text-skyblue-light mb-12">
+          <p className="text-sky-300 mb-12">
             Last updated: March 16, 2026
           </p>
 
-          <div className="space-y-10 text-skyblue-light/90 leading-relaxed">
+          <div className="space-y-10 text-sky-300/90 leading-relaxed">
             {/* Introduction */}
             <div>
               <h2 className="text-2xl font-semibold text-white mb-4">
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
                 We are designed to be privacy-friendly. Here is what we collect and store:
               </p>
 
-              <h3 className="text-lg font-semibold text-skyblue mb-2">
+              <h3 className="text-lg font-semibold text-sky-400 mb-2">
                 Account Data
               </h3>
               <p className="mb-4">
@@ -49,21 +49,21 @@ export default function PrivacyPage() {
                 <li><span className="font-semibold text-white">Email/password</span> &mdash; Your email address, display name, and a bcrypt hash of your password. We never store your password in plain text.</li>
               </ul>
 
-              <h3 className="text-lg font-semibold text-skyblue mb-2">
+              <h3 className="text-lg font-semibold text-sky-400 mb-2">
                 Saved Activity &amp; Profile Data
               </h3>
               <p className="mb-4">
                 When you use GlobePilot while signed in, we store your saved trips, Travel Passport stamps, badges, streak data, destination quiz results, and leaderboard entries in our database so they persist across sessions and devices.
               </p>
 
-              <h3 className="text-lg font-semibold text-skyblue mb-2">
+              <h3 className="text-lg font-semibold text-sky-400 mb-2">
                 Local Storage (Browser-Side Only)
               </h3>
               <p className="mb-4">
                 We use your browser&apos;s localStorage to save preferences and session data that never leaves your device. This includes your preferred currency, default origin airport, recent search history (origin airports, budget preferences), and trip history. You can clear this data at any time through your browser settings.
               </p>
 
-              <h3 className="text-lg font-semibold text-skyblue mb-2">
+              <h3 className="text-lg font-semibold text-sky-400 mb-2">
                 Search History
               </h3>
               <p className="mb-4">
@@ -81,35 +81,35 @@ export default function PrivacyPage() {
               </p>
 
               <ul className="space-y-4">
-                <li className="pl-4 border-l-2 border-skyblue/30">
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">SerpApi</span> &mdash; Provides Google Flights and Google Travel Explore data including live flight prices and destination suggestions. We send origin/destination airports, dates, and budget parameters. No personal data is shared.{' '}
-                  <a href="https://serpapi.com/privacy" target="_blank" rel="noopener noreferrer" className="text-skyblue hover:underline">SerpApi Privacy Policy</a>.
+                  <a href="https://serpapi.com/privacy" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">SerpApi Privacy Policy</a>.
                 </li>
-                <li className="pl-4 border-l-2 border-skyblue/30">
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">TravelPayouts</span> &mdash; Provides affiliate flight search results and booking links. We send origin/destination airports and travel dates. TravelPayouts may set cookies when you click booking links.
                 </li>
-                <li className="pl-4 border-l-2 border-skyblue/30">
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">DeepSeek AI</span> &mdash; Generates mystery destination itineraries, hotel recommendations, and local tips. We send destination names, budget tier, and travel preferences. No personal data (name, email, account info) is sent to DeepSeek.
                 </li>
-                <li className="pl-4 border-l-2 border-skyblue/30">
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">Supabase</span> &mdash; Our database and infrastructure provider (PostgreSQL). Stores user accounts, saved trips, and activity feed data. All data is encrypted at rest and in transit.
                 </li>
-                <li className="pl-4 border-l-2 border-skyblue/30">
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">Google OAuth</span> &mdash; Powers &ldquo;Sign in with Google&rdquo; authentication. We receive your name, email address, and profile picture from Google. We do not access your Google contacts, calendar, or any other Google data.
                 </li>
-                <li className="pl-4 border-l-2 border-skyblue/30">
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">Frankfurter API</span> &mdash; Provides currency exchange rates (free, open-source). No user data is sent &mdash; only currency codes.
                 </li>
-                <li className="pl-4 border-l-2 border-skyblue/30">
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">Open-Meteo</span> &mdash; Provides weather forecast data for destinations. No user data is sent &mdash; only destination coordinates.
                 </li>
-                <li className="pl-4 border-l-2 border-skyblue/30">
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">Wikipedia</span> &mdash; Provides nearby attraction information. No user data is sent &mdash; only destination coordinates.
                 </li>
-                <li className="pl-4 border-l-2 border-skyblue/30">
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">Pexels</span> &mdash; Provides destination photos. No user data is sent &mdash; only destination names.
                 </li>
-                <li className="pl-4 border-l-2 border-skyblue/30">
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">Resend</span> &mdash; Handles transactional emails including contact form replies and price alert notifications. We send your email address to Resend for delivery purposes only.
                 </li>
               </ul>
@@ -193,7 +193,7 @@ export default function PrivacyPage() {
               </ul>
               <p className="mt-4">
                 To exercise any of these rights, including account deletion, please email us at{' '}
-                <span className="text-skyblue font-semibold">privacy@globepilots.com</span>.
+                <span className="text-sky-400 font-semibold">privacy@globepilots.com</span>.
                 We will respond to all requests within 30 days.
               </p>
             </div>
@@ -226,7 +226,7 @@ export default function PrivacyPage() {
               <p>
                 If you have any questions about this Privacy Policy or wish to exercise your data rights, please contact us at:
               </p>
-              <p className="mt-2 text-skyblue font-semibold">
+              <p className="mt-2 text-sky-400 font-semibold">
                 privacy@globepilots.com
               </p>
             </div>

@@ -146,7 +146,7 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
       transition={{ duration: 0.2 }}
     >
       <motion.div
-        className="relative w-full max-w-lg bg-navy-dark/95 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-lg bg-slate-950/95 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden"
         initial={{ opacity: 0, scale: 0.95, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 16 }}

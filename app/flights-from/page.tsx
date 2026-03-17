@@ -50,7 +50,7 @@ export default function FlightsFromIndexPage() {
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
             Cheapest Flights from{' '}
-            <span className="text-skyblue">Your City</span>
+            <span className="text-sky-400">Your City</span>
           </h1>
           <p className="text-xl text-white/70 max-w-2xl mx-auto">
             Select your departure city to discover the cheapest destinations you can fly to,
@@ -71,9 +71,9 @@ export default function FlightsFromIndexPage() {
                 <Link
                   key={airport.code}
                   href={`/flights-from/${slugify(airport.city)}`}
-                  className="group bg-white/[0.04] border border-white/10 hover:border-skyblue/40 rounded-xl p-4 transition-all hover:bg-white/[0.06]"
+                  className="group bg-white/[0.04] border border-white/10 hover:border-sky-400/40 rounded-xl p-4 transition-all hover:bg-white/[0.06]"
                 >
-                  <h3 className="text-white font-medium group-hover:text-skyblue transition text-sm truncate">
+                  <h3 className="text-white font-medium group-hover:text-sky-400 transition text-sm truncate">
                     {airport.city}
                   </h3>
                   <p className="text-white/40 text-xs mt-1">
@@ -87,7 +87,7 @@ export default function FlightsFromIndexPage() {
       ))}
 
       {/* Bottom CTA */}
-      <section className="px-6 py-16 bg-gradient-to-br from-skyblue/10 to-purple-600/10">
+      <section className="px-6 py-16 bg-gradient-to-br from-sky-500/10 to-purple-600/10">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-4">
             Don&apos;t See Your City?
@@ -97,7 +97,7 @@ export default function FlightsFromIndexPage() {
           </p>
           <Link
             href="/search"
-            className="bg-skyblue text-navy font-bold py-3 px-8 rounded-full hover:bg-skyblue-light transition transform hover:scale-105"
+            className="bg-sky-500 text-slate-900 font-bold py-3 px-8 rounded-full hover:bg-sky-500-light transition transform hover:scale-105"
           >
             Search All Flights
           </Link>

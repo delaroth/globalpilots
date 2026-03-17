@@ -211,7 +211,7 @@ function AccordionItem({
       >
         <span className="text-white font-medium pr-4">{faq.question}</span>
         <svg
-          className={`w-5 h-5 text-skyblue shrink-0 transition-transform duration-300 ${
+          className={`w-5 h-5 text-sky-400 shrink-0 transition-transform duration-300 ${
             isOpen ? 'rotate-180' : ''
           }`}
           fill="none"
@@ -263,7 +263,7 @@ export default function FAQPage() {
           <div className="text-center mb-16">
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
               Frequently Asked{' '}
-              <span className="text-skyblue">Questions</span>
+              <span className="text-sky-400">Questions</span>
             </h1>
             <p className="text-xl text-white/70 max-w-xl mx-auto">
               Everything you need to know about GlobePilots and how our tools
@@ -275,7 +275,7 @@ export default function FAQPage() {
           <div className="space-y-12">
             {faqCategories.map((category) => (
               <div key={category.name}>
-                <h2 className="text-xl font-bold text-skyblue mb-4 flex items-center gap-2">
+                <h2 className="text-xl font-bold text-sky-400 mb-4 flex items-center gap-2">
                   {category.name}
                 </h2>
                 <div className="space-y-2">
@@ -306,7 +306,7 @@ export default function FAQPage() {
             </p>
             <a
               href="/contact"
-              className="inline-block px-8 py-3 bg-skyblue hover:bg-skyblue-dark text-navy font-bold rounded-xl transition"
+              className="inline-block px-8 py-3 bg-sky-500 hover:bg-sky-600 text-slate-900 font-bold rounded-xl transition"
             >
               Contact Us
             </a>

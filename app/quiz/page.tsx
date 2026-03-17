@@ -456,7 +456,7 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
       </div>
       <div className="h-2 bg-white/10 rounded-full overflow-hidden">
         <motion.div
-          className="h-full bg-gradient-to-r from-skyblue to-purple-400 rounded-full"
+          className="h-full bg-gradient-to-r from-sky-500 to-purple-400 rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -490,7 +490,7 @@ function QuestionCard({
           <button
             key={opt.value}
             onClick={() => onSelect(opt.value)}
-            className="group bg-white/[0.04] backdrop-blur-lg border border-white/10 hover:border-skyblue/50 hover:bg-white/[0.08] rounded-xl px-6 py-4 flex items-center gap-4 transition-all active:scale-[0.98]"
+            className="group bg-white/[0.04] backdrop-blur-lg border border-white/10 hover:border-sky-500/50 hover:bg-white/[0.08] rounded-xl px-6 py-4 flex items-center gap-4 transition-all active:scale-[0.98]"
           >
             <span className="text-3xl group-hover:scale-110 transition-transform">
               {opt.emoji}
@@ -558,12 +558,12 @@ function ResultCard({
       {/* Result card */}
       <div className="bg-white/[0.04] backdrop-blur-lg border border-white/10 rounded-2xl overflow-hidden">
         {/* Header with flag */}
-        <div className="bg-gradient-to-br from-skyblue/20 to-purple-500/20 p-8 text-center">
+        <div className="bg-gradient-to-br from-sky-500/20 to-purple-500/20 p-8 text-center">
           <div className="text-7xl mb-4">{destination.flag}</div>
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-1">
             {destination.name}
           </h2>
-          <p className="text-skyblue-light text-lg">{destination.country}</p>
+          <p className="text-sky-300 text-lg">{destination.country}</p>
         </div>
 
         {/* Details */}
@@ -602,7 +602,7 @@ function ResultCard({
           <div className="space-y-3 pt-2">
             <Link
               href={`/mystery${mysteryVibe ? `?vibe=${mysteryVibe}` : ''}`}
-              className="block w-full text-center px-6 py-3 bg-skyblue text-navy font-bold rounded-xl hover:bg-skyblue-light transition-colors text-lg"
+              className="block w-full text-center px-6 py-3 bg-sky-500 text-slate-900 font-bold rounded-xl hover:bg-sky-500-light transition-colors text-lg"
             >
               Try Mystery Vacation
             </Link>
@@ -652,9 +652,9 @@ function SharedResult({ params }: { params: URLSearchParams }) {
       <div className="text-center mb-8">
         <p className="text-sm text-white/40 mb-2">Someone shared their quiz result with you</p>
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-          Their match: <span className="text-skyblue">{dest.name}</span>
+          Their match: <span className="text-sky-400">{dest.name}</span>
         </h1>
-        <p className="text-skyblue-light">
+        <p className="text-sky-300">
           {personality ? `Travel personality: ${personality}` : dest.tagline}
         </p>
       </div>
@@ -662,7 +662,7 @@ function SharedResult({ params }: { params: URLSearchParams }) {
       <div className="text-center mt-8">
         <Link
           href="/quiz"
-          className="inline-block px-8 py-3 bg-skyblue text-navy font-bold rounded-xl hover:bg-skyblue-light transition-colors"
+          className="inline-block px-8 py-3 bg-sky-500 text-slate-900 font-bold rounded-xl hover:bg-sky-500-light transition-colors"
         >
           Take the Quiz Yourself
         </Link>
@@ -732,9 +732,9 @@ function QuizPageContent() {
             >
               <h1 className="text-3xl md:text-5xl font-bold text-white mb-3">
                 Which Mystery Destination{' '}
-                <span className="text-skyblue">Suits You?</span>
+                <span className="text-sky-400">Suits You?</span>
               </h1>
-              <p className="text-skyblue-light">
+              <p className="text-sky-300">
                 Answer 6 quick questions and we&apos;ll match you with your dream trip.
               </p>
             </motion.div>
@@ -767,7 +767,7 @@ function QuizPageContent() {
                 <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
                   Your Perfect Match
                 </h1>
-                <p className="text-skyblue-light">
+                <p className="text-sky-300">
                   Based on your answers, here&apos;s where you should go next.
                 </p>
               </motion.div>

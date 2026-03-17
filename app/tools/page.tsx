@@ -161,9 +161,9 @@ export default function ToolsPage() {
           <div className="text-center mb-16">
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
               Free Travel Planning{' '}
-              <span className="text-skyblue">Tools</span>
+              <span className="text-sky-400">Tools</span>
             </h1>
-            <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
+            <p className="text-xl text-sky-300 max-w-3xl mx-auto">
               Smart tools to help you discover destinations, plan trips, and
               estimate costs &mdash; all completely free.
             </p>
@@ -180,7 +180,7 @@ export default function ToolsPage() {
                       {category.title}
                     </span>
                   </h2>
-                  <p className="text-skyblue-light text-sm">{category.description}</p>
+                  <p className="text-sky-300 text-sm">{category.description}</p>
                 </div>
 
                 {/* Tools grid */}
@@ -192,10 +192,10 @@ export default function ToolsPage() {
                       className={`group relative bg-gradient-to-br ${tool.gradient} backdrop-blur-sm rounded-2xl p-8 border ${tool.border} hover:shadow-2xl transition-all transform hover:scale-[1.03] text-left flex flex-col`}
                     >
                       <div className="text-4xl mb-4">{tool.emoji}</div>
-                      <h3 className="text-xl font-bold text-white mb-3 group-hover:text-skyblue transition">
+                      <h3 className="text-xl font-bold text-white mb-3 group-hover:text-sky-400 transition">
                         {tool.title}
                       </h3>
-                      <p className="text-skyblue-light text-sm mb-6 flex-1">
+                      <p className="text-sky-300 text-sm mb-6 flex-1">
                         {tool.description}
                       </p>
                       <span
@@ -215,13 +215,13 @@ export default function ToolsPage() {
             <h2 className="text-2xl font-bold text-white">
               Ready to start planning?
             </h2>
-            <p className="text-skyblue-light max-w-xl mx-auto">
+            <p className="text-sky-300 max-w-xl mx-auto">
               Every tool is free to use, no sign-up required. Start with a
               Mystery Vacation and let AI plan your next adventure.
             </p>
             <Link
               href="/mystery"
-              className="inline-block mt-4 px-8 py-3 bg-skyblue text-navy font-bold rounded-xl hover:bg-skyblue-light transition-colors"
+              className="inline-block mt-4 px-8 py-3 bg-sky-500 text-slate-900 font-bold rounded-xl hover:bg-sky-500-light transition-colors"
             >
               Try Mystery Vacation
             </Link>

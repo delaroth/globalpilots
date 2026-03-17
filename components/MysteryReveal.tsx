@@ -602,10 +602,10 @@ export default function MysteryReveal({
                       alt={heroPhoto.alt}
                       className="absolute inset-0 w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-navy via-navy/60 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
                   </>
                 ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-skyblue via-skyblue-dark to-navy">
+                  <div className="absolute inset-0 bg-gradient-to-br from-sky-500 via-sky-600 to-slate-900">
                     <div className="absolute inset-0 flex items-center justify-center">
                       <span className="text-9xl">
                         {enrichment?.country?.flag || '🌍'}
@@ -613,14 +613,14 @@ export default function MysteryReveal({
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-navy/90 to-transparent p-6">
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-6">
                   <motion.h2
                     {...staggerChild(0)}
                     className="text-4xl font-bold text-white drop-shadow-lg"
                   >
                     {destination.destination}
                   </motion.h2>
-                  <motion.p {...staggerChild(1)} className="text-xl text-skyblue-light">
+                  <motion.p {...staggerChild(1)} className="text-xl text-sky-300">
                     {enrichment?.country?.flag ? `${enrichment.country.flag} ` : ''}
                     {destination.country}
                   </motion.p>
@@ -862,9 +862,9 @@ export default function MysteryReveal({
                 {destination.bestTimeToGo ? (
                   <motion.div {...staggerChild(7)}>
                     <FadeIn visible={true}>
-                      <div className="bg-skyblue/10 border border-skyblue/20 rounded-lg p-4">
+                      <div className="bg-sky-500/10 border border-sky-500/20 rounded-lg p-4">
                         <p className="text-sm text-white/80">
-                          <span className="font-semibold text-skyblue-light">
+                          <span className="font-semibold text-sky-300">
                             Best time to go:
                           </span>{' '}
                           {destination.bestTimeToGo}
@@ -960,7 +960,7 @@ export default function MysteryReveal({
                                     className="flex justify-between items-start"
                                   >
                                     <div className="flex-1">
-                                      <p className="text-sm font-medium text-skyblue-light">
+                                      <p className="text-sm font-medium text-sky-300">
                                         {activity.time}
                                       </p>
                                       <p className="text-white/70">
@@ -1000,7 +1000,7 @@ export default function MysteryReveal({
                                     key={idx}
                                     className="text-white/70 flex items-start"
                                   >
-                                    <span className="text-skyblue mr-2">
+                                    <span className="text-sky-400 mr-2">
                                       &bull;
                                     </span>
                                     {activity}
@@ -1037,7 +1037,7 @@ export default function MysteryReveal({
                                     key={idx}
                                     className="text-white/70 flex items-start"
                                   >
-                                    <span className="text-skyblue mr-2">
+                                    <span className="text-sky-400 mr-2">
                                       &bull;
                                     </span>
                                     {activity}
@@ -1067,7 +1067,7 @@ export default function MysteryReveal({
                 {destination.local_transportation ? (
                   <motion.div {...staggerChild(10)}>
                     <FadeIn visible={true}>
-                      <div className="bg-skyblue/10 border border-skyblue/20 rounded-lg p-4">
+                      <div className="bg-sky-500/10 border border-sky-500/20 rounded-lg p-4">
                         <h3 className="text-lg font-bold text-white mb-3">
                           Getting Around
                         </h3>
@@ -1158,7 +1158,7 @@ export default function MysteryReveal({
                         </h3>
                         <Link
                           href={`/trip-cost?dest=${costData.code}`}
-                          className="text-xs text-skyblue-light hover:text-skyblue font-medium transition"
+                          className="text-xs text-sky-300 hover:text-sky-400 font-medium transition"
                         >
                           Full calculator &rarr;
                         </Link>
@@ -1717,20 +1717,20 @@ export default function MysteryReveal({
                     {origin && (
                       <Link
                         href={`/explore?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(iata)}`}
-                        className="text-sm text-skyblue-light hover:text-skyblue transition"
+                        className="text-sm text-sky-300 hover:text-sky-400 transition"
                       >
                         Layover routes to {destination.destination}
                       </Link>
                     )}
                     <Link
                       href={`/trip-cost?destination=${encodeURIComponent(iata)}`}
-                      className="text-sm text-skyblue-light hover:text-skyblue transition"
+                      className="text-sm text-sky-300 hover:text-sky-400 transition"
                     >
                       Daily costs in {destination.destination}
                     </Link>
                     <Link
                       href={`/search?destination=${encodeURIComponent(iata)}`}
-                      className="text-sm text-skyblue-light hover:text-skyblue transition"
+                      className="text-sm text-sky-300 hover:text-sky-400 transition"
                     >
                       Search more flights
                     </Link>
@@ -1790,7 +1790,7 @@ export default function MysteryReveal({
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       onClick={onShowAnother}
-                      className="bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl"
+                      className="bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl"
                     >
                       Show Me Another
                     </button>

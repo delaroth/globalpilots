@@ -219,10 +219,10 @@ export default function HowItWorksPage() {
           <div className="text-center mb-20">
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
               How{' '}
-              <span className="text-skyblue">GlobePilots</span>{' '}
+              <span className="text-sky-400">GlobePilots</span>{' '}
               Works
             </h1>
-            <p className="text-xl text-skyblue-light max-w-3xl mx-auto">
+            <p className="text-xl text-sky-300 max-w-3xl mx-auto">
               8 free tools that help you find cheap flights,
               discover destinations, and plan unforgettable adventures. Here is
               exactly how each one works.
@@ -246,20 +246,20 @@ export default function HowItWorksPage() {
                   <h2 className="text-3xl font-bold text-white">
                     {feature.title}
                   </h2>
-                  <p className="text-lg text-skyblue-light/80">
+                  <p className="text-lg text-sky-300/80">
                     {feature.subtitle}
                   </p>
-                  <p className="text-skyblue-light text-sm leading-relaxed">
+                  <p className="text-sky-300 text-sm leading-relaxed">
                     {feature.description}
                   </p>
                   <ol className="space-y-2 mt-4">
                     {feature.howItWorks.map((step, j) => (
                       <li
                         key={j}
-                        className="flex items-start gap-3 text-sm text-skyblue-light"
+                        className="flex items-start gap-3 text-sm text-sky-300"
                       >
                         <span
-                          className={`flex-shrink-0 w-6 h-6 rounded-full bg-navy-light border ${feature.border} flex items-center justify-center text-xs font-bold ${feature.accent}`}
+                          className={`flex-shrink-0 w-6 h-6 rounded-full bg-slate-800 border ${feature.border} flex items-center justify-center text-xs font-bold ${feature.accent}`}
                         >
                           {j + 1}
                         </span>
@@ -297,7 +297,7 @@ export default function HowItWorksPage() {
                       {feature.mockupContent.items.map((item, j) => (
                         <div
                           key={j}
-                          className="bg-navy/40 rounded-lg px-4 py-2 text-sm text-skyblue-light/80 font-mono"
+                          className="bg-slate-900/40 rounded-lg px-4 py-2 text-sm text-sky-300/80 font-mono"
                         >
                           {item}
                         </div>
@@ -318,12 +318,12 @@ export default function HowItWorksPage() {
               {faqs.map((faq, i) => (
                 <div
                   key={i}
-                  className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20"
+                  className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-sky-500/20"
                 >
                   <h3 className="text-lg font-semibold text-white mb-2">
                     {faq.q}
                   </h3>
-                  <p className="text-skyblue-light text-sm leading-relaxed">
+                  <p className="text-sky-300 text-sm leading-relaxed">
                     {faq.a}
                   </p>
                 </div>
@@ -336,19 +336,19 @@ export default function HowItWorksPage() {
             <h2 className="text-2xl font-bold text-white">
               Ready to start your adventure?
             </h2>
-            <p className="text-skyblue-light">
+            <p className="text-sky-300">
               Pick any tool and start planning — all free, no sign-up needed.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
               <Link
                 href="/mystery"
-                className="px-8 py-3 bg-skyblue text-navy font-bold rounded-xl hover:bg-skyblue-light transition-colors"
+                className="px-8 py-3 bg-sky-500 text-slate-900 font-bold rounded-xl hover:bg-sky-500-light transition-colors"
               >
                 Try Mystery Vacation
               </Link>
               <Link
                 href="/tools"
-                className="px-8 py-3 bg-navy-light text-skyblue font-bold rounded-xl border border-skyblue/30 hover:border-skyblue/60 transition-colors"
+                className="px-8 py-3 bg-slate-800 text-sky-400 font-bold rounded-xl border border-sky-500/30 hover:border-sky-400/60 transition-colors"
               >
                 View All Tools
               </Link>

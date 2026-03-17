@@ -116,11 +116,11 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center">
         <div className="text-center">
           <div className="text-7xl mb-6 animate-pulse">🌍</div>
           <h2 className="text-2xl font-bold text-white mb-2">Loading Mystery Trip...</h2>
-          <p className="text-skyblue-light">Preparing your adventure details</p>
+          <p className="text-sky-300">Preparing your adventure details</p>
         </div>
       </div>
     )
@@ -128,15 +128,15 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
 
   if (error || !trip) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center">
         <div className="max-w-md mx-auto text-center px-4">
           <div className="bg-white rounded-2xl shadow-2xl p-8">
             <div className="text-6xl mb-4">😕</div>
-            <h2 className="text-2xl font-bold text-navy mb-4">Trip Not Found</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Trip Not Found</h2>
             <p className="text-gray-600 mb-6">{error || 'This trip could not be loaded.'}</p>
             <Link
               href="/mystery"
-              className="inline-block bg-skyblue hover:bg-skyblue-dark text-navy font-bold py-3 px-8 rounded-lg transition"
+              className="inline-block bg-sky-500 hover:bg-sky-600 text-slate-900 font-bold py-3 px-8 rounded-lg transition"
             >
               Create Your Own Mystery Trip
             </Link>
@@ -174,17 +174,17 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
     : ''
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
       {/* Navigation */}
-      <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
+      <nav className="w-full px-6 py-4 bg-slate-900/95 backdrop-blur-sm border-b border-sky-500/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-skyblue rounded-full flex items-center justify-center">
-              <span className="text-navy text-xl font-bold">G</span>
+            <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center">
+              <span className="text-slate-900 text-xl font-bold">G</span>
             </div>
             <span className="text-white text-xl font-bold">GlobePilot</span>
           </Link>
-          <Link href="/mystery" className="text-skyblue hover:text-skyblue-light transition">
+          <Link href="/mystery" className="text-sky-400 hover:text-sky-300 transition">
             Plan Your Own Trip
           </Link>
         </div>
@@ -193,7 +193,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Shared Badge */}
         <div className="text-center mb-6">
-          <span className="inline-block bg-skyblue/20 text-skyblue-light px-4 py-2 rounded-full text-sm font-medium border border-skyblue/30">
+          <span className="inline-block bg-sky-500/20 text-sky-300 px-4 py-2 rounded-full text-sm font-medium border border-sky-500/30">
             Shared Mystery Trip {sharedDate ? `- ${sharedDate}` : ''}
           </span>
         </div>
@@ -201,7 +201,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Hero Header */}
-          <div className="h-72 bg-gradient-to-br from-skyblue via-skyblue-dark to-navy relative">
+          <div className="h-72 bg-gradient-to-br from-sky-500 via-sky-600 to-slate-900 relative">
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-[120px] opacity-30">🌍</span>
             </div>
@@ -210,7 +210,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
               <h1 className="text-5xl font-bold text-white mb-2">
                 {trip.destination}
               </h1>
-              <p className="text-2xl text-skyblue-light font-medium">{trip.country}</p>
+              <p className="text-2xl text-sky-300 font-medium">{trip.country}</p>
               <div className="mt-3 flex items-center gap-4">
                 <span className="bg-green-500/90 text-white px-4 py-1 rounded-full text-lg font-bold">
                   ${Math.round(totalCost)} total
@@ -227,7 +227,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
           <div className="p-8">
             {/* Why This Destination */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-navy mb-3">Why This Destination?</h2>
+              <h2 className="text-2xl font-bold text-slate-900 mb-3">Why This Destination?</h2>
               <p className="text-gray-700 text-lg leading-relaxed">
                 {trip.whyThisPlace || trip.why_its_perfect}
               </p>
@@ -236,7 +236,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
             {/* Best Time to Go */}
             {trip.bestTimeToGo && (
               <div className="mb-8 bg-blue-50 rounded-xl p-5 border border-blue-200">
-                <p className="text-navy text-base">
+                <p className="text-slate-900 text-base">
                   <span className="font-semibold">Best time to go:</span> {trip.bestTimeToGo}
                 </p>
               </div>
@@ -245,7 +245,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
             {/* Budget Breakdown */}
             {trip.budget_breakdown ? (
               <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 mb-8 border-2 border-green-200">
-                <h3 className="text-xl font-bold text-navy mb-4">Budget Breakdown</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Budget Breakdown</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <div className="text-center bg-white rounded-lg p-3 shadow-sm">
                     <p className="text-xs text-gray-500 uppercase tracking-wide">Flight</p>
@@ -285,7 +285,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
               </div>
             ) : trip.budgetBreakdown ? (
               <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-6 mb-8 border-2 border-green-200">
-                <h3 className="text-xl font-bold text-navy mb-4">Budget Breakdown</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Budget Breakdown</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center bg-white rounded-lg p-3 shadow-sm">
                     <p className="text-xs text-gray-500 uppercase tracking-wide">Flights</p>
@@ -333,17 +333,17 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
             {/* Hotel Recommendations */}
             {trip.hotel_recommendations && trip.hotel_recommendations.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-xl font-bold text-navy mb-4">Where to Stay</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Where to Stay</h3>
                 <div className="space-y-3">
                   {trip.hotel_recommendations.map((hotel, idx) => (
-                    <div key={idx} className="bg-skyblue/10 rounded-xl p-5 border border-skyblue/30 hover:shadow-md transition">
+                    <div key={idx} className="bg-sky-500/10 rounded-xl p-5 border border-sky-500/30 hover:shadow-md transition">
                       <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-semibold text-navy text-lg">{hotel.name}</h4>
+                        <h4 className="font-semibold text-slate-900 text-lg">{hotel.name}</h4>
                         <p className="text-green-600 font-bold whitespace-nowrap ml-4 text-lg">
                           ${hotel.estimated_price_per_night}/night
                         </p>
                       </div>
-                      <p className="text-sm text-skyblue-dark font-medium mb-1">{hotel.neighborhood}</p>
+                      <p className="text-sm text-sky-600 font-medium mb-1">{hotel.neighborhood}</p>
                       <p className="text-gray-700">{hotel.why_recommended}</p>
                     </div>
                   ))}
@@ -354,21 +354,21 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
             {/* Daily Itinerary */}
             {trip.daily_itinerary && trip.daily_itinerary.length > 0 ? (
               <div className="mb-8">
-                <h3 className="text-xl font-bold text-navy mb-4">Your Daily Itinerary</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Your Daily Itinerary</h3>
                 <div className="space-y-4">
                   {trip.daily_itinerary.map((day) => (
-                    <div key={day.day} className="bg-skyblue/10 rounded-xl p-5 border border-skyblue/20">
+                    <div key={day.day} className="bg-sky-500/10 rounded-xl p-5 border border-sky-500/20">
                       <div className="flex justify-between items-center mb-4">
-                        <h4 className="font-bold text-navy text-lg">Day {day.day}</h4>
+                        <h4 className="font-bold text-slate-900 text-lg">Day {day.day}</h4>
                         <span className="text-sm font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">
                           ${day.total_day_cost} for the day
                         </span>
                       </div>
                       <div className="space-y-3">
                         {day.activities.map((activity, idx) => (
-                          <div key={idx} className="flex justify-between items-start border-b border-skyblue/10 pb-2 last:border-0 last:pb-0">
+                          <div key={idx} className="flex justify-between items-start border-b border-sky-400/10 pb-2 last:border-0 last:pb-0">
                             <div className="flex-1">
-                              <p className="text-sm font-semibold text-skyblue-dark">{activity.time}</p>
+                              <p className="text-sm font-semibold text-sky-600">{activity.time}</p>
                               <p className="text-gray-700">{activity.activity}</p>
                             </div>
                             <p className="text-sm font-bold text-gray-500 ml-4">
@@ -383,15 +383,15 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
               </div>
             ) : trip.itinerary && trip.itinerary.length > 0 ? (
               <div className="mb-8">
-                <h3 className="text-xl font-bold text-navy mb-4">Your Itinerary</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Your Itinerary</h3>
                 <div className="space-y-4">
                   {trip.itinerary.map((day) => (
-                    <div key={day.day} className="bg-skyblue/10 rounded-xl p-5 border border-skyblue/20">
-                      <h4 className="font-bold text-navy text-lg mb-3">Day {day.day}</h4>
+                    <div key={day.day} className="bg-sky-500/10 rounded-xl p-5 border border-sky-500/20">
+                      <h4 className="font-bold text-slate-900 text-lg mb-3">Day {day.day}</h4>
                       <ul className="space-y-2">
                         {day.activities.map((activity, idx) => (
                           <li key={idx} className="text-gray-700 flex items-start">
-                            <span className="text-skyblue mr-2 mt-1">&bull;</span>
+                            <span className="text-sky-400 mr-2 mt-1">&bull;</span>
                             {activity}
                           </li>
                         ))}
@@ -402,19 +402,19 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
               </div>
             ) : (trip.day1 || trip.day2 || trip.day3) ? (
               <div className="mb-8">
-                <h3 className="text-xl font-bold text-navy mb-4">Your 3-Day Adventure</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Your 3-Day Adventure</h3>
                 <div className="space-y-4">
                   {[
                     { label: 'Day 1', items: trip.day1 },
                     { label: 'Day 2', items: trip.day2 },
                     { label: 'Day 3', items: trip.day3 },
                   ].map(({ label, items }) => (
-                    <div key={label} className="bg-skyblue/10 rounded-xl p-5 border border-skyblue/20">
-                      <h4 className="font-bold text-navy text-lg mb-3">{label}</h4>
+                    <div key={label} className="bg-sky-500/10 rounded-xl p-5 border border-sky-500/20">
+                      <h4 className="font-bold text-slate-900 text-lg mb-3">{label}</h4>
                       <ul className="space-y-2">
                         {items?.map((activity, idx) => (
                           <li key={idx} className="text-gray-700 flex items-start">
-                            <span className="text-skyblue mr-2 mt-1">&bull;</span>
+                            <span className="text-sky-400 mr-2 mt-1">&bull;</span>
                             {activity}
                           </li>
                         ))}
@@ -428,7 +428,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
             {/* Local Transportation */}
             {trip.local_transportation && (
               <div className="mb-8 bg-blue-50 rounded-xl p-5 border border-blue-200">
-                <h3 className="text-lg font-bold text-navy mb-3">Getting Around</h3>
+                <h3 className="text-lg font-bold text-slate-900 mb-3">Getting Around</h3>
                 <div className="space-y-2 text-sm">
                   <div>
                     <p className="font-semibold text-gray-700">Airport to City:</p>
@@ -448,7 +448,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
             {/* Food */}
             {trip.best_local_food && trip.best_local_food.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-xl font-bold text-navy mb-3">Must-Try Local Food</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-3">Must-Try Local Food</h3>
                 <div className="flex flex-wrap gap-2">
                   {trip.best_local_food.map((food, idx) => (
                     <span
@@ -465,7 +465,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
             {/* Insider Tip */}
             {(trip.localTip || trip.insider_tip) && (
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-5 mb-8 rounded-r-xl">
-                <h3 className="font-semibold text-navy mb-1 text-lg">Insider Tip</h3>
+                <h3 className="font-semibold text-slate-900 mb-1 text-lg">Insider Tip</h3>
                 <p className="text-gray-700">{trip.localTip || trip.insider_tip}</p>
               </div>
             )}
@@ -486,7 +486,7 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
             {/* Booking Buttons */}
             {bookingBundle && (
               <div className="space-y-3 mb-8">
-                <h3 className="text-xl font-bold text-navy mb-4">Book This Trip</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">Book This Trip</h3>
 
                 <a
                   href={bookingBundle.flightUrl}
@@ -548,14 +548,14 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
           </div>
 
           {/* CTA: Create Your Own */}
-          <div className="bg-gradient-to-r from-navy via-navy-light to-navy p-8 text-center">
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-8 text-center">
             <h3 className="text-2xl font-bold text-white mb-3">Want your own mystery vacation?</h3>
-            <p className="text-skyblue-light mb-6 text-lg">
+            <p className="text-sky-300 mb-6 text-lg">
               Let our AI surprise you with a destination that fits your budget and vibe.
             </p>
             <Link
               href="/mystery"
-              className="inline-block bg-skyblue hover:bg-skyblue-dark text-navy font-bold text-lg py-4 px-10 rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300"
+              className="inline-block bg-sky-500 hover:bg-sky-600 text-slate-900 font-bold text-lg py-4 px-10 rounded-full shadow-2xl transform hover:scale-105 transition-all duration-300"
             >
               Create My Mystery Trip
             </Link>
@@ -564,8 +564,8 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
 
         {/* Footer attribution */}
         <div className="text-center mt-8 pb-8">
-          <p className="text-skyblue-light/60 text-sm">
-            Powered by <Link href="/" className="text-skyblue hover:text-skyblue-light transition underline">GlobePilot</Link> — AI-powered budget travel
+          <p className="text-sky-300/60 text-sm">
+            Powered by <Link href="/" className="text-sky-400 hover:text-sky-300 transition underline">GlobePilot</Link> — AI-powered budget travel
           </p>
         </div>
       </div>

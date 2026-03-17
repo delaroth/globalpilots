@@ -49,7 +49,7 @@ export default function CheapFlightsIndexPage() {
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
             Cheap Flights to{' '}
-            <span className="text-skyblue">Every Destination</span>
+            <span className="text-sky-400">Every Destination</span>
           </h1>
           <p className="text-xl text-white/70 max-w-2xl mx-auto">
             Browse 60+ destinations with daily cost breakdowns, money-saving tips,
@@ -74,7 +74,7 @@ export default function CheapFlightsIndexPage() {
                 </h2>
                 <Link
                   href={`/budget-travel/${regionSlug(region)}`}
-                  className="text-skyblue text-sm hover:underline"
+                  className="text-sky-400 text-sm hover:underline"
                 >
                   View {region} guide &rarr;
                 </Link>
@@ -86,11 +86,11 @@ export default function CheapFlightsIndexPage() {
                     <Link
                       key={dest.code}
                       href={`/cheap-flights/${slugify(dest.city)}`}
-                      className="group bg-white/[0.04] border border-white/10 hover:border-skyblue/40 rounded-xl p-5 transition-all hover:bg-white/[0.06]"
+                      className="group bg-white/[0.04] border border-white/10 hover:border-sky-400/40 rounded-xl p-5 transition-all hover:bg-white/[0.06]"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h3 className="text-white font-bold group-hover:text-skyblue transition">
+                          <h3 className="text-white font-bold group-hover:text-sky-400 transition">
                             {dest.city}
                           </h3>
                           <p className="text-white/50 text-sm">{dest.country}</p>
@@ -99,7 +99,7 @@ export default function CheapFlightsIndexPage() {
                           {dest.code}
                         </span>
                       </div>
-                      <p className="text-skyblue font-bold text-lg">
+                      <p className="text-sky-400 font-bold text-lg">
                         ${budget}<span className="text-sm font-normal text-white/50">/day</span>
                       </p>
                       <p className="text-white/40 text-xs mt-1">Budget tier</p>
@@ -113,7 +113,7 @@ export default function CheapFlightsIndexPage() {
       })}
 
       {/* Bottom CTA */}
-      <section className="px-6 py-16 bg-gradient-to-br from-skyblue/10 to-purple-600/10">
+      <section className="px-6 py-16 bg-gradient-to-br from-sky-500/10 to-purple-600/10">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-4">
             Not Sure Where to Go?
@@ -123,7 +123,7 @@ export default function CheapFlightsIndexPage() {
           </p>
           <Link
             href="/mystery"
-            className="bg-skyblue text-navy font-bold py-3 px-8 rounded-full hover:bg-skyblue-light transition transform hover:scale-105"
+            className="bg-sky-500 text-slate-900 font-bold py-3 px-8 rounded-full hover:bg-sky-500-light transition transform hover:scale-105"
           >
             Try Mystery Vacation
           </Link>

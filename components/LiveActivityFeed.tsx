@@ -40,9 +40,9 @@ export default function LiveActivityFeed() {
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <h3 className="font-semibold text-navy mb-4">Live Activity</h3>
+        <h3 className="font-semibold text-slate-900 mb-4">Live Activity</h3>
         <div className="text-center py-8">
-          <div className="inline-block w-8 h-8 border-4 border-skyblue border-t-transparent rounded-full animate-spin"></div>
+          <div className="inline-block w-8 h-8 border-4 border-sky-400 border-t-transparent rounded-full animate-spin"></div>
         </div>
       </div>
     )
@@ -54,7 +54,7 @@ export default function LiveActivityFeed() {
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
-      <h3 className="font-semibold text-navy mb-4 flex items-center gap-2">
+      <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
         <span className="text-xl">📊</span>
         Live Activity
       </h3>

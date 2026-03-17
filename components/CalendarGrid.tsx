@@ -33,7 +33,7 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
     return (
       <div className="text-center py-12 text-white">
         <p className="text-xl">No flights found for this route and month.</p>
-        <p className="text-skyblue-light mt-2">Try different dates or destinations.</p>
+        <p className="text-sky-300 mt-2">Try different dates or destinations.</p>
       </div>
     )
   }
@@ -76,7 +76,7 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
     return (
       <div className="text-center py-12 text-white">
         <p className="text-xl">No valid flight prices found for this route and month.</p>
-        <p className="text-skyblue-light mt-2">Try different dates or destinations.</p>
+        <p className="text-sky-300 mt-2">Try different dates or destinations.</p>
       </div>
     )
   }
@@ -151,11 +151,11 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
 
   return (
     <div className="w-full max-w-5xl mx-auto">
-      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20">
+      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-sky-500/20">
         <h2 className="text-2xl font-bold text-white mb-2 text-center">
           {monthNames[monthNum - 1]} {year} - {origin} to {destination}
         </h2>
-        <p className="text-skyblue-light/70 text-xs text-center mb-6">
+        <p className="text-sky-300/70 text-xs text-center mb-6">
           Prices are cached estimates — click a day to check current prices on Aviasales
         </p>
 
@@ -179,7 +179,7 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
         <div className="grid grid-cols-7 gap-2">
           {/* Weekday headers */}
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="text-center text-skyblue font-semibold py-2">
+            <div key={day} className="text-center text-sky-400 font-semibold py-2">
               {day}
             </div>
           ))}
@@ -241,16 +241,16 @@ export default function CalendarGrid({ data, origin, destination, month }: Calen
         {/* Stats */}
         {isFinite(minPrice) && isFinite(maxPrice) && isFinite(avgPrice) && (
           <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
-            <div className="bg-navy-light/50 rounded-lg p-3">
-              <p className="text-skyblue-light text-sm">Cheapest ~</p>
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <p className="text-sky-300 text-sm">Cheapest ~</p>
               <p className="text-white text-xl font-bold">${Math.round(minPrice)}</p>
             </div>
-            <div className="bg-navy-light/50 rounded-lg p-3">
-              <p className="text-skyblue-light text-sm">Average ~</p>
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <p className="text-sky-300 text-sm">Average ~</p>
               <p className="text-white text-xl font-bold">${avgPrice}</p>
             </div>
-            <div className="bg-navy-light/50 rounded-lg p-3 col-span-2 md:col-span-1">
-              <p className="text-skyblue-light text-sm">Most Expensive ~</p>
+            <div className="bg-slate-800/50 rounded-lg p-3 col-span-2 md:col-span-1">
+              <p className="text-sky-300 text-sm">Most Expensive ~</p>
               <p className="text-white text-xl font-bold">${Math.round(maxPrice)}</p>
             </div>
           </div>

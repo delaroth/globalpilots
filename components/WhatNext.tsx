@@ -152,7 +152,7 @@ export default function WhatNext(props: WhatNextProps) {
           <Link
             key={s.href}
             href={s.href}
-            className="group bg-white/[0.04] hover:bg-white/[0.08] backdrop-blur-sm border border-skyblue/10 hover:border-skyblue/30 rounded-xl px-4 py-3 transition-all"
+            className="group bg-white/[0.04] hover:bg-white/[0.08] backdrop-blur-sm border border-sky-400/10 hover:border-sky-500/30 rounded-xl px-4 py-3 transition-all"
           >
             <div className="flex items-start gap-3">
               <span className="text-lg leading-none mt-0.5 shrink-0">{s.emoji}</span>

@@ -95,7 +95,7 @@ export default function NaturalLanguageSearch() {
     <div className="w-full">
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
         <div className="mb-4">
-          <label htmlFor="nlsearch" className="block text-sm font-medium text-navy mb-2">
+          <label htmlFor="nlsearch" className="block text-sm font-medium text-slate-900 mb-2">
             🔍 Search naturally - just type what you want
           </label>
           <input
@@ -105,7 +105,7 @@ export default function NaturalLanguageSearch() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="e.g., 'Beach vacation under $1500' or 'NYC to Paris this summer'"
             disabled={loading}
-            className="w-full px-4 py-4 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-lg disabled:bg-gray-100"
+            className="w-full px-4 py-4 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-lg disabled:bg-gray-100"
           />
         </div>
 
@@ -118,7 +118,7 @@ export default function NaturalLanguageSearch() {
         <button
           type="submit"
           disabled={loading || !query.trim()}
-          className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-500 text-slate-900 font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
         >
           {loading ? 'Understanding...' : 'Search'}
         </button>
@@ -143,7 +143,7 @@ export default function NaturalLanguageSearch() {
 
       {/* Info */}
       <div className="mt-4 text-center">
-        <p className="text-skyblue-light text-sm">
+        <p className="text-sky-300 text-sm">
           Powered by AI - our system understands natural language and finds the best tool for your search
         </p>
       </div>

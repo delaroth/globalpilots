@@ -134,7 +134,7 @@ function StatsHeader({
   return (
     <div className="grid grid-cols-3 gap-4 mb-8">
       {[
-        { label: `Trips ${PERIOD_LABELS[period]}`, value: totalTrips.toString(), color: 'text-skyblue' },
+        { label: `Trips ${PERIOD_LABELS[period]}`, value: totalTrips.toString(), color: 'text-sky-400' },
         { label: 'Avg Cost', value: `$${avgCost}`, color: 'text-emerald-400' },
         { label: 'Most Popular', value: mostPopular, color: 'text-purple-300' },
       ].map((stat) => (
@@ -194,9 +194,9 @@ export default function LeaderboardPage() {
           <div className="text-center mb-10">
             <h1 className="text-3xl md:text-5xl font-bold text-white mb-3">
               Mystery Trip{' '}
-              <span className="text-skyblue">Leaderboard</span>
+              <span className="text-sky-400">Leaderboard</span>
             </h1>
-            <p className="text-skyblue-light max-w-xl mx-auto">
+            <p className="text-sky-300 max-w-xl mx-auto">
               Real trip discoveries ranked by cost. Can you find a cheaper deal?
             </p>
           </div>
@@ -209,7 +209,7 @@ export default function LeaderboardPage() {
                 onClick={() => setPeriod(p)}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
                   period === p
-                    ? 'bg-skyblue text-navy'
+                    ? 'bg-sky-500 text-slate-900'
                     : 'bg-white/[0.06] text-white/50 hover:text-white hover:bg-white/[0.1]'
                 }`}
               >
@@ -263,7 +263,7 @@ export default function LeaderboardPage() {
                     transition={{ duration: 0.3, delay: i * 0.04 }}
                     className={`bg-white/[0.04] backdrop-blur-lg border rounded-xl p-4 flex items-center gap-4 ${
                       entry.rank <= 3
-                        ? 'border-skyblue/20'
+                        ? 'border-sky-500/20'
                         : 'border-white/10'
                     }`}
                   >
@@ -320,17 +320,17 @@ export default function LeaderboardPage() {
           )}
 
           {/* Bottom CTA */}
-          <div className="text-center mt-12 bg-gradient-to-br from-skyblue/10 to-purple-500/10 border border-skyblue/20 rounded-2xl p-8">
+          <div className="text-center mt-12 bg-gradient-to-br from-sky-500/10 to-purple-500/10 border border-sky-500/20 rounded-2xl p-8">
             <h2 className="text-2xl font-bold text-white mb-2">
               Can you find a cheaper trip?
             </h2>
-            <p className="text-skyblue-light mb-6 max-w-md mx-auto">
+            <p className="text-sky-300 mb-6 max-w-md mx-auto">
               Try Mystery Vacation and see if you can beat the leaderboard. Set
               your budget and let AI surprise you.
             </p>
             <Link
               href="/mystery"
-              className="inline-block px-8 py-3 bg-skyblue text-navy font-bold rounded-xl hover:bg-skyblue-light transition-colors"
+              className="inline-block px-8 py-3 bg-sky-500 text-slate-900 font-bold rounded-xl hover:bg-sky-500-light transition-colors"
             >
               Try Mystery Vacation
             </Link>

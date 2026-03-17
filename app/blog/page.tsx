@@ -1,5 +1,7 @@
 'use client'
 
+import Navigation from '@/components/Navigation'
+import Footer from '@/components/Footer'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
@@ -57,17 +59,17 @@ export default function BlogPage() {
   const destinationPosts = posts.filter(p => p.type === 'destination')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
       {/* Navigation */}
-      <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
+      <nav className="w-full px-6 py-4 bg-slate-900/95 backdrop-blur-sm border-b border-sky-500/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-skyblue rounded-full flex items-center justify-center">
-              <span className="text-navy text-xl font-bold">G</span>
+            <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center">
+              <span className="text-slate-900 text-xl font-bold">G</span>
             </div>
             <span className="text-white text-xl font-bold">GlobePilot</span>
           </Link>
-          <Link href="/" className="text-skyblue hover:text-skyblue-light transition">
+          <Link href="/" className="text-sky-400 hover:text-sky-300 transition">
             Back to Home
           </Link>
         </div>
@@ -79,7 +81,7 @@ export default function BlogPage() {
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Travel Guides &amp; Tips
           </h1>
-          <p className="text-xl text-skyblue-light max-w-2xl mx-auto">
+          <p className="text-xl text-sky-300 max-w-2xl mx-auto">
             Expert travel advice, budget breakdowns, and destination guides to help you travel smarter
           </p>
         </div>
@@ -88,7 +90,7 @@ export default function BlogPage() {
         <div className="max-w-6xl mx-auto">
           {isLoading ? (
             <div className="text-center py-20">
-              <div className="inline-block w-16 h-16 border-4 border-skyblue border-t-transparent rounded-full animate-spin mb-4"></div>
+              <div className="inline-block w-16 h-16 border-4 border-sky-400 border-t-transparent rounded-full animate-spin mb-4"></div>
               <p className="text-white text-lg">Loading travel guides...</p>
             </div>
           ) : error ? (
@@ -97,13 +99,13 @@ export default function BlogPage() {
             </div>
           ) : posts.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-              <h2 className="text-2xl font-bold text-navy mb-2">No Guides Yet</h2>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">No Guides Yet</h2>
               <p className="text-gray-600 mb-6">
                 Travel guides are generated when users discover mystery destinations.
               </p>
               <Link
                 href="/mystery"
-                className="inline-block bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-8 rounded-lg transition"
+                className="inline-block bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-8 rounded-lg transition"
               >
                 Discover a Mystery Destination
               </Link>
@@ -121,7 +123,7 @@ export default function BlogPage() {
                     className="block bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.01] group mb-6"
                   >
                     <div className="md:flex">
-                      <div className="md:w-2/5 h-48 md:h-auto bg-gradient-to-br from-skyblue via-navy to-navy-dark relative">
+                      <div className="md:w-2/5 h-48 md:h-auto bg-gradient-to-br from-sky-500 via-slate-900 to-slate-950 relative">
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span className="text-7xl opacity-30">&#x2708;&#xFE0F;</span>
                         </div>
@@ -134,7 +136,7 @@ export default function BlogPage() {
                         )}
                       </div>
                       <div className="md:w-3/5 p-6 md:p-8">
-                        <h3 className="font-bold text-navy text-2xl mb-3 group-hover:text-skyblue transition">
+                        <h3 className="font-bold text-slate-900 text-2xl mb-3 group-hover:text-sky-400 transition">
                           {editorialPosts[0].title}
                         </h3>
                         <p className="text-gray-600 mb-4 line-clamp-3">
@@ -142,7 +144,7 @@ export default function BlogPage() {
                         </p>
                         <div className="flex items-center justify-between text-sm text-gray-500">
                           <span>{new Date(editorialPosts[0].created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                          <span className="text-skyblue font-semibold group-hover:underline">Read Article &rarr;</span>
+                          <span className="text-sky-400 font-semibold group-hover:underline">Read Article &rarr;</span>
                         </div>
                       </div>
                     </div>
@@ -157,7 +159,7 @@ export default function BlogPage() {
                           href={`/blog/${post.slug}`}
                           className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] group"
                         >
-                          <div className="h-32 bg-gradient-to-br from-navy via-navy-dark to-skyblue-dark relative">
+                          <div className="h-32 bg-gradient-to-br from-slate-900 via-slate-950 to-sky-600 relative">
                             <div className="absolute inset-0 flex items-center justify-center">
                               <span className="text-5xl opacity-20">&#x2708;&#xFE0F;</span>
                             </div>
@@ -170,7 +172,7 @@ export default function BlogPage() {
                             )}
                           </div>
                           <div className="p-5">
-                            <h4 className="font-bold text-navy text-lg mb-2 line-clamp-2 group-hover:text-skyblue transition">
+                            <h4 className="font-bold text-slate-900 text-lg mb-2 line-clamp-2 group-hover:text-sky-400 transition">
                               {post.title}
                             </h4>
                             <p className="text-gray-600 text-sm line-clamp-3 mb-4">
@@ -178,7 +180,7 @@ export default function BlogPage() {
                             </p>
                             <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
                               <span>{new Date(post.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                              <span className="text-skyblue font-semibold group-hover:underline">Read &rarr;</span>
+                              <span className="text-sky-400 font-semibold group-hover:underline">Read &rarr;</span>
                             </div>
                           </div>
                         </Link>
@@ -199,7 +201,7 @@ export default function BlogPage() {
                         href={`/blog/${post.slug}`}
                         className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] group"
                       >
-                        <div className="h-32 bg-gradient-to-br from-skyblue via-skyblue-dark to-navy relative">
+                        <div className="h-32 bg-gradient-to-br from-sky-500 via-sky-600 to-slate-900 relative">
                           <div className="absolute inset-0 flex items-center justify-center">
                             <span className="text-6xl">&#x1F30D;</span>
                           </div>
@@ -207,11 +209,11 @@ export default function BlogPage() {
                             <h3 className="text-white font-bold text-lg line-clamp-1">
                               {post.destination_name}
                             </h3>
-                            <p className="text-skyblue-light text-sm">{post.country}</p>
+                            <p className="text-sky-300 text-sm">{post.country}</p>
                           </div>
                         </div>
                         <div className="p-5">
-                          <h4 className="font-bold text-navy text-lg mb-2 line-clamp-2 group-hover:text-skyblue transition">
+                          <h4 className="font-bold text-slate-900 text-lg mb-2 line-clamp-2 group-hover:text-sky-400 transition">
                             {post.title}
                           </h4>
                           <p className="text-gray-600 text-sm line-clamp-3 mb-4">
@@ -223,7 +225,7 @@ export default function BlogPage() {
                           </div>
                         </div>
                         <div className="px-5 pb-4">
-                          <span className="text-skyblue font-semibold text-sm group-hover:underline">
+                          <span className="text-sky-400 font-semibold text-sm group-hover:underline">
                             Read Guide &rarr;
                           </span>
                         </div>
@@ -239,29 +241,29 @@ export default function BlogPage() {
         {/* CTA Section */}
         {!isLoading && !error && posts.length > 0 && (
           <div className="max-w-4xl mx-auto mt-16">
-            <div className="bg-skyblue/10 backdrop-blur-sm rounded-2xl p-8 border border-skyblue/20 text-center">
+            <div className="bg-sky-500/10 backdrop-blur-sm rounded-2xl p-8 border border-sky-500/20 text-center">
               <h2 className="text-2xl font-bold text-white mb-4">
                 Ready for Your Next Adventure?
               </h2>
-              <p className="text-skyblue-light mb-6">
+              <p className="text-sky-300 mb-6">
                 Discover your perfect destination with our flight search tools
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link
                   href="/search"
-                  className="inline-block bg-skyblue hover:bg-skyblue-dark text-navy font-bold py-4 px-8 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="inline-block bg-sky-500 hover:bg-sky-600 text-slate-900 font-bold py-4 px-8 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   Search Flights
                 </Link>
                 <Link
                   href="/mystery"
-                  className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-8 rounded-lg transition shadow-lg border border-skyblue/30"
+                  className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-8 rounded-lg transition shadow-lg border border-sky-500/30"
                 >
                   Mystery Destination
                 </Link>
                 <Link
                   href="/discover"
-                  className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-8 rounded-lg transition shadow-lg border border-skyblue/30"
+                  className="inline-block bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-8 rounded-lg transition shadow-lg border border-sky-500/30"
                 >
                   Discover Deals
                 </Link>

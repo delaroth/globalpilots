@@ -79,19 +79,19 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full">
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center space-x-2 mb-8">
-          <div className="w-12 h-12 bg-skyblue rounded-full flex items-center justify-center">
-            <span className="text-navy text-2xl font-bold">G</span>
+          <div className="w-12 h-12 bg-sky-500 rounded-full flex items-center justify-center">
+            <span className="text-slate-900 text-2xl font-bold">G</span>
           </div>
           <span className="text-white text-2xl font-bold">GlobePilot</span>
         </Link>
 
         {/* Signup Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h1 className="text-3xl font-bold text-navy mb-2">Create Account</h1>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Create Account</h1>
           <p className="text-gray-600 mb-6">Start tracking flight prices and discovering destinations</p>
 
           {/* Error Message */}
@@ -104,7 +104,7 @@ export default function SignupPage() {
           {/* Signup Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-navy mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-slate-900 mb-2">
                 Full Name
               </label>
               <input
@@ -113,13 +113,13 @@ export default function SignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="John Doe"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-navy mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-900 mb-2">
                 Email Address
               </label>
               <input
@@ -128,13 +128,13 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-navy mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-900 mb-2">
                 Password
               </label>
               <input
@@ -143,7 +143,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
                 required
                 minLength={8}
               />
@@ -151,7 +151,7 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-navy mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-900 mb-2">
                 Confirm Password
               </label>
               <input
@@ -160,7 +160,7 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
                 required
                 minLength={8}
               />
@@ -169,7 +169,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </button>
@@ -212,7 +212,7 @@ export default function SignupPage() {
           {/* Login Link */}
           <p className="mt-6 text-center text-sm text-gray-600">
             Already have an account?{' '}
-            <Link href="/login" className="text-skyblue hover:text-skyblue-dark font-semibold">
+            <Link href="/login" className="text-sky-400 hover:text-sky-600 font-semibold">
               Sign in
             </Link>
           </p>
@@ -221,7 +221,7 @@ export default function SignupPage() {
         {/* Back to Home */}
         <Link
           href="/"
-          className="block text-center mt-6 text-skyblue hover:text-skyblue-light transition"
+          className="block text-center mt-6 text-sky-400 hover:text-sky-300 transition"
         >
           ← Back to Home
         </Link>

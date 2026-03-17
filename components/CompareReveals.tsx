@@ -118,7 +118,7 @@ export default function CompareReveals({
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-navy-dark/95 backdrop-blur-xl"
+        className="fixed inset-0 bg-slate-950/95 backdrop-blur-xl"
         onClick={onClose}
       />
 

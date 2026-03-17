@@ -73,13 +73,13 @@ export default function FestivalFilter({ festivals, currentMonth }: FestivalFilt
               onClick={() => setSelectedMonth(month)}
               className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? 'bg-skyblue text-navy shadow-lg shadow-skyblue/20'
+                  ? 'bg-sky-500 text-slate-900 shadow-lg shadow-sky-500/20'
                   : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white'
               }`}
             >
               {name.slice(0, 3)}
               {festivalCount > 0 && (
-                <span className={`ml-1 text-xs ${isActive ? 'text-navy/60' : 'text-white/40'}`}>
+                <span className={`ml-1 text-xs ${isActive ? 'text-slate-900/60' : 'text-white/40'}`}>
                   {festivalCount}
                 </span>
               )}
@@ -94,7 +94,7 @@ export default function FestivalFilter({ festivals, currentMonth }: FestivalFilt
           onClick={() => setActiveCategories(new Set())}
           className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
             activeCategories.size === 0
-              ? 'bg-skyblue text-navy'
+              ? 'bg-sky-500 text-slate-900'
               : 'bg-white/[0.06] text-white/70 hover:bg-white/[0.12]'
           }`}
         >
@@ -161,12 +161,12 @@ export default function FestivalFilter({ festivals, currentMonth }: FestivalFilt
                         {festival.name}
                       </h3>
                       <span className="text-white/40">—</span>
-                      <span className="text-skyblue-light text-sm">
+                      <span className="text-sky-300 text-sm">
                         {festival.city}, {festival.country}
                       </span>
                     </div>
 
-                    <p className="text-skyblue-light/80 text-sm font-medium mb-2">
+                    <p className="text-sky-300/80 text-sm font-medium mb-2">
                       &ldquo;{festival.highlight}&rdquo;
                     </p>
 
@@ -209,7 +209,7 @@ export default function FestivalFilter({ festivals, currentMonth }: FestivalFilt
                     {festival.iata && (
                       <Link
                         href={`/mystery?hint=festival&destination=${festival.iata}`}
-                        className="inline-flex items-center gap-1.5 bg-skyblue text-navy font-bold text-sm px-4 py-2 rounded-xl hover:bg-skyblue-light transition-colors"
+                        className="inline-flex items-center gap-1.5 bg-sky-500 text-slate-900 font-bold text-sm px-4 py-2 rounded-xl hover:bg-sky-500-light transition-colors"
                       >
                         Mystery Trip to {festival.city}
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,7 +246,7 @@ export default function FestivalFilter({ festivals, currentMonth }: FestivalFilt
         </p>
         <Link
           href={getRandomFestivalLink()}
-          className="inline-flex items-center gap-2 bg-skyblue text-navy font-bold px-6 py-3 rounded-xl hover:bg-skyblue-light transition-colors text-lg"
+          className="inline-flex items-center gap-2 bg-sky-500 text-slate-900 font-bold px-6 py-3 rounded-xl hover:bg-sky-500-light transition-colors text-lg"
         >
           Surprise Me
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

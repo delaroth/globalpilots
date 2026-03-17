@@ -208,7 +208,7 @@ export default function ClueReveal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-skyblue-light text-sm mt-1"
+            className="text-sky-300 text-sm mt-1"
           >
             Unraveling the clues...
           </motion.p>
@@ -258,7 +258,7 @@ export default function ClueReveal({
                   disabled={!canGuessThisRound}
                   className={`flex-1 bg-white/[0.06] border rounded-lg px-4 py-2 text-white placeholder:text-white/30 outline-none transition-colors duration-300 disabled:opacity-40 ${
                     lastGuessWrong && shaking ? 'border-red-500/50' : 'border-white/10'
-                  } focus:border-skyblue/50`}
+                  } focus:border-sky-500/50`}
                   animate={
                     shaking
                       ? {
@@ -271,7 +271,7 @@ export default function ClueReveal({
                 <button
                   onClick={handleGuessSubmit}
                   disabled={!guess.trim() || !canGuessThisRound}
-                  className="bg-skyblue/20 hover:bg-skyblue/30 text-skyblue rounded-lg px-4 py-2 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                  className="bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 rounded-lg px-4 py-2 transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -348,9 +348,9 @@ export default function ClueReveal({
         {!allCluesShown && !guessedCorrectly && (
           <div className="flex justify-center">
             <div className="flex gap-1.5">
-              <div className="w-2 h-2 bg-skyblue/60 rounded-full animate-bounce" />
-              <div className="w-2 h-2 bg-skyblue/60 rounded-full animate-bounce [animation-delay:0.15s]" />
-              <div className="w-2 h-2 bg-skyblue/60 rounded-full animate-bounce [animation-delay:0.3s]" />
+              <div className="w-2 h-2 bg-sky-500/60 rounded-full animate-bounce" />
+              <div className="w-2 h-2 bg-sky-500/60 rounded-full animate-bounce [animation-delay:0.15s]" />
+              <div className="w-2 h-2 bg-sky-500/60 rounded-full animate-bounce [animation-delay:0.3s]" />
             </div>
           </div>
         )}
@@ -366,7 +366,7 @@ export default function ClueReveal({
             >
               <button
                 onClick={handleReveal}
-                className="bg-skyblue hover:bg-skyblue-dark text-navy font-bold text-lg py-4 px-10 rounded-full shadow-lg shadow-skyblue/20 transform hover:scale-105 transition-all duration-300 animate-pulse"
+                className="bg-sky-500 hover:bg-sky-600 text-slate-900 font-bold text-lg py-4 px-10 rounded-full shadow-lg shadow-sky-500/20 transform hover:scale-105 transition-all duration-300 animate-pulse"
               >
                 Reveal Destination
               </button>
@@ -383,13 +383,13 @@ export default function ClueReveal({
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               className="text-center"
             >
-              <p className="text-skyblue-light text-sm uppercase tracking-widest mb-2">
+              <p className="text-sky-300 text-sm uppercase tracking-widest mb-2">
                 You&apos;re going to
               </p>
               <h3 className="text-4xl md:text-5xl font-bold text-white mb-2">
                 {destinationName}
               </h3>
-              <p className="text-skyblue text-xl">{country}</p>
+              <p className="text-sky-400 text-xl">{country}</p>
             </motion.div>
           )}
         </AnimatePresence>

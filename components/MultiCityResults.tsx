@@ -468,27 +468,27 @@ export default function MultiCityResults({ result, origin, totalBudget, totalDay
     <div className="max-w-5xl mx-auto space-y-8">
       {/* Route Visualization */}
       <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-white/20">
-        <h2 className="text-lg font-semibold text-skyblue-light mb-6 text-center uppercase tracking-wider">Your Mystery Route</h2>
+        <h2 className="text-lg font-semibold text-sky-300 mb-6 text-center uppercase tracking-wider">Your Mystery Route</h2>
 
         <div className="flex items-center justify-center flex-wrap gap-y-4">
           {/* Origin */}
           <div className="flex items-center">
             <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-skyblue to-skyblue-dark flex items-center justify-center shadow-lg ring-2 ring-skyblue/50">
-                <span className="text-navy font-bold text-sm">{origin}</span>
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-lg ring-2 ring-sky-500/50">
+                <span className="text-slate-900 font-bold text-sm">{origin}</span>
               </div>
-              <span className="text-xs text-skyblue-light mt-1.5">Start</span>
+              <span className="text-xs text-sky-300 mt-1.5">Start</span>
             </div>
           </div>
 
           {result.cities.map((city, idx) => (
             <div key={city.code} className="flex items-center">
               <div className="flex items-center mx-1 md:mx-2">
-                <div className="w-6 md:w-12 h-px bg-gradient-to-r from-skyblue/60 to-amber-400/60" />
+                <div className="w-6 md:w-12 h-px bg-gradient-to-r from-sky-500/60 to-amber-400/60" />
                 <svg className="w-5 h-5 text-amber-400 -mx-1 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
                 </svg>
-                <div className="w-6 md:w-12 h-px bg-gradient-to-r from-amber-400/60 to-skyblue/60" />
+                <div className="w-6 md:w-12 h-px bg-gradient-to-r from-amber-400/60 to-sky-500/60" />
               </div>
               <div className="flex flex-col items-center">
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg ring-2 ${bubbleColors[idx % bubbleColors.length]}`}>
@@ -505,17 +505,17 @@ export default function MultiCityResults({ result, origin, totalBudget, totalDay
           {/* Return */}
           <div className="flex items-center">
             <div className="flex items-center mx-1 md:mx-2">
-              <div className="w-6 md:w-12 h-px bg-gradient-to-r from-skyblue/60 to-amber-400/60" />
+              <div className="w-6 md:w-12 h-px bg-gradient-to-r from-sky-500/60 to-amber-400/60" />
               <svg className="w-5 h-5 text-amber-400 -mx-1 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
               </svg>
-              <div className="w-6 md:w-12 h-px bg-gradient-to-r from-amber-400/60 to-skyblue/60" />
+              <div className="w-6 md:w-12 h-px bg-gradient-to-r from-amber-400/60 to-sky-500/60" />
             </div>
             <div className="flex flex-col items-center">
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-skyblue to-skyblue-dark flex items-center justify-center shadow-lg ring-2 ring-skyblue/50">
-                <span className="text-navy font-bold text-sm">{origin}</span>
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-lg ring-2 ring-sky-500/50">
+                <span className="text-slate-900 font-bold text-sm">{origin}</span>
               </div>
-              <span className="text-xs text-skyblue-light mt-1.5">Return</span>
+              <span className="text-xs text-sky-300 mt-1.5">Return</span>
             </div>
           </div>
         </div>
@@ -524,7 +524,7 @@ export default function MultiCityResults({ result, origin, totalBudget, totalDay
 
         {result.reasoning && (
           <div className="mt-6 bg-white/5 rounded-xl p-4 border border-white/10">
-            <p className="text-skyblue-light text-sm italic text-center">{result.reasoning}</p>
+            <p className="text-sky-300 text-sm italic text-center">{result.reasoning}</p>
           </div>
         )}
       </div>
@@ -554,7 +554,7 @@ export default function MultiCityResults({ result, origin, totalBudget, totalDay
                       {flag && <span className="text-lg">{flag}</span>}
                       <h3 className="text-xl font-bold text-white">{city.name}</h3>
                     </div>
-                    <p className="text-skyblue-light text-sm">{city.country}</p>
+                    <p className="text-sky-300 text-sm">{city.country}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="bg-white/10 rounded-lg px-3 py-1.5">
@@ -574,7 +574,7 @@ export default function MultiCityResults({ result, origin, totalBudget, totalDay
                 </div>
 
                 {city.arriveDate && city.departDate && (
-                  <div className="flex items-center gap-2 mb-4 text-xs text-skyblue-light/80">
+                  <div className="flex items-center gap-2 mb-4 text-xs text-sky-300/80">
                     <span>{formatShortDate(city.arriveDate)}</span>
                     <span className="text-white/30">&rarr;</span>
                     <span>{formatShortDate(city.departDate)}</span>
@@ -583,15 +583,15 @@ export default function MultiCityResults({ result, origin, totalBudget, totalDay
 
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-skyblue-light">Flight to {city.code}</span>
+                    <span className="text-sky-300">Flight to {city.code}</span>
                     <span className="text-white font-semibold">${city.estimatedFlightCost}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-skyblue-light">Daily costs</span>
+                    <span className="text-sky-300">Daily costs</span>
                     <span className="text-white font-semibold">${city.estimatedDailyCost}/day</span>
                   </div>
                   <div className="border-t border-white/20 pt-2 flex justify-between">
-                    <span className="text-skyblue-light font-medium">Subtotal</span>
+                    <span className="text-sky-300 font-medium">Subtotal</span>
                     <span className="text-white font-bold">${cityTotal}</span>
                   </div>
                 </div>
@@ -646,13 +646,13 @@ export default function MultiCityResults({ result, origin, totalBudget, totalDay
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Total Estimated Cost</h3>
-            <p className="text-skyblue-light text-sm">
+            <p className="text-sky-300 text-sm">
               {result.cities.length} cities &middot; {totalDays} days &middot; {result.bookingLinks.length} flights
             </p>
           </div>
           <div className="text-center md:text-right">
             <div className="text-4xl font-bold text-white">${result.totalEstimatedCost}</div>
-            <p className="text-skyblue-light text-sm">
+            <p className="text-sky-300 text-sm">
               of ${totalBudget} budget
               {result.totalEstimatedCost <= parseFloat(totalBudget)
                 ? ` ($${Math.round(parseFloat(totalBudget) - result.totalEstimatedCost)} remaining)`
@@ -682,7 +682,7 @@ export default function MultiCityResults({ result, origin, totalBudget, totalDay
                 </div>
                 <div>
                   <span className="text-white font-medium text-sm">{link.label}</span>
-                  <span className="block text-skyblue-light text-xs">
+                  <span className="block text-sky-300 text-xs">
                     Leg {idx + 1} of {result.bookingLinks.length}
                     {link.date && ` · ${formatShortDate(link.date)}`}
                   </span>
@@ -719,7 +719,7 @@ export default function MultiCityResults({ result, origin, totalBudget, totalDay
           <Link
             key={city.code}
             href={`/trip-cost?destination=${encodeURIComponent(city.code)}`}
-            className="text-sm text-skyblue-light/70 hover:text-skyblue transition"
+            className="text-sm text-sky-300/70 hover:text-sky-400 transition"
           >
             Daily costs in {city.name}
           </Link>

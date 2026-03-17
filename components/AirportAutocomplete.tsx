@@ -251,7 +251,7 @@ export default function AirportAutocomplete({
 
   return (
     <div className="space-y-2 relative" ref={dropdownRef}>
-      <label htmlFor={id} className="block text-sm font-medium text-navy">
+      <label htmlFor={id} className="block text-sm font-medium text-slate-900">
         {label}
       </label>
 
@@ -260,7 +260,7 @@ export default function AirportAutocomplete({
         {selectedCity && !showDropdown ? (
           <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 flex justify-between items-center">
             <div>
-              <span className="font-semibold text-navy">{selectedCity}</span>
+              <span className="font-semibold text-slate-900">{selectedCity}</span>
               {displayCode && (
                 <span className="text-sm text-gray-600 ml-2">({displayCode})</span>
               )}
@@ -296,7 +296,7 @@ export default function AirportAutocomplete({
             onFocus={() => setShowDropdown(true)}
             onBlur={handleBlur}
             placeholder={placeholder}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
             autoComplete="off"
           />
         )}
@@ -311,7 +311,7 @@ export default function AirportAutocomplete({
           <button
             type="button"
             onClick={() => handleSelect(suggestedAirport.code, suggestedAirport.city)}
-            className="text-xs font-medium text-skyblue hover:text-skyblue/80 bg-skyblue/10 hover:bg-skyblue/20 px-2 py-0.5 rounded-full transition"
+            className="text-xs font-medium text-sky-400 hover:text-sky-400/80 bg-sky-500/10 hover:bg-sky-500/20 px-2 py-0.5 rounded-full transition"
           >
             Use {suggestedAirport.code}
           </button>
@@ -329,11 +329,11 @@ export default function AirportAutocomplete({
                 key={airport.code}
                 type="button"
                 onClick={() => handleSelect(airport.code, airport.city)}
-                className={`w-full px-4 py-3 text-left hover:bg-skyblue/10 transition border-b border-gray-100 last:border-b-0 ${isGroup ? 'bg-blue-50/50' : ''}`}
+                className={`w-full px-4 py-3 text-left hover:bg-sky-500/10 transition border-b border-gray-100 last:border-b-0 ${isGroup ? 'bg-blue-50/50' : ''}`}
               >
                 <div className="flex justify-between items-center">
                   <div>
-                    <span className={`font-semibold ${isGroup ? 'text-blue-700' : 'text-navy'}`}>
+                    <span className={`font-semibold ${isGroup ? 'text-blue-700' : 'text-slate-900'}`}>
                       {airport.city}
                     </span>
                     {!isGroup && (

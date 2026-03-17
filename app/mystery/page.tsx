@@ -542,7 +542,7 @@ function MysteryPageContent() {
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             AI Trip Planner
           </h1>
-          <p className="text-xl text-skyblue-light">
+          <p className="text-xl text-sky-300">
             Set your budget and vibe. AI does the rest.
           </p>
           <div className="mt-4">
@@ -654,7 +654,7 @@ function MysteryPageContent() {
                         }}
                         placeholder="1500"
                         min="100"
-                        className="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg focus:border-skyblue focus:ring-1 focus:ring-skyblue focus:outline-none transition text-navy"
+                        className="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:outline-none transition text-slate-900"
                         required
                       />
                     </div>
@@ -735,7 +735,7 @@ function MysteryPageContent() {
                                 setBudgetPriority('custom')
                                 setTravelStyle('custom')
                               }}
-                              className="w-full h-2 rounded-full appearance-none cursor-pointer accent-skyblue bg-gray-200"
+                              className="w-full h-2 rounded-full appearance-none cursor-pointer accent-sky-400 bg-gray-200"
                             />
                           </div>
                         )
@@ -793,7 +793,7 @@ function MysteryPageContent() {
                       <select
                         value={timeframe}
                         onChange={(e) => setTimeframe(e.target.value)}
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-skyblue focus:ring-1 focus:ring-skyblue focus:outline-none transition text-navy bg-white text-sm"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:outline-none transition text-slate-900 bg-white text-sm"
                       >
                         {timeframeOptions.map(opt => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -805,14 +805,14 @@ function MysteryPageContent() {
                         value={departDate}
                         onChange={(e) => setDepartDate(e.target.value)}
                         min={new Date().toISOString().split('T')[0]}
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-skyblue focus:ring-1 focus:ring-skyblue focus:outline-none transition text-navy text-sm"
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:outline-none transition text-slate-900 text-sm"
                       />
                     )}
                     {/* Duration dropdown */}
                     <select
                       value={tripDuration}
                       onChange={(e) => setTripDuration(parseInt(e.target.value))}
-                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-skyblue focus:ring-1 focus:ring-skyblue focus:outline-none transition text-navy bg-white text-sm"
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:outline-none transition text-slate-900 bg-white text-sm"
                     >
                       <option value={0}>AI picks best length</option>
                       {durationOptions.map(d => (
@@ -843,7 +843,7 @@ function MysteryPageContent() {
                             type="checkbox"
                             checked={flexibleDates}
                             onChange={(e) => setFlexibleDates(e.target.checked)}
-                            className="w-4 h-4 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                            className="w-4 h-4 text-sky-400 border-gray-300 rounded focus:ring-sky-400"
                           />
                           <span className="ml-2 text-sm text-gray-600">
                             Flexible &plusmn;3 days
@@ -874,7 +874,7 @@ function MysteryPageContent() {
                         onClick={() => handleVibeToggle(vibe.value)}
                         className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
                           selectedVibes.includes(vibe.value)
-                            ? 'bg-skyblue text-navy shadow-sm ring-1 ring-skyblue/50'
+                            ? 'bg-sky-500 text-slate-900 shadow-sm ring-1 ring-sky-500/50'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
@@ -997,7 +997,7 @@ function MysteryPageContent() {
                           id="region"
                           value={region}
                           onChange={(e) => setRegion(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-skyblue focus:ring-1 focus:ring-skyblue focus:outline-none transition text-navy bg-white text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:outline-none transition text-slate-900 bg-white text-sm"
                         >
                           <option value="Any">Any Region</option>
                           <option value="Southeast Asia">Southeast Asia</option>
@@ -1048,7 +1048,7 @@ function MysteryPageContent() {
               {!isSearching ? (
                 <button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-bold text-lg py-4 px-6 rounded-lg transition shadow-xl hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-500 text-slate-900 font-bold text-lg py-4 px-6 rounded-lg transition shadow-xl hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   {submitText}
                 </button>
@@ -1057,9 +1057,9 @@ function MysteryPageContent() {
                   <button
                     type="button"
                     disabled
-                    className="flex-1 bg-gradient-to-r from-skyblue/50 to-skyblue-dark/50 text-navy/60 font-bold text-lg py-4 px-6 rounded-lg cursor-not-allowed flex items-center justify-center gap-3"
+                    className="flex-1 bg-gradient-to-r from-sky-500/50 to-sky-600/50 text-slate-900/60 font-bold text-lg py-4 px-6 rounded-lg cursor-not-allowed flex items-center justify-center gap-3"
                   >
-                    <div className="inline-block w-5 h-5 border-2 border-navy/40 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="inline-block w-5 h-5 border-2 border-slate-900/40 border-t-transparent rounded-full animate-spin"></div>
                     <span>Searching...</span>
                   </button>
                   <button
@@ -1130,7 +1130,7 @@ function MysteryPageContent() {
 
         {/* Info */}
         <div className="mt-8 text-center">
-          <p className="text-skyblue-light text-sm">
+          <p className="text-sky-300 text-sm">
             Our AI will find you a unique destination that matches your preferences and budget
           </p>
         </div>

@@ -150,7 +150,7 @@ function TripCostContent() {
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
   return (
-    <main className="min-h-screen flex flex-col bg-gradient-to-b from-navy via-navy-dark to-navy">
+    <main className="min-h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
       <Navigation />
 
       <section className="flex-1 px-4 md:px-6 py-8 max-w-6xl mx-auto w-full">
@@ -159,7 +159,7 @@ function TripCostContent() {
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
             Trip Cost Calculator
           </h1>
-          <p className="text-skyblue-light text-lg max-w-2xl mx-auto">
+          <p className="text-sky-300 text-lg max-w-2xl mx-auto">
             Estimate your total trip cost for 60+ destinations. Real daily cost data for hotels, food, transport, and activities.
           </p>
         </div>
@@ -193,7 +193,7 @@ function TripCostContent() {
                   <button
                     type="button"
                     onClick={() => setShowOrigin(true)}
-                    className="w-full px-4 py-3 border-2 border-dashed border-white/10 rounded-lg text-slate-500 hover:border-skyblue hover:text-skyblue transition text-left"
+                    className="w-full px-4 py-3 border-2 border-dashed border-white/10 rounded-lg text-slate-500 hover:border-sky-400 hover:text-sky-400 transition text-left"
                   >
                     + Add origin airport for flight estimate
                   </button>
@@ -213,7 +213,7 @@ function TripCostContent() {
           {/* Trip Length Slider */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-white mb-2">
-              Trip Length: <span className="text-skyblue font-bold text-lg">{days} {days === 1 ? 'day' : 'days'}</span>
+              Trip Length: <span className="text-sky-400 font-bold text-lg">{days} {days === 1 ? 'day' : 'days'}</span>
             </label>
             <input
               type="range"
@@ -221,7 +221,7 @@ function TripCostContent() {
               max="30"
               value={days}
               onChange={e => setDays(parseInt(e.target.value, 10))}
-              className="w-full h-3 bg-white/[0.06] rounded-lg appearance-none cursor-pointer accent-skyblue"
+              className="w-full h-3 bg-white/[0.06] rounded-lg appearance-none cursor-pointer accent-sky-400"
             />
             <div className="flex justify-between text-xs text-slate-500 mt-1">
               <span>1 day</span>
@@ -242,12 +242,12 @@ function TripCostContent() {
                   onClick={() => setTier(t)}
                   className={`relative p-4 rounded-xl border-2 transition-all text-left ${
                     tier === t
-                      ? 'border-skyblue bg-skyblue/10 shadow-lg scale-[1.02]'
+                      ? 'border-sky-400 bg-sky-500/10 shadow-lg scale-[1.02]'
                       : 'border-white/[0.08] hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className={`font-bold ${tier === t ? 'text-skyblue' : 'text-white'}`}>
+                    <span className={`font-bold ${tier === t ? 'text-sky-400' : 'text-white'}`}>
                       {tierLabels[t]}
                     </span>
                     {tier === t && (
@@ -294,7 +294,7 @@ function TripCostContent() {
                     className={`text-sm px-3 py-1.5 rounded-full border transition ${
                       destination === d.code
                         ? 'bg-sky-500 text-white border-sky-500'
-                        : 'bg-white/[0.06] text-slate-400 border-white/[0.08] hover:border-skyblue hover:bg-skyblue/5'
+                        : 'bg-white/[0.06] text-slate-400 border-white/[0.08] hover:border-sky-400 hover:bg-sky-500/5'
                     }`}
                   >
                     {d.city} <span className="text-xs opacity-70">${dailyTotal}/day</span>
@@ -308,8 +308,8 @@ function TripCostContent() {
         {/* Loading */}
         {loading && (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-skyblue mx-auto mb-4" />
-            <p className="text-skyblue-light">Calculating trip costs...</p>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sky-400 mx-auto mb-4" />
+            <p className="text-sky-300">Calculating trip costs...</p>
           </div>
         )}
 
@@ -459,7 +459,7 @@ function TripCostContent() {
                   <p className="text-sm text-slate-400 mb-2 font-medium">Best months to visit:</p>
                   <div className="flex flex-wrap gap-1.5">
                     {result.destination.bestMonths.map(m => (
-                      <span key={m} className="bg-skyblue/10 text-skyblue text-xs px-2 py-1 rounded-full font-medium">
+                      <span key={m} className="bg-sky-500/10 text-sky-400 text-xs px-2 py-1 rounded-full font-medium">
                         {monthNames[m - 1]}
                       </span>
                     ))}
@@ -482,12 +482,12 @@ function TripCostContent() {
                       onClick={() => setTier(t)}
                       className={`p-5 rounded-xl border-2 text-left transition-all ${
                         isSelected
-                          ? 'border-skyblue bg-skyblue/5 shadow-md'
+                          ? 'border-sky-400 bg-sky-500/5 shadow-md'
                           : 'border-white/[0.08] hover:border-white/20'
                       }`}
                     >
                       <div className="flex justify-between items-start mb-3">
-                        <h4 className={`font-bold ${isSelected ? 'text-skyblue' : 'text-white'}`}>
+                        <h4 className={`font-bold ${isSelected ? 'text-sky-400' : 'text-white'}`}>
                           {tierLabels[t]}
                         </h4>
                         {isSelected && (
@@ -586,27 +586,27 @@ function TripCostContent() {
                 <span className="text-xs text-white/40">Continue planning:</span>
                 <Link
                   href={`/search?destination=${encodeURIComponent(result.destination.code)}${origin ? `&origin=${encodeURIComponent(origin)}` : ''}`}
-                  className="text-sm text-skyblue-light/70 hover:text-skyblue transition"
+                  className="text-sm text-sky-300/70 hover:text-sky-400 transition"
                 >
                   Search flights to {result.destination.city}
                 </Link>
                 {origin && (
                   <Link
                     href={`/explore?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(result.destination.code)}`}
-                    className="text-sm text-skyblue-light/70 hover:text-skyblue transition"
+                    className="text-sm text-sky-300/70 hover:text-sky-400 transition"
                   >
                     Explore stopover routes
                   </Link>
                 )}
                 <Link
                   href="/mystery"
-                  className="text-sm text-skyblue-light/70 hover:text-skyblue transition"
+                  className="text-sm text-sky-300/70 hover:text-sky-400 transition"
                 >
                   Plan a multi-city trip
                 </Link>
                 <Link
                   href="/mystery"
-                  className="text-sm text-skyblue-light/70 hover:text-skyblue transition"
+                  className="text-sm text-sky-300/70 hover:text-sky-400 transition"
                 >
                   Mystery destination
                 </Link>
@@ -620,7 +620,7 @@ function TripCostContent() {
           <div className="text-center py-12">
             <div className="text-6xl mb-4">&#x1F4B0;</div>
             <h2 className="text-2xl font-bold text-white mb-2">Select a destination to get started</h2>
-            <p className="text-skyblue-light max-w-md mx-auto">
+            <p className="text-sky-300 max-w-md mx-auto">
               Search for a city above or use the quick pick buttons to see daily cost breakdowns for any destination.
             </p>
           </div>
@@ -635,9 +635,9 @@ function TripCostContent() {
 export default function TripCostPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-b from-navy via-navy-dark to-navy flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-skyblue mb-4"></div>
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-sky-400 mb-4"></div>
           <p className="text-white text-lg">Loading...</p>
         </div>
       </div>

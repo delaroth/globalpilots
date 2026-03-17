@@ -208,12 +208,12 @@ export default async function BestTimePage({
       {/* Hero */}
       <section className="px-6 py-16 md:py-24">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-skyblue font-medium mb-2 tracking-wide uppercase text-sm">
+          <p className="text-sky-400 font-medium mb-2 tracking-wide uppercase text-sm">
             {dest.country} &middot; {dest.region}
           </p>
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
             Best Time to Visit{' '}
-            <span className="text-skyblue">{dest.city}</span>
+            <span className="text-sky-400">{dest.city}</span>
           </h1>
           <p className="text-xl text-white/70 max-w-2xl mx-auto">
             When to go for the best experience &mdash; weather, prices &amp; tips
@@ -222,7 +222,7 @@ export default async function BestTimePage({
       </section>
 
       {/* 12-Month Grid */}
-      <section className="px-6 py-16 bg-navy-light/30">
+      <section className="px-6 py-16 bg-slate-800/30">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">
             Month-by-Month Guide to {dest.city}
@@ -337,7 +337,7 @@ export default async function BestTimePage({
                   )}
                   <div className="border-t border-white/10 pt-3 flex items-center justify-between">
                     <span className="text-white/50 text-sm">Est. daily cost</span>
-                    <span className="text-skyblue font-bold">${estDailyCost}/day</span>
+                    <span className="text-sky-400 font-bold">${estDailyCost}/day</span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-white/50 text-sm">Est. flights</span>
@@ -352,7 +352,7 @@ export default async function BestTimePage({
 
       {/* Budget Comparison: Peak vs Shoulder */}
       {shoulderMonths.length > 0 && (
-        <section className="px-6 py-16 bg-navy-light/30">
+        <section className="px-6 py-16 bg-slate-800/30">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold text-white mb-8 text-center">
               Save Money in Shoulder Season
@@ -420,8 +420,8 @@ export default async function BestTimePage({
                 key={i}
                 className="flex gap-4 bg-white/[0.04] border border-white/10 rounded-xl p-5"
               >
-                <div className="w-8 h-8 bg-skyblue/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-skyblue font-bold text-sm">{i + 1}</span>
+                <div className="w-8 h-8 bg-sky-500/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-sky-400 font-bold text-sm">{i + 1}</span>
                 </div>
                 <p className="text-white/80 leading-relaxed">{tip}</p>
               </div>
@@ -431,7 +431,7 @@ export default async function BestTimePage({
       </section>
 
       {/* FAQ Section */}
-      <section className="px-6 py-16 bg-navy-light/30">
+      <section className="px-6 py-16 bg-slate-800/30">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">
             Frequently Asked Questions
@@ -459,13 +459,13 @@ export default async function BestTimePage({
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href={`/search?destination=${dest.code}`}
-              className="bg-skyblue text-navy font-bold py-3 px-8 rounded-full hover:bg-skyblue-light transition transform hover:scale-105"
+              className="bg-sky-500 text-slate-900 font-bold py-3 px-8 rounded-full hover:bg-sky-500-light transition transform hover:scale-105"
             >
               Search Flights to {dest.city}
             </Link>
             <Link
               href="/mystery"
-              className="border-2 border-skyblue text-skyblue font-bold py-3 px-8 rounded-full hover:bg-skyblue/10 transition transform hover:scale-105"
+              className="border-2 border-sky-400 text-sky-400 font-bold py-3 px-8 rounded-full hover:bg-sky-500/10 transition transform hover:scale-105"
             >
               Plan a Mystery Trip
             </Link>

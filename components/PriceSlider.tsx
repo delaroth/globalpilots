@@ -80,7 +80,7 @@ export default function PriceSlider({
 
         {/* Custom slider thumb */}
         <div
-          className="absolute top-0 h-8 w-8 bg-skyblue border-4 border-white rounded-full shadow-lg pointer-events-none transform -translate-x-1/2 -translate-y-1/3"
+          className="absolute top-0 h-8 w-8 bg-sky-500 border-4 border-white rounded-full shadow-lg pointer-events-none transform -translate-x-1/2 -translate-y-1/3"
           style={{ left: `${((targetPrice - minPrice) / (maxPrice - minPrice)) * 100}%` }}
         />
       </div>
@@ -88,7 +88,7 @@ export default function PriceSlider({
       {/* Target Price Display */}
       <div className="text-center mt-6">
         <p className="text-sm text-gray-600 mb-1">Your Target Price</p>
-        <p className="text-4xl font-bold text-navy">${targetPrice}</p>
+        <p className="text-4xl font-bold text-slate-900">${targetPrice}</p>
         <span className={`inline-block mt-3 px-6 py-2 rounded-full text-sm font-semibold ${status.bg} ${status.textColor}`}>
           {status.text}
         </span>
@@ -135,7 +135,7 @@ export default function PriceSlider({
       </div>
 
       {/* Recommendation */}
-      <div className="bg-skyblue/10 border border-skyblue/30 rounded-lg p-4">
+      <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4">
         <p className="text-sm text-gray-700">
           <span className="font-semibold">💡 Tip:</span>{' '}
           {percentAboveLow <= 5

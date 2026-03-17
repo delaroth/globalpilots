@@ -17,7 +17,7 @@ export default function NotFound() {
           </div>
 
           {/* Big 404 */}
-          <h1 className="text-[10rem] md:text-[14rem] font-black leading-none bg-gradient-to-r from-skyblue via-purple-400 to-pink-400 bg-clip-text text-transparent select-none">
+          <h1 className="text-[10rem] md:text-[14rem] font-black leading-none bg-gradient-to-r from-sky-500 via-purple-400 to-pink-400 bg-clip-text text-transparent select-none">
             404
           </h1>
 
@@ -42,7 +42,7 @@ export default function NotFound() {
             </Link>
             <Link
               href="/mystery"
-              className="px-8 py-3 bg-skyblue hover:bg-skyblue-dark text-navy font-bold rounded-xl transition"
+              className="px-8 py-3 bg-sky-500 hover:bg-sky-600 text-slate-900 font-bold rounded-xl transition"
             >
               Try Mystery Vacation
             </Link>

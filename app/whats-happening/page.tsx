@@ -57,7 +57,7 @@ export default function WhatsHappeningPage() {
   const totalCountries = countriesSet.size
 
   return (
-    <div className="min-h-screen bg-navy flex flex-col">
+    <div className="min-h-screen bg-slate-900 flex flex-col">
       <Navigation />
 
       <main className="flex-grow w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -67,7 +67,7 @@ export default function WhatsHappeningPage() {
             <span className="mr-2" role="img" aria-label="party">&#x1F389;</span>
             What&apos;s Happening Around the World
           </h1>
-          <p className="text-skyblue-light text-lg sm:text-xl max-w-2xl">
+          <p className="text-sky-300 text-lg sm:text-xl max-w-2xl">
             Discover festivals &amp; events to time your mystery vacation perfectly.
           </p>
           <div className="flex flex-wrap gap-4 mt-4 text-sm text-white/50">

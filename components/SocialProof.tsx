@@ -89,7 +89,7 @@ export default function SocialProof() {
           {data.topDestinations.length > 0 && (
             <span className="text-white/40">
               Trending:{' '}
-              <span className="text-skyblue-light/60">
+              <span className="text-sky-300/60">
                 {data.topDestinations.slice(0, 3).join(', ')}
               </span>
             </span>

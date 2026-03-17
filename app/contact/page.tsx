@@ -73,7 +73,7 @@ export default function ContactPage() {
           {/* Hero */}
           <div className="text-center mb-16">
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-              Get in <span className="text-skyblue">Touch</span>
+              Get in <span className="text-sky-400">Touch</span>
             </h1>
             <p className="text-xl text-white/70 max-w-xl mx-auto">
               Have a question, found a bug, or want to partner with us? We&apos;d
@@ -92,7 +92,7 @@ export default function ContactPage() {
                 <h3 className="text-white font-semibold mb-1">Email</h3>
                 <a
                   href="mailto:hello@globepilots.com"
-                  className="text-skyblue hover:text-skyblue-light transition text-sm"
+                  className="text-sky-400 hover:text-sky-300 transition text-sm"
                 >
                   hello@globepilots.com
                 </a>
@@ -117,7 +117,7 @@ export default function ContactPage() {
                 <h3 className="text-white font-semibold mb-1">Quick Tip</h3>
                 <p className="text-white/70 text-sm">
                   Check our{' '}
-                  <a href="/faq" className="text-skyblue hover:text-skyblue-light transition underline">
+                  <a href="/faq" className="text-sky-400 hover:text-sky-300 transition underline">
                     FAQ page
                   </a>{' '}
                   first — your question might already be answered.
@@ -170,7 +170,7 @@ export default function ContactPage() {
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Your name"
                       required
-                      className="w-full px-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-skyblue/50 focus:ring-1 focus:ring-skyblue/50 transition"
+                      className="w-full px-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition"
                     />
                   </div>
 
@@ -186,7 +186,7 @@ export default function ContactPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
                       required
-                      className="w-full px-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-skyblue/50 focus:ring-1 focus:ring-skyblue/50 transition"
+                      className="w-full px-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition"
                     />
                   </div>
 
@@ -200,10 +200,10 @@ export default function ContactPage() {
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       required
-                      className="w-full px-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white focus:outline-none focus:border-skyblue/50 focus:ring-1 focus:ring-skyblue/50 transition appearance-none cursor-pointer"
+                      className="w-full px-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition appearance-none cursor-pointer"
                     >
                       {subjects.map((s) => (
-                        <option key={s.value} value={s.value} className="bg-navy text-white">
+                        <option key={s.value} value={s.value} className="bg-slate-900 text-white">
                           {s.label}
                         </option>
                       ))}
@@ -222,7 +222,7 @@ export default function ContactPage() {
                       placeholder="Tell us what's on your mind..."
                       required
                       rows={5}
-                      className="w-full px-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-skyblue/50 focus:ring-1 focus:ring-skyblue/50 transition resize-none"
+                      className="w-full px-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/50 transition resize-none"
                     />
                   </div>
 
@@ -230,7 +230,7 @@ export default function ContactPage() {
                   <button
                     type="submit"
                     disabled={status === 'loading'}
-                    className="w-full px-8 py-3 bg-skyblue hover:bg-skyblue-dark text-navy font-bold rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="w-full px-8 py-3 bg-sky-500 hover:bg-sky-600 text-slate-900 font-bold rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {status === 'loading' ? 'Sending...' : 'Send Message'}
                   </button>

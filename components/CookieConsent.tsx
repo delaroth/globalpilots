@@ -38,7 +38,7 @@ export default function CookieConsent() {
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="fixed bottom-0 left-0 right-0 z-50 bg-navy-dark/95 backdrop-blur-sm border-t border-white/10"
+          className="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-sm border-t border-white/10"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-white/70 text-sm text-center sm:text-left">
@@ -46,7 +46,7 @@ export default function CookieConsent() {
               browse, you agree to our use of{' '}
               <Link
                 href="/privacy"
-                className="text-skyblue hover:text-skyblue-light underline underline-offset-2 transition"
+                className="text-sky-400 hover:text-sky-300 underline underline-offset-2 transition"
               >
                 cookies
               </Link>
@@ -62,7 +62,7 @@ export default function CookieConsent() {
               </Link>
               <button
                 onClick={handleAccept}
-                className="bg-skyblue hover:bg-skyblue-light text-navy font-semibold text-sm px-5 py-2 rounded-lg transition"
+                className="bg-sky-500 hover:bg-sky-500-light text-slate-900 font-semibold text-sm px-5 py-2 rounded-lg transition"
               >
                 Accept
               </button>

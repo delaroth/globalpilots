@@ -24,12 +24,12 @@ function VerifyEmailContent() {
   }, [token, router])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center space-x-2 mb-8">
-          <div className="w-12 h-12 bg-skyblue rounded-full flex items-center justify-center">
-            <span className="text-navy text-2xl font-bold">G</span>
+          <div className="w-12 h-12 bg-sky-500 rounded-full flex items-center justify-center">
+            <span className="text-slate-900 text-2xl font-bold">G</span>
           </div>
           <span className="text-white text-2xl font-bold">GlobePilot</span>
         </Link>
@@ -39,9 +39,9 @@ function VerifyEmailContent() {
           {status === 'loading' && (
             <>
               <div className="flex justify-center mb-6">
-                <div className="w-12 h-12 border-4 border-skyblue border-t-transparent rounded-full animate-spin" />
+                <div className="w-12 h-12 border-4 border-sky-400 border-t-transparent rounded-full animate-spin" />
               </div>
-              <h1 className="text-2xl font-bold text-navy mb-2">Verifying Email</h1>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Verifying Email</h1>
               <p className="text-gray-600">{message}</p>
             </>
           )}
@@ -55,11 +55,11 @@ function VerifyEmailContent() {
                   </svg>
                 </div>
               </div>
-              <h1 className="text-2xl font-bold text-navy mb-2">Verification Failed</h1>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Verification Failed</h1>
               <p className="text-gray-600 mb-6">{message}</p>
               <Link
                 href="/login"
-                className="inline-block bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition"
+                className="inline-block bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-6 rounded-lg transition"
               >
                 Go to Login
               </Link>
@@ -75,11 +75,11 @@ function VerifyEmailContent() {
                   </svg>
                 </div>
               </div>
-              <h1 className="text-2xl font-bold text-navy mb-2">Email Verified!</h1>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Email Verified!</h1>
               <p className="text-gray-600 mb-6">Your email has been verified successfully. You can now log in.</p>
               <Link
                 href="/login"
-                className="inline-block bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition"
+                className="inline-block bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-6 rounded-lg transition"
               >
                 Go to Login
               </Link>
@@ -90,7 +90,7 @@ function VerifyEmailContent() {
         {/* Back to Home */}
         <Link
           href="/"
-          className="block text-center mt-6 text-skyblue hover:text-skyblue-light transition"
+          className="block text-center mt-6 text-sky-400 hover:text-sky-300 transition"
         >
           &larr; Back to Home
         </Link>
@@ -101,7 +101,7 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light" />}>
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800" />}>
       <VerifyEmailContent />
     </Suspense>
   )

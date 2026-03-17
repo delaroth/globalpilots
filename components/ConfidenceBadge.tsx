@@ -90,7 +90,7 @@ export function PriceWithConfidence({
 }: PriceWithConfidenceProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-2xl font-bold text-navy">
+      <span className="text-2xl font-bold text-slate-900">
         {pricePrefix}{Math.round(price)}
       </span>
 
@@ -99,7 +99,7 @@ export function PriceWithConfidence({
       {showAction && (
         <button
           onClick={onAction}
-          className="ml-auto bg-skyblue hover:bg-skyblue-dark text-white font-semibold text-sm py-1.5 px-4 rounded-lg transition shadow-md hover:shadow-lg"
+          className="ml-auto bg-sky-500 hover:bg-sky-600 text-white font-semibold text-sm py-1.5 px-4 rounded-lg transition shadow-md hover:shadow-lg"
         >
           {actionLabel}
         </button>

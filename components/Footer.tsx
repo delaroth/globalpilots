@@ -33,18 +33,18 @@ export default function Footer() {
   ]
 
   return (
-    <footer className="w-full bg-navy-dark border-t border-skyblue/20 mt-auto">
+    <footer className="w-full bg-slate-950 border-t border-sky-500/20 mt-auto">
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-8">
           {/* Brand */}
           <div className="col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-skyblue rounded-full flex items-center justify-center">
-                <span className="text-navy text-xl font-bold">G</span>
+              <div className="w-10 h-10 bg-sky-500 rounded-full flex items-center justify-center">
+                <span className="text-slate-900 text-xl font-bold">G</span>
               </div>
               <span className="text-white text-2xl font-bold">GlobePilot</span>
             </div>
-            <p className="text-skyblue-light text-sm mb-4">
+            <p className="text-sky-300 text-sm mb-4">
               Set your budget. Pick your vibe. Get surprised.
             </p>
             {/* Mystery Vacation — prominent standalone link */}
@@ -54,7 +54,7 @@ export default function Footer() {
             >
               Mystery Vacation
             </Link>
-            <p className="text-skyblue-light/70 text-xs">
+            <p className="text-sky-300/70 text-xs">
               AI-powered travel planning that finds your perfect mystery destination.
             </p>
           </div>
@@ -68,7 +68,7 @@ export default function Footer() {
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-skyblue-light text-sm hover:text-skyblue transition"
+                      className="text-sky-300 text-sm hover:text-sky-400 transition"
                     >
                       {link.label}
                     </Link>
@@ -81,24 +81,24 @@ export default function Footer() {
           {/* About column fills the remaining space */}
           <div>
             <h3 className="text-white font-semibold mb-3 text-sm">About</h3>
-            <ul className="space-y-2 text-skyblue-light text-sm">
+            <ul className="space-y-2 text-sky-300 text-sm">
               <li>
-                <Link href="/about" className="hover:text-skyblue transition">
+                <Link href="/about" className="hover:text-sky-400 transition">
                   How It Works
                 </Link>
               </li>
               <li>
-                <Link href="/faq" className="hover:text-skyblue transition">
+                <Link href="/faq" className="hover:text-sky-400 transition">
                   FAQ
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-skyblue transition">
+                <Link href="/contact" className="hover:text-sky-400 transition">
                   Contact Us
                 </Link>
               </li>
               <li>
-                <Link href="/tools" className="hover:text-skyblue transition">
+                <Link href="/tools" className="hover:text-sky-400 transition">
                   All Tools
                 </Link>
               </li>
@@ -111,14 +111,14 @@ export default function Footer() {
           <div className="col-span-2" />
           <div>
             <h3 className="text-white font-semibold mb-3 text-sm">Legal</h3>
-            <ul className="space-y-2 text-skyblue-light text-sm">
+            <ul className="space-y-2 text-sky-300 text-sm">
               <li>
-                <Link href="/privacy" className="hover:text-skyblue transition">
+                <Link href="/privacy" className="hover:text-sky-400 transition">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="hover:text-skyblue transition">
+                <Link href="/terms" className="hover:text-sky-400 transition">
                   Terms of Service
                 </Link>
               </li>
@@ -127,16 +127,16 @@ export default function Footer() {
         </div>
 
         {/* Deal Alerts Signup */}
-        <div className="border-t border-skyblue/20 pt-8 pb-8 max-w-md">
+        <div className="border-t border-sky-500/20 pt-8 pb-8 max-w-md">
           <EmailCapture context="footer" />
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-skyblue/20 pt-8 text-center">
-          <p className="text-skyblue-light text-sm">
+        <div className="border-t border-sky-500/20 pt-8 text-center">
+          <p className="text-sky-300 text-sm">
             &copy; {currentYear} GlobePilot. Built with &#10084;&#65039; for travellers.
           </p>
-          <p className="text-skyblue-light/70 text-xs mt-2">
+          <p className="text-sky-300/70 text-xs mt-2">
             Powered by TravelPayouts & DeepSeek AI
           </p>
           <p className="text-white/30 text-xs mt-3">

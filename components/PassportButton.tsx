@@ -66,7 +66,7 @@ export default function PassportButton() {
           text-sm font-medium text-white/80 hover:text-white
           shadow-lg
           transition-colors
-          ${pulse ? 'ring-2 ring-skyblue/50 ring-offset-2 ring-offset-navy-dark' : ''}
+          ${pulse ? 'ring-2 ring-sky-500/50 ring-offset-2 ring-offset-slate-950' : ''}
         `}
         animate={
           pulse
@@ -81,7 +81,7 @@ export default function PassportButton() {
       >
         <span className="text-base">{'\u{1F30D}'}</span>
         <span>Passport</span>
-        <span className="bg-white/10 rounded-full px-2 py-0.5 text-xs font-semibold text-skyblue-light">
+        <span className="bg-white/10 rounded-full px-2 py-0.5 text-xs font-semibold text-sky-300">
           {stampCount}
         </span>
       </motion.button>

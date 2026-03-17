@@ -1,5 +1,7 @@
 'use client'
 
+import Navigation from '@/components/Navigation'
+import Footer from '@/components/Footer'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
@@ -245,17 +247,17 @@ export default function AlertsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
       {/* Navigation */}
-      <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
+      <nav className="w-full px-6 py-4 bg-slate-900/95 backdrop-blur-sm border-b border-sky-500/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-skyblue rounded-full flex items-center justify-center">
-              <span className="text-navy text-xl font-bold">G</span>
+            <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center">
+              <span className="text-slate-900 text-xl font-bold">G</span>
             </div>
             <span className="text-white text-xl font-bold">GlobePilot</span>
           </Link>
-          <Link href="/" className="text-skyblue hover:text-skyblue-light transition">
+          <Link href="/" className="text-sky-400 hover:text-sky-300 transition">
             ← Back to Home
           </Link>
         </div>
@@ -267,7 +269,7 @@ export default function AlertsPage() {
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Price Alerts 🔔
           </h1>
-          <p className="text-xl text-skyblue-light">
+          <p className="text-xl text-sky-300">
             Get notified when prices drop below your target
           </p>
         </div>
@@ -281,12 +283,12 @@ export default function AlertsPage() {
           {/* Create Alert Form */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-navy mb-6">Create Price Alert</h2>
+              <h2 className="text-2xl font-bold text-slate-900 mb-6">Create Price Alert</h2>
 
               <form onSubmit={handleSubmit}>
                 {/* Email */}
                 <div className="mb-4">
-                  <label htmlFor="email" className="block text-sm font-medium text-navy mb-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-slate-900 mb-2">
                     Email Address
                   </label>
                   <input
@@ -295,7 +297,7 @@ export default function AlertsPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="your@email.com"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
                     required
                   />
                 </div>
@@ -326,16 +328,16 @@ export default function AlertsPage() {
                 )}
 
                 {/* Flexible Dates Toggle */}
-                <div className="mb-4 bg-skyblue/10 border border-skyblue/30 rounded-lg p-4">
+                <div className="mb-4 bg-sky-500/10 border border-sky-500/30 rounded-lg p-4">
                   <label className="flex items-start cursor-pointer">
                     <input
                       type="checkbox"
                       checked={flexibleDates}
                       onChange={(e) => setFlexibleDates(e.target.checked)}
-                      className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue mt-0.5"
+                      className="w-5 h-5 text-sky-400 border-gray-300 rounded focus:ring-sky-400 mt-0.5"
                     />
                     <div className="ml-3 flex-1">
-                      <span className="text-navy font-semibold">My dates are flexible</span>
+                      <span className="text-slate-900 font-semibold">My dates are flexible</span>
                       <p className="text-sm text-gray-600 mt-1">
                         Track prices ±{dateRangeDays} days around your travel date for better deals
                       </p>
@@ -343,8 +345,8 @@ export default function AlertsPage() {
                   </label>
 
                   {flexibleDates && (
-                    <div className="mt-4 pt-4 border-t border-skyblue/20">
-                      <label className="block text-sm font-medium text-navy mb-2">
+                    <div className="mt-4 pt-4 border-t border-sky-500/20">
+                      <label className="block text-sm font-medium text-slate-900 mb-2">
                         Date Flexibility: ±{dateRangeDays} days
                       </label>
                       <input
@@ -353,7 +355,7 @@ export default function AlertsPage() {
                         max="7"
                         value={dateRangeDays}
                         onChange={(e) => setDateRangeDays(parseInt(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-sky-400"
                       />
                       <div className="flex justify-between text-xs text-gray-500 mt-1">
                         <span>±1 day</span>
@@ -368,13 +370,13 @@ export default function AlertsPage() {
 
                 {/* Target Price */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-navy mb-2">
+                  <label className="block text-sm font-medium text-slate-900 mb-2">
                     Target Price (USD)
                   </label>
 
                   {isLoadingPrices ? (
                     <div className="text-center py-12 bg-gray-50 rounded-lg">
-                      <div className="inline-block w-8 h-8 border-4 border-skyblue border-t-transparent rounded-full animate-spin mb-3"></div>
+                      <div className="inline-block w-8 h-8 border-4 border-sky-400 border-t-transparent rounded-full animate-spin mb-3"></div>
                       <p className="text-sm text-gray-600">Loading price data...</p>
                     </div>
                   ) : currentPrice !== null && historicalLow !== null ? (
@@ -395,7 +397,7 @@ export default function AlertsPage() {
                           onChange={(e) => setTargetPrice(e.target.value)}
                           placeholder="299"
                           min="1"
-                          className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                          className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
                           required
                         />
                       </div>
@@ -426,11 +428,11 @@ export default function AlertsPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
+                  className="w-full bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3"
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="inline-block w-5 h-5 border-3 border-navy border-t-transparent rounded-full animate-spin"></div>
+                      <div className="inline-block w-5 h-5 border-3 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
                       <span>Creating Alert...</span>
                     </>
                   ) : (
@@ -440,8 +442,8 @@ export default function AlertsPage() {
               </form>
 
               {/* Note about alerts */}
-              <div className="mt-6 bg-skyblue/10 border border-skyblue/30 rounded-lg p-4">
-                <p className="text-skyblue text-sm">
+              <div className="mt-6 bg-sky-500/10 border border-sky-500/30 rounded-lg p-4">
+                <p className="text-sky-400 text-sm">
                   <strong>💡 How it works:</strong> We check prices every 6 hours and email you when they drop below your target. Alerts are stored securely and synced across your devices.
                 </p>
               </div>
@@ -455,13 +457,13 @@ export default function AlertsPage() {
 
             {/* My Alerts */}
             <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-navy mb-6">
+              <h2 className="text-2xl font-bold text-slate-900 mb-6">
                 My Alerts ({alerts.length})
               </h2>
 
               {isLoadingAlerts ? (
                 <div className="text-center py-12">
-                  <div className="inline-block w-12 h-12 border-4 border-skyblue border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <div className="inline-block w-12 h-12 border-4 border-sky-400 border-t-transparent rounded-full animate-spin mb-4"></div>
                   <p className="text-gray-600">Loading your alerts...</p>
                 </div>
               ) : alerts.length === 0 ? (
@@ -485,7 +487,7 @@ export default function AlertsPage() {
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <h3 className="font-bold text-navy text-lg">
+                          <h3 className="font-bold text-slate-900 text-lg">
                             {alert.origin} → {alert.destination}
                           </h3>
                           <p className="text-sm text-gray-600">{alert.email}</p>
@@ -518,8 +520,8 @@ export default function AlertsPage() {
                         </p>
                       </div>
 
-                      <div className="mt-3 bg-skyblue/10 border border-skyblue/30 rounded p-2 text-center">
-                        <p className="text-skyblue-dark text-xs">
+                      <div className="mt-3 bg-sky-500/10 border border-sky-500/30 rounded p-2 text-center">
+                        <p className="text-sky-600 text-xs">
                           Created {new Date(alert.createdAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -533,27 +535,27 @@ export default function AlertsPage() {
 
         {/* How it works */}
         <div className="max-w-4xl mx-auto mt-12">
-          <div className="bg-skyblue/10 backdrop-blur-sm rounded-xl p-8 border border-skyblue/20">
+          <div className="bg-sky-500/10 backdrop-blur-sm rounded-xl p-8 border border-sky-500/20">
             <h2 className="text-2xl font-bold text-white mb-6 text-center">How Price Alerts Work</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="text-4xl mb-3">🎯</div>
                 <h3 className="text-white font-semibold mb-2">Set Your Target</h3>
-                <p className="text-skyblue-light text-sm">
+                <p className="text-sky-300 text-sm">
                   Choose a route and your ideal price point
                 </p>
               </div>
               <div className="text-center">
                 <div className="text-4xl mb-3">👀</div>
                 <h3 className="text-white font-semibold mb-2">We Monitor</h3>
-                <p className="text-skyblue-light text-sm">
+                <p className="text-sky-300 text-sm">
                   Our system checks prices regularly
                 </p>
               </div>
               <div className="text-center">
                 <div className="text-4xl mb-3">📧</div>
                 <h3 className="text-white font-semibold mb-2">Get Notified</h3>
-                <p className="text-skyblue-light text-sm">
+                <p className="text-sky-300 text-sm">
                   Receive alerts when prices drop below your target
                 </p>
               </div>

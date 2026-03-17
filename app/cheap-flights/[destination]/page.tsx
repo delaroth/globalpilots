@@ -155,27 +155,27 @@ export default async function CheapFlightsDestinationPage({
       {/* Hero */}
       <section className="px-6 py-16 md:py-24">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-skyblue font-medium mb-2 tracking-wide uppercase text-sm">
+          <p className="text-sky-400 font-medium mb-2 tracking-wide uppercase text-sm">
             {dest.country} &middot; {dest.region}
           </p>
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
             Cheap Flights to{' '}
-            <span className="text-skyblue">{dest.city}</span>
+            <span className="text-sky-400">{dest.city}</span>
           </h1>
           <p className="text-xl text-white/70 max-w-2xl mx-auto mb-8">
             Find the best deals on flights to {dest.city}, {dest.country}.
-            Budget from <span className="text-skyblue font-semibold">${budgetDaily}/day</span> once you land.
+            Budget from <span className="text-sky-400 font-semibold">${budgetDaily}/day</span> once you land.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href={`/search?destination=${dest.code}`}
-              className="bg-skyblue text-navy font-bold py-3 px-8 rounded-full hover:bg-skyblue-light transition transform hover:scale-105"
+              className="bg-sky-500 text-slate-900 font-bold py-3 px-8 rounded-full hover:bg-sky-500-light transition transform hover:scale-105"
             >
               Find Flights to {dest.city}
             </Link>
             <Link
               href="/mystery"
-              className="border-2 border-skyblue text-skyblue font-bold py-3 px-8 rounded-full hover:bg-skyblue/10 transition transform hover:scale-105"
+              className="border-2 border-sky-400 text-sky-400 font-bold py-3 px-8 rounded-full hover:bg-sky-500/10 transition transform hover:scale-105"
             >
               Mystery Trip Including {dest.city}
             </Link>
@@ -184,7 +184,7 @@ export default async function CheapFlightsDestinationPage({
       </section>
 
       {/* Best Time to Fly */}
-      <section className="px-6 py-16 bg-navy-light/30">
+      <section className="px-6 py-16 bg-slate-800/30">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">
             Best Time to Fly to {dest.city}
@@ -193,9 +193,9 @@ export default async function CheapFlightsDestinationPage({
             {dest.bestMonths.map((m) => (
               <div
                 key={m}
-                className="bg-skyblue/10 border border-skyblue/30 rounded-xl p-4 text-center"
+                className="bg-sky-500/10 border border-sky-500/30 rounded-xl p-4 text-center"
               >
-                <p className="text-skyblue font-bold text-lg">{monthNames[m - 1]}</p>
+                <p className="text-sky-400 font-bold text-lg">{monthNames[m - 1]}</p>
                 <p className="text-white/60 text-sm mt-1">Great weather</p>
               </div>
             ))}
@@ -216,7 +216,7 @@ export default async function CheapFlightsDestinationPage({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {([
               { tier: 'Budget', data: dest.dailyCosts.budget, total: budgetDaily, color: 'emerald', desc: 'Hostels & street food' },
-              { tier: 'Mid-Range', data: dest.dailyCosts.mid, total: midDaily, color: 'skyblue', desc: '3-star hotels & restaurants' },
+              { tier: 'Mid-Range', data: dest.dailyCosts.mid, total: midDaily, color: 'sky-400', desc: '3-star hotels & restaurants' },
               { tier: 'Comfort', data: dest.dailyCosts.comfort, total: comfortDaily, color: 'purple', desc: '4-star hotels & fine dining' },
             ] as const).map((t) => (
               <div
@@ -225,7 +225,7 @@ export default async function CheapFlightsDestinationPage({
               >
                 <h3 className="text-xl font-bold text-white mb-1">{t.tier}</h3>
                 <p className="text-white/50 text-sm mb-4">{t.desc}</p>
-                <p className="text-3xl font-bold text-skyblue mb-4">
+                <p className="text-3xl font-bold text-sky-400 mb-4">
                   ${t.total}<span className="text-base font-normal text-white/50">/day</span>
                 </p>
                 <ul className="space-y-2 text-sm">
@@ -253,7 +253,7 @@ export default async function CheapFlightsDestinationPage({
       </section>
 
       {/* Money-Saving Tips */}
-      <section className="px-6 py-16 bg-navy-light/30">
+      <section className="px-6 py-16 bg-slate-800/30">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">
             Money-Saving Tips for {dest.city}
@@ -264,8 +264,8 @@ export default async function CheapFlightsDestinationPage({
                 key={i}
                 className="flex gap-4 bg-white/[0.04] border border-white/10 rounded-xl p-5"
               >
-                <div className="w-8 h-8 bg-skyblue/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-skyblue font-bold text-sm">{i + 1}</span>
+                <div className="w-8 h-8 bg-sky-500/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-sky-400 font-bold text-sm">{i + 1}</span>
                 </div>
                 <p className="text-white/80 leading-relaxed">{tip}</p>
               </div>
@@ -296,12 +296,12 @@ export default async function CheapFlightsDestinationPage({
                   return (
                     <tr
                       key={fp.month}
-                      className={`border-b border-white/5 ${isCheapest ? 'bg-skyblue/5' : ''}`}
+                      className={`border-b border-white/5 ${isCheapest ? 'bg-sky-500/5' : ''}`}
                     >
                       <td className="py-3 px-4 text-white font-medium">
                         {fp.month}
                         {isCheapest && (
-                          <span className="ml-2 text-xs bg-skyblue/20 text-skyblue px-2 py-0.5 rounded-full">
+                          <span className="ml-2 text-xs bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full">
                             Cheapest
                           </span>
                         )}
@@ -327,7 +327,7 @@ export default async function CheapFlightsDestinationPage({
       </section>
 
       {/* FAQ Section */}
-      <section className="px-6 py-16 bg-navy-light/30">
+      <section className="px-6 py-16 bg-slate-800/30">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">
             Frequently Asked Questions
@@ -355,13 +355,13 @@ export default async function CheapFlightsDestinationPage({
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href={`/search?destination=${dest.code}`}
-              className="bg-skyblue text-navy font-bold py-3 px-8 rounded-full hover:bg-skyblue-light transition transform hover:scale-105"
+              className="bg-sky-500 text-slate-900 font-bold py-3 px-8 rounded-full hover:bg-sky-500-light transition transform hover:scale-105"
             >
               Search Flights to {dest.city}
             </Link>
             <Link
               href="/mystery"
-              className="border-2 border-skyblue text-skyblue font-bold py-3 px-8 rounded-full hover:bg-skyblue/10 transition transform hover:scale-105"
+              className="border-2 border-sky-400 text-sky-400 font-bold py-3 px-8 rounded-full hover:bg-sky-500/10 transition transform hover:scale-105"
             >
               Try Mystery Vacation
             </Link>

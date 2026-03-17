@@ -155,7 +155,7 @@ function BadgesSection({ earned }: { earned: PassportBadge[] }) {
               </div>
 
               {/* Tooltip */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-navy-dark border border-white/10 rounded-lg text-xs text-white/70 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-950 border border-white/10 rounded-lg text-xs text-white/70 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
                 {isEarned ? (
                   <>
                     <span className="text-white font-medium">{def.emoji} {def.name}</span>
@@ -242,7 +242,7 @@ function StampCard({
               {'\u{2708}\u{FE0F}'} Booked
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-skyblue bg-skyblue/10 border border-skyblue/20 rounded-full px-2 py-0.5">
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full px-2 py-0.5">
               Revealed
             </span>
           )}
@@ -431,7 +431,7 @@ export default function TravelPassport({ isOpen, onClose }: TravelPassportProps)
         >
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-navy-dark/[0.98] backdrop-blur-xl"
+            className="absolute inset-0 bg-slate-950/[0.98] backdrop-blur-xl"
             onClick={onClose}
           />
 

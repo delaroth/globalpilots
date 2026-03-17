@@ -150,34 +150,34 @@ export default async function BudgetTravelRegionPage({
       {/* Hero */}
       <section className="px-6 py-16 md:py-24">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-skyblue font-medium mb-2 tracking-wide uppercase text-sm">
+          <p className="text-sky-400 font-medium mb-2 tracking-wide uppercase text-sm">
             Budget Travel Guide
           </p>
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
             Best Budget Destinations in{' '}
-            <span className="text-skyblue">{regionName}</span>
+            <span className="text-sky-400">{regionName}</span>
           </h1>
           <p className="text-xl text-white/70 max-w-2xl mx-auto">
             {sorted.length} destinations starting from{' '}
-            <span className="text-skyblue font-semibold">${cheapestBudget}/day</span>.
+            <span className="text-sky-400 font-semibold">${cheapestBudget}/day</span>.
             Average budget cost: ${avgBudget}/day.
           </p>
         </div>
       </section>
 
       {/* Stats Bar */}
-      <section className="px-6 py-8 bg-navy-light/30">
+      <section className="px-6 py-8 bg-slate-800/30">
         <div className="max-w-4xl mx-auto grid grid-cols-3 gap-4 text-center">
           <div>
-            <p className="text-3xl font-bold text-skyblue">{sorted.length}</p>
+            <p className="text-3xl font-bold text-sky-400">{sorted.length}</p>
             <p className="text-white/50 text-sm">Destinations</p>
           </div>
           <div>
-            <p className="text-3xl font-bold text-skyblue">${cheapestBudget}</p>
+            <p className="text-3xl font-bold text-sky-400">${cheapestBudget}</p>
             <p className="text-white/50 text-sm">Cheapest/day</p>
           </div>
           <div>
-            <p className="text-3xl font-bold text-skyblue">${avgBudget}</p>
+            <p className="text-3xl font-bold text-sky-400">${avgBudget}</p>
             <p className="text-white/50 text-sm">Average/day</p>
           </div>
         </div>
@@ -209,7 +209,7 @@ export default async function BudgetTravelRegionPage({
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs bg-skyblue/20 text-skyblue px-2 py-0.5 rounded-full font-medium">
+                        <span className="text-xs bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full font-medium">
                           #{i + 1}
                         </span>
                         <span className="text-xs text-white/40 font-mono">{dest.code}</span>
@@ -218,7 +218,7 @@ export default async function BudgetTravelRegionPage({
                       <p className="text-white/50 text-sm">{dest.country}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-skyblue">${budget}</p>
+                      <p className="text-2xl font-bold text-sky-400">${budget}</p>
                       <p className="text-white/40 text-xs">budget/day</p>
                     </div>
                   </div>
@@ -242,13 +242,13 @@ export default async function BudgetTravelRegionPage({
 
                   {bestTip && (
                     <p className="text-white/60 text-sm mb-4 flex-1 leading-relaxed">
-                      <span className="text-skyblue font-medium">Top tip:</span> {bestTip}
+                      <span className="text-sky-400 font-medium">Top tip:</span> {bestTip}
                     </p>
                   )}
 
                   <Link
                     href={`/cheap-flights/${destSlugify(dest.city)}`}
-                    className="text-center bg-white/[0.06] border border-white/10 hover:border-skyblue/40 text-white hover:text-skyblue font-medium py-2.5 px-4 rounded-xl transition text-sm mt-auto"
+                    className="text-center bg-white/[0.06] border border-white/10 hover:border-sky-400/40 text-white hover:text-sky-400 font-medium py-2.5 px-4 rounded-xl transition text-sm mt-auto"
                   >
                     View flights &amp; details
                   </Link>
@@ -260,7 +260,7 @@ export default async function BudgetTravelRegionPage({
       </section>
 
       {/* Comparison Table */}
-      <section className="px-6 py-16 bg-navy-light/30">
+      <section className="px-6 py-16 bg-slate-800/30">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">
             Cost Comparison Table
@@ -285,12 +285,12 @@ export default async function BudgetTravelRegionPage({
                     <td className="py-3 px-4">
                       <Link
                         href={`/cheap-flights/${destSlugify(dest.city)}`}
-                        className="text-white hover:text-skyblue font-medium transition"
+                        className="text-white hover:text-sky-400 font-medium transition"
                       >
                         {dest.city}, {dest.country}
                       </Link>
                     </td>
-                    <td className="py-3 px-4 text-skyblue font-medium">
+                    <td className="py-3 px-4 text-sky-400 font-medium">
                       ${dailyTotal(dest.dailyCosts.budget)}
                     </td>
                     <td className="py-3 px-4 text-white/70">
@@ -324,7 +324,7 @@ export default async function BudgetTravelRegionPage({
                 <Link
                   key={r}
                   href={`/budget-travel/${slugify(r)}`}
-                  className="bg-white/[0.06] border border-white/10 hover:border-skyblue/40 text-white hover:text-skyblue px-5 py-2.5 rounded-full transition text-sm font-medium"
+                  className="bg-white/[0.06] border border-white/10 hover:border-sky-400/40 text-white hover:text-sky-400 px-5 py-2.5 rounded-full transition text-sm font-medium"
                 >
                   {r}
                 </Link>
@@ -334,7 +334,7 @@ export default async function BudgetTravelRegionPage({
       </section>
 
       {/* Bottom CTA */}
-      <section className="px-6 py-16 bg-gradient-to-br from-skyblue/10 to-purple-600/10">
+      <section className="px-6 py-16 bg-gradient-to-br from-sky-500/10 to-purple-600/10">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-4">
             Plan Your {regionName} Trip
@@ -345,13 +345,13 @@ export default async function BudgetTravelRegionPage({
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/mystery"
-              className="bg-skyblue text-navy font-bold py-3 px-8 rounded-full hover:bg-skyblue-light transition transform hover:scale-105"
+              className="bg-sky-500 text-slate-900 font-bold py-3 px-8 rounded-full hover:bg-sky-500-light transition transform hover:scale-105"
             >
               Mystery Vacation
             </Link>
             <Link
               href="/trip-cost"
-              className="border-2 border-skyblue text-skyblue font-bold py-3 px-8 rounded-full hover:bg-skyblue/10 transition transform hover:scale-105"
+              className="border-2 border-sky-400 text-sky-400 font-bold py-3 px-8 rounded-full hover:bg-sky-500/10 transition transform hover:scale-105"
             >
               Trip Cost Calculator
             </Link>

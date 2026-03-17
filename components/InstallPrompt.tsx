@@ -61,7 +61,7 @@ export default function InstallPrompt() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-lg animate-slide-up">
-      <div className="bg-navy-light/95 backdrop-blur-md border border-skyblue/30 rounded-xl p-4 shadow-2xl flex items-center gap-3">
+      <div className="bg-slate-800/95 backdrop-blur-md border border-sky-500/30 rounded-xl p-4 shadow-2xl flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-white text-sm font-medium">
             Add GlobePilot to your home screen for quick access
@@ -69,13 +69,13 @@ export default function InstallPrompt() {
         </div>
         <button
           onClick={handleInstall}
-          className="shrink-0 bg-skyblue hover:bg-skyblue/80 text-navy-dark font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
+          className="shrink-0 bg-sky-500 hover:bg-sky-500/80 text-slate-900-dark font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
         >
           Install
         </button>
         <button
           onClick={dismiss}
-          className="shrink-0 text-skyblue-light/60 hover:text-white transition-colors text-lg leading-none px-1"
+          className="shrink-0 text-sky-300/60 hover:text-white transition-colors text-lg leading-none px-1"
           aria-label="Dismiss"
         >
           &times;

@@ -150,7 +150,7 @@ export default function MysteryFlightsIndexPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
       <Navigation />
 
       {/* JSON-LD */}
@@ -163,19 +163,19 @@ export default function MysteryFlightsIndexPage() {
         {/* Hero */}
         <section className="relative py-16 md:py-24 px-4">
           <div className="max-w-5xl mx-auto text-center">
-            <p className="text-skyblue-light text-sm font-medium uppercase tracking-widest mb-4">
+            <p className="text-sky-300 text-sm font-medium uppercase tracking-widest mb-4">
               {totalAirports}+ Departure Airports
             </p>
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
               Mystery Flights from{' '}
-              <span className="text-skyblue">Every Airport</span>
+              <span className="text-sky-400">Every Airport</span>
             </h1>
             <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto mb-8">
               Find your departure airport and let our AI surprise you with the perfect vacation destination. Set your budget, pick a vibe, and go.
             </p>
             <Link
               href="/mystery"
-              className="inline-block bg-skyblue text-navy font-bold text-lg px-8 py-4 rounded-xl hover:bg-skyblue-light transition transform hover:scale-105 shadow-lg"
+              className="inline-block bg-sky-500 text-slate-900 font-bold text-lg px-8 py-4 rounded-xl hover:bg-sky-500-light transition transform hover:scale-105 shadow-lg"
             >
               Start a Mystery Trip Now
             </Link>
@@ -205,11 +205,11 @@ export default function MysteryFlightsIndexPage() {
                       <Link
                         key={`${regionInfo.key}-${airport.code}`}
                         href={`/mystery-flights/${airport.code}`}
-                        className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 hover:border-skyblue/30 hover:bg-white/[0.07] transition group"
+                        className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-xl px-4 py-3 hover:border-sky-500/30 hover:bg-white/[0.07] transition group"
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-sm">{getFlag(airport.country)}</span>
-                          <span className="text-white font-semibold text-sm group-hover:text-skyblue transition truncate">
+                          <span className="text-white font-semibold text-sm group-hover:text-sky-400 transition truncate">
                             {airport.city}
                           </span>
                         </div>
@@ -237,7 +237,7 @@ export default function MysteryFlightsIndexPage() {
             </p>
             <Link
               href="/mystery"
-              className="inline-block bg-skyblue text-navy font-bold text-lg px-8 py-4 rounded-xl hover:bg-skyblue-light transition transform hover:scale-105 shadow-lg"
+              className="inline-block bg-sky-500 text-slate-900 font-bold text-lg px-8 py-4 rounded-xl hover:bg-sky-500-light transition transform hover:scale-105 shadow-lg"
             >
               Start Your Mystery Trip
             </Link>

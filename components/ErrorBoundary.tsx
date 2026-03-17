@@ -55,7 +55,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
               </svg>
             </div>
 
-            <h2 className="text-xl font-bold text-navy mb-2">
+            <h2 className="text-xl font-bold text-slate-900 mb-2">
               Something went wrong
             </h2>
 
@@ -65,7 +65,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
             <button
               onClick={this.handleRetry}
-              className="bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-8 rounded-lg transition shadow-md hover:shadow-lg"
+              className="bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-8 rounded-lg transition shadow-md hover:shadow-lg"
             >
               Try Again
             </button>

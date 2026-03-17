@@ -1,5 +1,7 @@
 'use client'
 
+import Navigation from '@/components/Navigation'
+import Footer from '@/components/Footer'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -69,20 +71,20 @@ function EditorialPostView({ post }: { post: EditorialPost }) {
     <>
       {/* Header */}
       <div className="max-w-4xl mx-auto mb-8">
-        <div className="bg-gradient-to-br from-navy via-navy-dark to-skyblue-dark rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-sky-600 rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center opacity-5">
             <span className="text-[200px]">&#x2708;&#xFE0F;</span>
           </div>
           <div className="relative z-10">
             {post.category && (
-              <span className="inline-block bg-skyblue/20 text-skyblue-light text-sm font-semibold px-4 py-1 rounded-full mb-4 uppercase tracking-wide">
+              <span className="inline-block bg-sky-500/20 text-sky-300 text-sm font-semibold px-4 py-1 rounded-full mb-4 uppercase tracking-wide">
                 {post.category}
               </span>
             )}
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
               {post.title}
             </h1>
-            <p className="text-lg text-skyblue-light/80 max-w-2xl mx-auto mb-4">
+            <p className="text-lg text-sky-300/80 max-w-2xl mx-auto mb-4">
               {post.excerpt}
             </p>
             <div className="flex items-center justify-center gap-6 text-sm text-white/60">
@@ -97,13 +99,13 @@ function EditorialPostView({ post }: { post: EditorialPost }) {
         <article className="bg-white rounded-2xl shadow-2xl p-8 md:p-12">
           <div
             className="prose prose-lg max-w-none
-              prose-headings:text-navy prose-headings:font-bold
+              prose-headings:text-slate-900 prose-headings:font-bold
               prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4
               prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
               prose-p:text-gray-700 prose-p:leading-relaxed
-              prose-a:text-skyblue prose-a:font-semibold prose-a:no-underline hover:prose-a:underline
+              prose-a:text-sky-400 prose-a:font-semibold prose-a:no-underline hover:prose-a:underline
               prose-li:text-gray-700
-              prose-strong:text-navy
+              prose-strong:text-slate-900
               prose-ul:my-4 prose-li:my-1"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
@@ -113,7 +115,7 @@ function EditorialPostView({ post }: { post: EditorialPost }) {
         <div className="mt-8 text-center">
           <Link
             href="/blog"
-            className="inline-block bg-white hover:bg-gray-50 text-navy font-semibold py-3 px-8 rounded-lg transition shadow-lg"
+            className="inline-block bg-white hover:bg-gray-50 text-slate-900 font-semibold py-3 px-8 rounded-lg transition shadow-lg"
           >
             &larr; Back to All Guides
           </Link>
@@ -139,18 +141,18 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
     <>
       {/* Header */}
       <div className="max-w-4xl mx-auto mb-8">
-        <div className="bg-gradient-to-br from-skyblue via-skyblue-dark to-navy rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
+        <div className="bg-gradient-to-br from-sky-500 via-sky-600 to-slate-900 rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center opacity-10">
             <span className="text-9xl">&#x1F30D;</span>
           </div>
           <div className="relative z-10">
-            <p className="text-skyblue-light text-sm font-semibold mb-2 uppercase tracking-wide">
+            <p className="text-sky-300 text-sm font-semibold mb-2 uppercase tracking-wide">
               Travel Guide
             </p>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
               {post.destination_name}
             </h1>
-            <p className="text-xl text-skyblue-light mb-4">{post.country}</p>
+            <p className="text-xl text-sky-300 mb-4">{post.country}</p>
             <div className="flex items-center justify-center gap-6 text-sm text-white/80">
               <span>{post.view_count} views</span>
               <span>&bull;</span>
@@ -168,7 +170,7 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
           </p>
 
           <section className="mb-8">
-            <h2 className="text-3xl font-bold text-navy mb-4 flex items-center gap-3">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4 flex items-center gap-3">
               <span className="text-4xl">&#x2728;</span>
               Why Visit {post.destination_name}?
             </h2>
@@ -179,8 +181,8 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
             </div>
           </section>
 
-          <section className="mb-8 bg-skyblue/10 rounded-xl p-6">
-            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+          <section className="mb-8 bg-sky-500/10 rounded-xl p-6">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
               <span className="text-3xl">&#x1F4C5;</span>
               Best Time to Visit
             </h2>
@@ -190,7 +192,7 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
               <span className="text-3xl">&#x1F4B0;</span>
               Budget Breakdown
             </h2>
@@ -200,7 +202,7 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
           </section>
 
           <section className="mb-8 bg-yellow-50 rounded-xl p-6">
-            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
               <span className="text-3xl">&#x1F3AF;</span>
               Top Attractions
             </h2>
@@ -210,7 +212,7 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
               <span className="text-3xl">&#x1F37D;&#xFE0F;</span>
               Local Food Guide
             </h2>
@@ -220,7 +222,7 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
           </section>
 
           <section className="mb-8 bg-green-50 rounded-xl p-6">
-            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
               <span className="text-3xl">&#x1F4A1;</span>
               Money Saving Tips
             </h2>
@@ -230,7 +232,7 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-bold text-navy mb-4 flex items-center gap-3">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
               <span className="text-3xl">&#x1F6E1;&#xFE0F;</span>
               Safety Tips
             </h2>
@@ -241,8 +243,8 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
 
           {/* BOOK THIS TRIP */}
           <div className="mt-12 pt-8 border-t border-gray-200">
-            <div className="bg-gradient-to-r from-skyblue/20 to-navy/20 rounded-xl p-8">
-              <h3 className="text-2xl font-bold text-navy mb-3 text-center">
+            <div className="bg-gradient-to-r from-sky-500/20 to-slate-900/20 rounded-xl p-8">
+              <h3 className="text-2xl font-bold text-slate-900 mb-3 text-center">
                 Book Your Trip to {post.destination_name}
               </h3>
               <p className="text-gray-700 mb-6 text-center">
@@ -277,7 +279,7 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
               <div className="mt-6 text-center">
                 <Link
                   href="/mystery"
-                  className="inline-block text-skyblue hover:text-skyblue-dark font-semibold transition"
+                  className="inline-block text-sky-400 hover:text-sky-600 font-semibold transition"
                 >
                   Or let AI plan your perfect trip &rarr;
                 </Link>
@@ -290,7 +292,7 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
         <div className="mt-8 text-center">
           <Link
             href="/blog"
-            className="inline-block bg-white hover:bg-gray-50 text-navy font-semibold py-3 px-8 rounded-lg transition shadow-lg"
+            className="inline-block bg-white hover:bg-gray-50 text-slate-900 font-semibold py-3 px-8 rounded-lg transition shadow-lg"
           >
             &larr; Back to All Guides
           </Link>
@@ -350,9 +352,9 @@ export default function BlogPostPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block w-16 h-16 border-4 border-skyblue border-t-transparent rounded-full animate-spin mb-4"></div>
+          <div className="inline-block w-16 h-16 border-4 border-sky-400 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="text-white text-lg">Loading guide...</p>
         </div>
       </div>
@@ -361,16 +363,16 @@ export default function BlogPostPage() {
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
-        <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
+        <nav className="w-full px-6 py-4 bg-slate-900/95 backdrop-blur-sm border-b border-sky-500/20">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-skyblue rounded-full flex items-center justify-center">
-                <span className="text-navy text-xl font-bold">G</span>
+              <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center">
+                <span className="text-slate-900 text-xl font-bold">G</span>
               </div>
               <span className="text-white text-xl font-bold">GlobePilot</span>
             </Link>
-            <Link href="/blog" className="text-skyblue hover:text-skyblue-light transition">
+            <Link href="/blog" className="text-sky-400 hover:text-sky-300 transition">
               Back to Guides
             </Link>
           </div>
@@ -382,7 +384,7 @@ export default function BlogPostPage() {
             <p className="text-red-600 mb-6">The guide you&apos;re looking for doesn&apos;t exist.</p>
             <Link
               href="/blog"
-              className="inline-block bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-8 rounded-lg transition"
+              className="inline-block bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-8 rounded-lg transition"
             >
               View All Guides
             </Link>
@@ -393,21 +395,21 @@ export default function BlogPostPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
       {/* Navigation */}
-      <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
+      <nav className="w-full px-6 py-4 bg-slate-900/95 backdrop-blur-sm border-b border-sky-500/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-skyblue rounded-full flex items-center justify-center">
-              <span className="text-navy text-xl font-bold">G</span>
+            <div className="w-8 h-8 bg-sky-500 rounded-full flex items-center justify-center">
+              <span className="text-slate-900 text-xl font-bold">G</span>
             </div>
             <span className="text-white text-xl font-bold">GlobePilot</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link href="/blog" className="text-skyblue hover:text-skyblue-light transition">
+            <Link href="/blog" className="text-sky-400 hover:text-sky-300 transition">
               All Guides
             </Link>
-            <Link href="/" className="text-skyblue hover:text-skyblue-light transition">
+            <Link href="/" className="text-sky-400 hover:text-sky-300 transition">
               Home
             </Link>
           </div>
@@ -425,7 +427,7 @@ export default function BlogPostPage() {
         <div className="mt-4 text-center">
           <button
             onClick={handleShare}
-            className="text-skyblue hover:text-skyblue-dark font-semibold transition"
+            className="text-sky-400 hover:text-sky-600 font-semibold transition"
           >
             Share this guide
           </button>

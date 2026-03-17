@@ -54,19 +54,19 @@ function LoginContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         {/* Logo */}
         <Link href="/" className="flex items-center justify-center space-x-2 mb-8">
-          <div className="w-12 h-12 bg-skyblue rounded-full flex items-center justify-center">
-            <span className="text-navy text-2xl font-bold">G</span>
+          <div className="w-12 h-12 bg-sky-500 rounded-full flex items-center justify-center">
+            <span className="text-slate-900 text-2xl font-bold">G</span>
           </div>
           <span className="text-white text-2xl font-bold">GlobePilot</span>
         </Link>
 
         {/* Login Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h1 className="text-3xl font-bold text-navy mb-2">Welcome Back</h1>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome Back</h1>
           <p className="text-gray-600 mb-6">Sign in to your account</p>
 
           {/* Verified Banner */}
@@ -100,7 +100,7 @@ function LoginContent() {
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-navy mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-900 mb-2">
                 Email Address
               </label>
               <input
@@ -109,13 +109,13 @@ function LoginContent() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-navy mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-slate-900 mb-2">
                 Password
               </label>
               <input
@@ -124,11 +124,11 @@ function LoginContent() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
                 required
               />
               <div className="mt-1 text-right">
-                <Link href="/forgot-password" className="text-sm text-skyblue hover:text-skyblue-dark font-medium">
+                <Link href="/forgot-password" className="text-sm text-sky-400 hover:text-sky-600 font-medium">
                   Forgot password?
                 </Link>
               </div>
@@ -137,7 +137,7 @@ function LoginContent() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-6 rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -180,7 +180,7 @@ function LoginContent() {
           {/* Sign Up Link */}
           <p className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{' '}
-            <Link href="/signup" className="text-skyblue hover:text-skyblue-dark font-semibold">
+            <Link href="/signup" className="text-sky-400 hover:text-sky-600 font-semibold">
               Sign up
             </Link>
           </p>
@@ -189,7 +189,7 @@ function LoginContent() {
         {/* Back to Home */}
         <Link
           href="/"
-          className="block text-center mt-6 text-skyblue hover:text-skyblue-light transition"
+          className="block text-center mt-6 text-sky-400 hover:text-sky-300 transition"
         >
           ← Back to Home
         </Link>
@@ -200,7 +200,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light" />}>
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800" />}>
       <LoginContent />
     </Suspense>
   )

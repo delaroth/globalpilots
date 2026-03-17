@@ -75,7 +75,7 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
       {/* Trigger Button */}
       <button
         onClick={fetchGuide}
-        className="w-full text-left bg-gradient-to-r from-navy/90 to-navy-light/90 hover:from-navy hover:to-navy-light text-white rounded-lg px-4 py-3 transition-all duration-200 group border border-skyblue/20 hover:border-skyblue/40"
+        className="w-full text-left bg-gradient-to-r from-slate-900/90 to-slate-800/90 hover:from-slate-900 hover:to-slate-800 text-white rounded-lg px-4 py-3 transition-all duration-200 group border border-sky-500/20 hover:border-sky-400/40"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
             </span>
           </div>
           <svg
-            className={`w-4 h-4 text-skyblue transition-transform duration-200 ${
+            className={`w-4 h-4 text-sky-400 transition-transform duration-200 ${
               expanded ? 'rotate-180' : ''
             }`}
             fill="none"
@@ -98,7 +98,7 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
           </svg>
         </div>
         {!expanded && (
-          <p className="text-skyblue-light/60 text-xs mt-1">
+          <p className="text-sky-300/60 text-xs mt-1">
             AI-powered layover guide with activities, food, and transit tips
           </p>
         )}
@@ -106,13 +106,13 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
 
       {/* Expanded Guide Content */}
       {expanded && (
-        <div className="mt-2 bg-gradient-to-b from-navy/95 to-navy-dark/95 rounded-lg border border-skyblue/20 overflow-hidden">
+        <div className="mt-2 bg-gradient-to-b from-slate-900/95 to-slate-950/95 rounded-lg border border-sky-500/20 overflow-hidden">
           {/* Loading State */}
           {loading && (
             <div className="p-6 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-skyblue mb-3"></div>
-              <p className="text-skyblue-light text-sm">Generating your layover guide for {city}...</p>
-              <p className="text-skyblue-light/40 text-xs mt-1">Powered by AI travel intelligence</p>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-sky-400 mb-3"></div>
+              <p className="text-sky-300 text-sm">Generating your layover guide for {city}...</p>
+              <p className="text-sky-300/40 text-xs mt-1">Powered by AI travel intelligence</p>
             </div>
           )}
 
@@ -123,7 +123,7 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
                 <p className="text-red-300 text-sm">{error}</p>
                 <button
                   onClick={() => { setGuide(null); fetchGuide() }}
-                  className="text-skyblue text-xs mt-2 hover:underline"
+                  className="text-sky-400 text-xs mt-2 hover:underline"
                 >
                   Try again
                 </button>
@@ -136,16 +136,16 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
             <div className="p-4 space-y-4">
               {/* Quick Info Bar */}
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-skyblue/10 rounded-lg p-3 border border-skyblue/20">
-                  <p className="text-skyblue text-[10px] uppercase tracking-wider font-semibold mb-1">
+                <div className="bg-sky-500/10 rounded-lg p-3 border border-sky-500/20">
+                  <p className="text-sky-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
                     Can I leave the airport?
                   </p>
                   <p className="text-white text-xs leading-relaxed">
                     {guide.can_leave_airport}
                   </p>
                 </div>
-                <div className="bg-skyblue/10 rounded-lg p-3 border border-skyblue/20">
-                  <p className="text-skyblue text-[10px] uppercase tracking-wider font-semibold mb-1">
+                <div className="bg-sky-500/10 rounded-lg p-3 border border-sky-500/20">
+                  <p className="text-sky-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
                     Getting to the City
                   </p>
                   <p className="text-white text-xs leading-relaxed">
@@ -186,23 +186,23 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
 
               {/* Top Activities */}
               <div>
-                <h4 className="text-skyblue font-semibold text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <h4 className="text-sky-400 font-semibold text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <span>{'\u2B50'}</span> Top Things to Do
                 </h4>
                 <div className="space-y-2">
                   {guide.top_activities.map((activity, i) => (
                     <div
                       key={i}
-                      className="bg-white/5 rounded-lg p-3 border border-white/10 hover:border-skyblue/30 transition"
+                      className="bg-white/5 rounded-lg p-3 border border-white/10 hover:border-sky-500/30 transition"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <p className="text-white text-sm font-medium">{activity.name}</p>
-                          <p className="text-skyblue-light/60 text-xs mt-0.5">{activity.description}</p>
+                          <p className="text-sky-300/60 text-xs mt-0.5">{activity.description}</p>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className="text-skyblue text-xs font-semibold">{activity.estimated_cost}</p>
-                          <p className="text-skyblue-light/40 text-[10px]">{activity.time_needed}</p>
+                          <p className="text-sky-400 text-xs font-semibold">{activity.estimated_cost}</p>
+                          <p className="text-sky-300/40 text-[10px]">{activity.time_needed}</p>
                         </div>
                       </div>
                     </div>
@@ -212,24 +212,24 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
 
               {/* Food Picks */}
               <div>
-                <h4 className="text-skyblue font-semibold text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <h4 className="text-sky-400 font-semibold text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <span>{'\u{1F37D}\uFE0F'}</span> Where to Eat
                 </h4>
                 <div className="space-y-2">
                   {guide.food_picks.map((pick, i) => (
                     <div
                       key={i}
-                      className="bg-white/5 rounded-lg p-3 border border-white/10 hover:border-skyblue/30 transition"
+                      className="bg-white/5 rounded-lg p-3 border border-white/10 hover:border-sky-500/30 transition"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <p className="text-white text-sm font-medium">{pick.name}</p>
-                          <p className="text-skyblue-light/60 text-xs mt-0.5">
+                          <p className="text-sky-300/60 text-xs mt-0.5">
                             {pick.type} &middot; Must try: <span className="text-amber-300/80">{pick.must_try}</span>
                           </p>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className="text-skyblue text-xs font-semibold">{pick.price_range}</p>
+                          <p className="text-sky-400 text-xs font-semibold">{pick.price_range}</p>
                         </div>
                       </div>
                     </div>
@@ -239,14 +239,14 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
 
               {/* Practical Tips */}
               <div>
-                <h4 className="text-skyblue font-semibold text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <h4 className="text-sky-400 font-semibold text-xs uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <span>{'\u{1F4A1}'}</span> Practical Tips
                 </h4>
                 <div className="bg-white/5 rounded-lg p-3 border border-white/10 space-y-2">
                   {guide.practical_tips.map((tip, i) => (
                     <div key={i} className="flex items-start gap-2">
-                      <span className="text-skyblue text-xs mt-0.5 flex-shrink-0">{'\u2713'}</span>
-                      <p className="text-skyblue-light/80 text-xs leading-relaxed">{tip}</p>
+                      <span className="text-sky-400 text-xs mt-0.5 flex-shrink-0">{'\u2713'}</span>
+                      <p className="text-sky-300/80 text-xs leading-relaxed">{tip}</p>
                     </div>
                   ))}
                 </div>
@@ -255,13 +255,13 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
               {/* Currency & Language */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                  <p className="text-skyblue text-[10px] uppercase tracking-wider font-semibold mb-1">
+                  <p className="text-sky-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
                     {'\u{1F4B0}'} Currency
                   </p>
                   <p className="text-white/80 text-xs">{guide.currency}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                  <p className="text-skyblue text-[10px] uppercase tracking-wider font-semibold mb-1">
+                  <p className="text-sky-400 text-[10px] uppercase tracking-wider font-semibold mb-1">
                     {'\u{1F5E3}\uFE0F'} Language
                   </p>
                   <p className="text-white/80 text-xs">{guide.language_tip}</p>
@@ -270,7 +270,7 @@ export default function CityGuide({ city, hubCode, hours = 12 }: CityGuideProps)
 
               {/* Footer */}
               <div className="text-center pt-2 border-t border-white/10">
-                <p className="text-skyblue-light/30 text-[10px]">
+                <p className="text-sky-300/30 text-[10px]">
                   AI-generated guide for {guide.hours}-hour layover &middot; Verify visa requirements with your embassy
                 </p>
               </div>

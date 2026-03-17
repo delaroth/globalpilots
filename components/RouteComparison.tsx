@@ -9,8 +9,8 @@ import BookingLinks from '@/components/BookingLinks'
 const CityGuide = dynamic(() => import('@/components/CityGuide'), {
   ssr: false,
   loading: () => (
-    <div className="mt-3 bg-navy/50 rounded-lg px-4 py-3 text-center">
-      <p className="text-skyblue-light text-sm">Loading guide...</p>
+    <div className="mt-3 bg-slate-900/95 rounded-lg px-4 py-3 text-center">
+      <p className="text-sky-300 text-sm">Loading guide...</p>
     </div>
   ),
 })
@@ -91,7 +91,7 @@ export default function RouteComparison({
           </div>
         )
       ) : (
-        <div className="bg-gradient-to-r from-skyblue to-skyblue-dark text-white rounded-xl p-6 mb-8 text-center shadow-2xl">
+        <div className="bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl p-6 mb-8 text-center shadow-2xl">
           <div className="text-6xl mb-3">🌍</div>
           <h2 className="text-3xl font-bold mb-2">
             No Direct Flight Available - But We Found Stopover Options!
@@ -108,14 +108,14 @@ export default function RouteComparison({
           <h3 className="text-white text-xl font-bold mb-4">Direct Flight Option</h3>
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             <div className="bg-gray-100 px-6 py-4 border-b">
-              <h3 className="text-xl font-bold text-navy">Direct Flight</h3>
+              <h3 className="text-xl font-bold text-slate-900">Direct Flight</h3>
               <p className="text-sm text-gray-600">{origin} → {destination}</p>
             </div>
             <div className="p-6">
               {/* Route visualization */}
               <div className="flex items-center justify-center mb-6 py-8">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-navy">{origin}</div>
+                  <div className="text-3xl font-bold text-slate-900">{origin}</div>
                 </div>
                 <div className="flex-1 relative mx-4">
                   <div className="border-t-2 border-gray-300"></div>
@@ -124,7 +124,7 @@ export default function RouteComparison({
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-navy">{destination}</div>
+                  <div className="text-3xl font-bold text-slate-900">{destination}</div>
                 </div>
               </div>
 
@@ -188,7 +188,7 @@ export default function RouteComparison({
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-center flex-1">
-                        <div className="text-lg font-bold text-navy">{origin}</div>
+                        <div className="text-lg font-bold text-slate-900">{origin}</div>
                       </div>
                       <div className="relative flex-1">
                         <div className={`border-t-2 ${hasSavings ? 'border-green-400' : 'border-blue-400'}`}></div>
@@ -208,7 +208,7 @@ export default function RouteComparison({
                         </div>
                       </div>
                       <div className="text-center flex-1">
-                        <div className="text-lg font-bold text-navy">{destination}</div>
+                        <div className="text-lg font-bold text-slate-900">{destination}</div>
                       </div>
                     </div>
 
@@ -314,13 +314,13 @@ export default function RouteComparison({
       </div>
 
       {/* Info */}
-      <div className="bg-skyblue/10 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20">
+      <div className="bg-sky-500/10 backdrop-blur-sm rounded-xl p-6 border border-sky-500/20">
         <h3 className="text-white font-semibold mb-2">💡 How Layover Arbitrage Works</h3>
-        <p className="text-skyblue-light text-sm">
+        <p className="text-sky-300 text-sm">
           Sometimes booking two separate flights with a stopover in a major hub city {directPrice !== null ? 'is cheaper than flying direct' : 'can save you money'}.
           Use the layover as a chance to explore a bonus destination for a couple days - essentially getting two trips for {directPrice !== null ? 'less than the price of one' : 'the price of one'}!
         </p>
-        <p className="text-skyblue-light/60 text-xs mt-3">
+        <p className="text-sky-300/60 text-xs mt-3">
           {isLiveSource
             ? 'Prices shown are live but may change at time of booking. Click "Search" to confirm the latest fare.'
             : 'Prices shown are cached estimates and may differ from booking prices. Click "Search" to see current prices on Aviasales.'}

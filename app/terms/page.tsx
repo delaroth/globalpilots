@@ -12,11 +12,11 @@ export default function TermsPage() {
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Terms of Service
           </h1>
-          <p className="text-skyblue-light mb-12">
+          <p className="text-sky-300 mb-12">
             Last updated: March 16, 2026
           </p>
 
-          <div className="space-y-10 text-skyblue-light/90 leading-relaxed">
+          <div className="space-y-10 text-sky-300/90 leading-relaxed">
             {/* Agreement */}
             <div>
               <h2 className="text-2xl font-semibold text-white mb-4">
@@ -60,7 +60,7 @@ export default function TermsPage() {
               <p className="mb-4">
                 Flight prices, cost estimates, and travel data displayed on GlobePilot are sourced from multiple third-party providers. This data is provided on an &ldquo;as-is&rdquo; basis.
               </p>
-              <div className="bg-navy-light/50 border border-skyblue/20 rounded-lg p-4">
+              <div className="bg-slate-800/50 border border-sky-500/20 rounded-lg p-4">
                 <p className="text-white font-semibold mb-2">Important:</p>
                 <ul className="list-disc list-inside space-y-2">
                   <li>Prices marked as <span className="font-semibold text-white">LIVE</span> are real-time results from Google Flights via SerpApi. These are the most current but may still differ from the final booking price.</li>
@@ -121,7 +121,7 @@ export default function TermsPage() {
               </ul>
               <p>
                 You have the right to delete your account at any time by contacting us at{' '}
-                <span className="text-skyblue font-semibold">privacy@globepilots.com</span>.
+                <span className="text-sky-400 font-semibold">privacy@globepilots.com</span>.
                 Upon deletion, all your account data, saved trips, passport data, and activity history will be permanently removed.
               </p>
             </div>
@@ -215,12 +215,12 @@ export default function TermsPage() {
               <p>
                 If you have any questions about these Terms of Service, please contact us at:
               </p>
-              <p className="mt-2 text-skyblue font-semibold">
+              <p className="mt-2 text-sky-400 font-semibold">
                 legal@globepilots.com
               </p>
               <p className="mt-4">
                 For privacy-related inquiries, please see our{' '}
-                <Link href="/privacy" className="text-skyblue hover:underline">
+                <Link href="/privacy" className="text-sky-400 hover:underline">
                   Privacy Policy
                 </Link>
                 .

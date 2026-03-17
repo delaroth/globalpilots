@@ -183,7 +183,7 @@ export default async function MysteryFlightsFromPage({ params }: { params: Promi
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
       <Navigation />
 
       {/* JSON-LD */}
@@ -196,19 +196,19 @@ export default async function MysteryFlightsFromPage({ params }: { params: Promi
         {/* Hero */}
         <section className="relative py-16 md:py-24 px-4">
           <div className="max-w-5xl mx-auto text-center">
-            <p className="text-skyblue-light text-sm font-medium uppercase tracking-widest mb-4">
+            <p className="text-sky-300 text-sm font-medium uppercase tracking-widest mb-4">
               Surprise Vacation Deals
             </p>
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
               Mystery Flights from{' '}
-              <span className="text-skyblue">{airport.city}</span>
+              <span className="text-sky-400">{airport.city}</span>
             </h1>
             <p className="text-lg md:text-xl text-white/70 max-w-2xl mx-auto mb-8">
               Set your budget, pick a vibe, and let our AI reveal the perfect surprise destination from {airport.city} ({code}). Completely free to use.
             </p>
             <Link
               href={`/mystery?origin=${code}`}
-              className="inline-block bg-skyblue text-navy font-bold text-lg px-8 py-4 rounded-xl hover:bg-skyblue-light transition transform hover:scale-105 shadow-lg"
+              className="inline-block bg-sky-500 text-slate-900 font-bold text-lg px-8 py-4 rounded-xl hover:bg-sky-500-light transition transform hover:scale-105 shadow-lg"
             >
               Start Your Mystery Trip
             </Link>
@@ -229,22 +229,22 @@ export default async function MysteryFlightsFromPage({ params }: { params: Promi
               {cards.map(card => (
                 <div
                   key={card.code}
-                  className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-skyblue/30 transition group"
+                  className="bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-sky-500/30 transition group"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h3 className="text-lg font-bold text-white group-hover:text-skyblue transition">
+                      <h3 className="text-lg font-bold text-white group-hover:text-sky-400 transition">
                         {getFlag(card.country)} {card.city}
                       </h3>
                       <p className="text-white/50 text-sm">{card.country}</p>
                     </div>
-                    <span className="bg-skyblue/10 text-skyblue text-xs font-semibold px-2.5 py-1 rounded-full">
+                    <span className="bg-sky-500/10 text-sky-400 text-xs font-semibold px-2.5 py-1 rounded-full">
                       {card.region}
                     </span>
                   </div>
 
                   <div className="mb-4">
-                    <p className="text-skyblue-light text-2xl font-bold">
+                    <p className="text-sky-300 text-2xl font-bold">
                       from ${card.dailyTotal}<span className="text-sm font-normal text-white/50">/day</span>
                     </p>
                     <p className="text-white/40 text-xs mt-1">
@@ -260,7 +260,7 @@ export default async function MysteryFlightsFromPage({ params }: { params: Promi
 
                   <Link
                     href={`/mystery?origin=${code}`}
-                    className="block w-full text-center bg-skyblue text-navy font-bold py-2.5 rounded-xl hover:bg-skyblue-light transition text-sm"
+                    className="block w-full text-center bg-sky-500 text-slate-900 font-bold py-2.5 rounded-xl hover:bg-sky-500-light transition text-sm"
                   >
                     Reveal This Mystery
                   </Link>
@@ -295,7 +295,7 @@ export default async function MysteryFlightsFromPage({ params }: { params: Promi
                 },
               ].map(item => (
                 <div key={item.step} className="text-center">
-                  <div className="w-12 h-12 bg-skyblue text-navy font-bold text-xl rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-12 h-12 bg-sky-500 text-slate-900 font-bold text-xl rounded-full flex items-center justify-center mx-auto mb-4">
                     {item.step}
                   </div>
                   <h3 className="text-white font-semibold text-lg mb-2">{item.title}</h3>
@@ -317,7 +317,7 @@ export default async function MysteryFlightsFromPage({ params }: { params: Promi
             </p>
             <Link
               href={`/mystery?origin=${code}`}
-              className="inline-block bg-skyblue text-navy font-bold text-lg px-8 py-4 rounded-xl hover:bg-skyblue-light transition transform hover:scale-105 shadow-lg"
+              className="inline-block bg-sky-500 text-slate-900 font-bold text-lg px-8 py-4 rounded-xl hover:bg-sky-500-light transition transform hover:scale-105 shadow-lg"
             >
               Surprise Me from {airport.city}
             </Link>
@@ -358,14 +358,14 @@ export default async function MysteryFlightsFromPage({ params }: { params: Promi
                   <Link
                     key={a.code}
                     href={`/mystery-flights/${a.code}`}
-                    className="text-skyblue-light hover:text-skyblue text-sm px-3 py-1.5 bg-white/[0.03] rounded-lg border border-white/5 hover:border-skyblue/20 transition"
+                    className="text-sky-300 hover:text-sky-400 text-sm px-3 py-1.5 bg-white/[0.03] rounded-lg border border-white/5 hover:border-sky-500/20 transition"
                   >
                     {a.city} ({a.code})
                   </Link>
                 ))}
               <Link
                 href="/mystery-flights"
-                className="text-skyblue font-semibold text-sm px-3 py-1.5 bg-skyblue/10 rounded-lg border border-skyblue/20 hover:bg-skyblue/20 transition"
+                className="text-sky-400 font-semibold text-sm px-3 py-1.5 bg-sky-500/10 rounded-lg border border-sky-500/20 hover:bg-sky-500/20 transition"
               >
                 View All Airports
               </Link>

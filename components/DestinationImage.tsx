@@ -54,7 +54,7 @@ export default function DestinationImage({
 
   // Fallback: gradient with city name in large white text
   return (
-    <div className={`relative ${height} bg-gradient-to-br from-skyblue to-skyblue-dark ${className}`}>
+    <div className={`relative ${height} bg-gradient-to-br from-sky-500 to-sky-600 ${className}`}>
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="text-white/80 text-2xl font-bold tracking-wide">
           {city || code}

@@ -27,7 +27,7 @@ const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
   ssr: false,
   loading: () => (
     <div className="text-center py-12">
-      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-skyblue"></div>
+      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-sky-400"></div>
       <p className="text-white mt-4">Loading calendar...</p>
     </div>
   ),
@@ -197,7 +197,7 @@ function FlexibleDateInput({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-navy">{label}</label>
+      <label className="block text-sm font-medium text-slate-900">{label}</label>
 
       {/* Type selector - compact segmented control */}
       <div className="flex bg-gray-100 rounded-lg p-0.5">
@@ -216,7 +216,7 @@ function FlexibleDateInput({
             }}
             className={`flex-1 text-xs font-medium py-1.5 px-2 rounded-md transition-all ${
               value.type === opt.value
-                ? 'bg-white text-navy shadow-sm'
+                ? 'bg-white text-slate-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -232,7 +232,7 @@ function FlexibleDateInput({
           value={value.exactDate || ''}
           onChange={e => onChange({ ...value, exactDate: e.target.value })}
           min={minDate || new Date().toISOString().split('T')[0]}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
           required
         />
       )}
@@ -241,7 +241,7 @@ function FlexibleDateInput({
         <select
           value={value.month || ''}
           onChange={e => onChange({ ...value, month: e.target.value })}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900"
           required
         >
           {monthOptions.map(opt => (
@@ -251,7 +251,7 @@ function FlexibleDateInput({
       )}
 
       {value.type === 'anytime' && (
-        <div className="px-4 py-3 bg-skyblue/5 border-2 border-skyblue/20 rounded-lg text-sm text-gray-600">
+        <div className="px-4 py-3 bg-sky-500/5 border-2 border-sky-500/20 rounded-lg text-sm text-gray-600">
           Best price in the next 6 months
         </div>
       )}
@@ -791,14 +791,14 @@ function SearchPageContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-navy-dark via-navy to-navy-light">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
       <Navigation />
 
       <div className="container mx-auto px-4 py-8 md:py-12 flex-1">
         {/* Page header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">Smart Flight Search</h1>
-          <p className="text-xl text-skyblue-light">Search by exact dates, browse a month, or find the cheapest time to fly</p>
+          <p className="text-xl text-sky-300">Search by exact dates, browse a month, or find the cheapest time to fly</p>
         </div>
 
         {/* FORM CARD */}
@@ -819,7 +819,7 @@ function SearchPageContent() {
                   onClick={() => { setTripType(opt.value); setError('') }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                     tripType === opt.value
-                      ? 'bg-skyblue text-navy shadow-sm'
+                      ? 'bg-sky-500 text-slate-900 shadow-sm'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
@@ -875,7 +875,7 @@ function SearchPageContent() {
                 <button
                   type="button"
                   onClick={() => setShowPriceCalendar(!showPriceCalendar)}
-                  className="flex items-center gap-2 text-sm text-skyblue hover:text-skyblue-dark font-medium transition"
+                  className="flex items-center gap-2 text-sm text-sky-400 hover:text-sky-600 font-medium transition"
                 >
                   <svg
                     className={`w-3.5 h-3.5 transition-transform ${showPriceCalendar ? 'rotate-90' : ''}`}
@@ -918,21 +918,21 @@ function SearchPageContent() {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-navy mb-1">Depart</label>
+                    <label className="block text-sm font-medium text-slate-900 mb-1">Depart</label>
                     <input
                       type="date"
                       value={departureDate.exactDate || ''}
                       min={today}
                       onChange={e => setDepartureDate({ type: 'exact', exactDate: e.target.value })}
-                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-navy mb-1">Max Travel Days</label>
+                    <label className="block text-sm font-medium text-slate-900 mb-1">Max Travel Days</label>
                     <select
                       value={stopoverMaxDays}
                       onChange={e => setStopoverMaxDays(Number(e.target.value))}
-                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-sm"
                     >
                       {[1, 2, 3, 5, 7, 10, 14, 21, 30, 45, 60].map(d => (
                         <option key={d} value={d}>{d} days</option>
@@ -940,7 +940,7 @@ function SearchPageContent() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-navy mb-1">Passport</label>
+                    <label className="block text-sm font-medium text-slate-900 mb-1">Passport</label>
                     <PassportSelector
                       selected={stopoverPassports}
                       onChange={setStopoverPassports}
@@ -949,11 +949,11 @@ function SearchPageContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-navy mb-1">Budget</label>
+                    <label className="block text-sm font-medium text-slate-900 mb-1">Budget</label>
                     <select
                       value={stopoverBudget}
                       onChange={e => setStopoverBudget(e.target.value as 'budget' | 'mid' | 'comfort')}
-                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-sm"
                     >
                       <option value="budget">Budget</option>
                       <option value="mid">Mid-Range</option>
@@ -972,7 +972,7 @@ function SearchPageContent() {
               <div className="space-y-3">
                 {/* Budget Mode Toggle */}
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-navy">{budgetMode ? 'Budget Optimizer' : 'Flight legs'}</p>
+                  <p className="text-sm font-medium text-slate-900">{budgetMode ? 'Budget Optimizer' : 'Flight legs'}</p>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <span className="text-xs text-gray-500">Budget Mode</span>
                     <div className="relative">
@@ -982,19 +982,19 @@ function SearchPageContent() {
                         onChange={(e) => setBudgetMode(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-skyblue"></div>
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-500"></div>
                     </div>
                   </label>
                 </div>
 
                 {budgetMode ? (
                   /* Budget Mode Form */
-                  <div className="space-y-3 bg-skyblue/5 border border-skyblue/20 rounded-lg p-4">
+                  <div className="space-y-3 bg-sky-500/5 border border-sky-500/20 rounded-lg p-4">
                     <p className="text-xs text-gray-500">Enter your desired cities and let us find the cheapest route order.</p>
 
                     {/* Destinations */}
                     <div className="space-y-2">
-                      <label className="block text-sm font-medium text-navy">Destinations (2-4 cities)</label>
+                      <label className="block text-sm font-medium text-slate-900">Destinations (2-4 cities)</label>
                       {budgetDestinations.map((dest, idx) => (
                         <div key={idx} className="flex items-center gap-2">
                           <AirportAutocomplete
@@ -1023,7 +1023,7 @@ function SearchPageContent() {
                         <button
                           type="button"
                           onClick={() => setBudgetDestinations([...budgetDestinations, ''])}
-                          className="text-sm text-skyblue hover:text-skyblue-dark font-medium transition"
+                          className="text-sm text-sky-400 hover:text-sky-600 font-medium transition"
                         >
                           + Add city
                         </button>
@@ -1033,17 +1033,17 @@ function SearchPageContent() {
                     {/* Trip starts + total days + budget */}
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-sm font-medium text-navy mb-1">Trip starts</label>
+                        <label className="block text-sm font-medium text-slate-900 mb-1">Trip starts</label>
                         <input
                           type="date"
                           value={budgetStartDate}
                           onChange={(e) => setBudgetStartDate(e.target.value)}
                           min={today}
-                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-navy mb-1">Total days</label>
+                        <label className="block text-sm font-medium text-slate-900 mb-1">Total days</label>
                         <input
                           type="number"
                           value={budgetTripDays}
@@ -1051,18 +1051,18 @@ function SearchPageContent() {
                           placeholder="14"
                           min={2}
                           max={90}
-                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-navy mb-1">Budget ($)</label>
+                        <label className="block text-sm font-medium text-slate-900 mb-1">Budget ($)</label>
                         <input
                           type="number"
                           value={budgetTotal}
                           onChange={(e) => setBudgetTotal(e.target.value)}
                           placeholder="1500"
                           min={1}
-                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                          className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-sm"
                         />
                       </div>
                     </div>
@@ -1099,7 +1099,7 @@ function SearchPageContent() {
                           />
                         </div>
                         <div className="w-36 shrink-0">
-                          {idx === 0 && <label className="block text-sm font-medium text-navy mb-1">Date</label>}
+                          {idx === 0 && <label className="block text-sm font-medium text-slate-900 mb-1">Date</label>}
                           <input
                             type="date"
                             value={leg.date}
@@ -1109,7 +1109,7 @@ function SearchPageContent() {
                               setLegs(updated)
                             }}
                             min={idx > 0 && legs[idx - 1].date ? legs[idx - 1].date : today}
-                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
+                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-sm"
                             required
                           />
                         </div>
@@ -1132,7 +1132,7 @@ function SearchPageContent() {
                           const prevTo = legs[legs.length - 1]?.to || ''
                           setLegs([...legs, { from: prevTo, to: '', date: '' }])
                         }}
-                        className="text-sm text-skyblue hover:text-skyblue-dark font-medium transition"
+                        className="text-sm text-sky-400 hover:text-sky-600 font-medium transition"
                       >
                         + Add flight
                       </button>
@@ -1147,7 +1147,7 @@ function SearchPageContent() {
               className={`w-full font-semibold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg ${
                 tripType === 'stopovers'
                   ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white'
-                  : 'bg-skyblue hover:bg-skyblue-dark text-navy'
+                  : 'bg-sky-500 hover:bg-sky-600 text-slate-900'
               }`}>
               {stopoverLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -1173,7 +1173,7 @@ function SearchPageContent() {
         {/* Loading spinner */}
         {loading && (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-skyblue"></div>
+            <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-sky-400"></div>
             <p className="text-white mt-4 text-lg">
               {destination === 'ANYWHERE' && 'Finding cheapest destinations...'}
               {destination !== 'ANYWHERE' && tripType === 'multi-city' && `Searching ${legs.length} flight legs...`}
@@ -1192,7 +1192,7 @@ function SearchPageContent() {
               <div className="max-w-md mx-auto mb-8">
                 <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
                   <div className="text-5xl mb-4">&#128269;</div>
-                  <h3 className="text-xl font-bold text-navy mb-3">No prices found</h3>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">No prices found</h3>
                   <p className="text-gray-600 mb-6">
                     Click below to check current prices on Aviasales.
                   </p>
@@ -1203,7 +1203,7 @@ function SearchPageContent() {
                       const link = buildFlightLink(origin, destination, date, ret)
                       window.open(link, '_blank')
                     }}
-                    className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
+                    className="w-full bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                   >
                     Search on Aviasales
                   </button>
@@ -1224,24 +1224,24 @@ function SearchPageContent() {
             {exactDateResult && (
               <div className="max-w-md mx-auto">
                 <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-                  <div className="px-6 py-5 text-center bg-gradient-to-r from-skyblue to-skyblue-dark relative">
+                  <div className="px-6 py-5 text-center bg-gradient-to-r from-sky-500 to-sky-600 relative">
                     {exactDateResult.isLive && (
                       <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg animate-pulse">
                         <span className="w-2 h-2 bg-white rounded-full"></span>
                         LIVE
                       </span>
                     )}
-                    <p className="text-navy font-semibold text-sm uppercase tracking-wide">
+                    <p className="text-slate-900 font-semibold text-sm uppercase tracking-wide">
                       {exactDateResult.isLive ? 'Live Price' : 'Estimated Price'}
                     </p>
-                    <p className="text-navy text-6xl font-bold mt-1">
+                    <p className="text-slate-900 text-6xl font-bold mt-1">
                       {exactDateResult.isLive ? '' : '~'}${exactDateResult.price}
                     </p>
-                    <p className="text-navy/80 text-sm mt-2">
+                    <p className="text-slate-900/80 text-sm mt-2">
                       {origin} {isRoundTrip ? '<>' : '>'} {destination} · {exactDateResult.departDate || effectiveDepartDate}
                       {isRoundTrip && (exactDateResult.returnDate || effectiveReturnDate) && ` — ${exactDateResult.returnDate || effectiveReturnDate}`}
                     </p>
-                    <p className="text-navy/60 text-xs mt-1">
+                    <p className="text-slate-900/60 text-xs mt-1">
                       {exactDateResult.isLive
                         ? exactDateResult.source === 'google-flights'
                           ? 'Live from Google Flights — prices update in real time'
@@ -1249,14 +1249,14 @@ function SearchPageContent() {
                         : 'Cached estimate — actual price may vary'}
                     </p>
                     {exactDateResult.dayData?.airlines && exactDateResult.dayData.airlines.length > 0 && (
-                      <p className="text-navy/70 text-xs mt-1">
+                      <p className="text-slate-900/70 text-xs mt-1">
                         {exactDateResult.dayData.airlines.join(', ')}
                         {exactDateResult.dayData.stops !== undefined && ` · ${exactDateResult.dayData.stops === 0 ? 'Direct' : `${exactDateResult.dayData.stops} stop${exactDateResult.dayData.stops > 1 ? 's' : ''}`}`}
                         {exactDateResult.dayData.duration && ` · ${exactDateResult.dayData.duration}`}
                       </p>
                     )}
                     {exactDateResult.dayData?.priceLevel && (
-                      <p className="text-navy/60 text-xs mt-1">
+                      <p className="text-slate-900/60 text-xs mt-1">
                         Price level: <span className="font-semibold">{exactDateResult.dayData.priceLevel}</span>
                         {exactDateResult.dayData.typicalRange && (
                           <> · Typical: ${exactDateResult.dayData.typicalRange[0]}–${exactDateResult.dayData.typicalRange[1]}</>
@@ -1276,7 +1276,7 @@ function SearchPageContent() {
                         })
                         if (action.type === 'affiliate-redirect') window.open(action.url, '_blank')
                       }}
-                      className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
+                      className="w-full bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                     >
                       {exactDateResult.source === 'google-flights'
                         ? 'Book on Google Flights'
@@ -1349,26 +1349,26 @@ function SearchPageContent() {
             {flexResult && (
               <div className="max-w-md mx-auto">
                 <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-                  <div className="px-6 py-5 text-center bg-gradient-to-r from-skyblue to-skyblue-dark relative">
+                  <div className="px-6 py-5 text-center bg-gradient-to-r from-sky-500 to-sky-600 relative">
                     {flexResult.isLive && (
                       <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-lg animate-pulse">
                         <span className="w-2 h-2 bg-white rounded-full"></span>
                         LIVE
                       </span>
                     )}
-                    <p className="text-navy font-semibold text-sm uppercase tracking-wide">
+                    <p className="text-slate-900 font-semibold text-sm uppercase tracking-wide">
                       {flexResult.searchType === 'mixed' ? 'Estimated Total' : 'Best Price Found'}
                     </p>
-                    <p className="text-navy text-6xl font-bold mt-1">
+                    <p className="text-slate-900 text-6xl font-bold mt-1">
                       {flexResult.isLive ? '' : '~'}${flexResult.searchType === 'mixed' ? flexResult.totalEstimate : flexResult.price}
                     </p>
-                    <p className="text-navy/80 text-sm mt-2">
+                    <p className="text-slate-900/80 text-sm mt-2">
                       {origin} {isRoundTrip ? '<>' : '>'} {destination}
                     </p>
 
                     {/* Show best dates if available */}
                     {flexResult.bestDepartDate && (
-                      <p className="text-navy/70 text-sm mt-1 font-medium">
+                      <p className="text-slate-900/70 text-sm mt-1 font-medium">
                         Best departure: {new Date(flexResult.bestDepartDate + 'T00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                         {flexResult.bestReturnDate && (
                           <> — return {new Date(flexResult.bestReturnDate + 'T00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</>
@@ -1380,13 +1380,13 @@ function SearchPageContent() {
                     {flexResult.searchType === 'mixed' && (
                       <div className="mt-3 space-y-1">
                         {flexResult.departure?.price && (
-                          <p className="text-navy/60 text-xs">
+                          <p className="text-slate-900/60 text-xs">
                             Outbound: ${flexResult.departure.price}
                             {flexResult.departure.airlines?.length > 0 && ` · ${flexResult.departure.airlines.join(', ')}`}
                           </p>
                         )}
                         {flexResult.return?.price && (
-                          <p className="text-navy/60 text-xs">
+                          <p className="text-slate-900/60 text-xs">
                             Return: ${flexResult.return.price}
                             {flexResult.return.airline && ` · ${flexResult.return.airline}`}
                           </p>
@@ -1396,13 +1396,13 @@ function SearchPageContent() {
 
                     {/* Single search: show airline/stops info */}
                     {flexResult.searchType !== 'mixed' && flexResult.airline && (
-                      <p className="text-navy/70 text-xs mt-1">
+                      <p className="text-slate-900/70 text-xs mt-1">
                         {flexResult.airline}
                         {flexResult.stops !== null && ` · ${flexResult.stops === 0 ? 'Direct' : `${flexResult.stops} stop${flexResult.stops > 1 ? 's' : ''}`}`}
                       </p>
                     )}
 
-                    <p className="text-navy/60 text-xs mt-2">
+                    <p className="text-slate-900/60 text-xs mt-2">
                       {flexResult.isLive
                         ? 'Live from Google — prices change frequently'
                         : 'Cached estimate — verify on booking site'}
@@ -1424,7 +1424,7 @@ function SearchPageContent() {
                                 </span>
                               )}
                             </div>
-                            <div className={`font-bold ${i === 0 ? 'text-green-600' : 'text-navy'}`}>${f.price}</div>
+                            <div className={`font-bold ${i === 0 ? 'text-green-600' : 'text-slate-900'}`}>${f.price}</div>
                           </div>
                         ))}
                       </div>
@@ -1437,7 +1437,7 @@ function SearchPageContent() {
                         const link = buildFlightLink(origin, destination, depDate, retDate)
                         window.open(link, '_blank')
                       }}
-                      className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
+                      className="w-full bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg"
                     >
                       {flexResult.bestDepartDate
                         ? `Book for ${new Date(flexResult.bestDepartDate + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
@@ -1479,7 +1479,7 @@ function SearchPageContent() {
               <div className="max-w-2xl mx-auto">
                 <div className="text-center mb-6">
                   <h2 className="text-2xl font-bold text-white mb-2">Multi-city Itinerary</h2>
-                  <p className="text-skyblue-light">{multiCityResults.legs.length} flights</p>
+                  <p className="text-sky-300">{multiCityResults.legs.length} flights</p>
                 </div>
                 <div className="space-y-4">
                   {multiCityResults.legs.map((leg: any, idx: number) => (
@@ -1487,8 +1487,8 @@ function SearchPageContent() {
                       <div className="px-5 py-4 flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-white bg-navy rounded-full w-5 h-5 flex items-center justify-center">{idx + 1}</span>
-                            <span className="font-bold text-navy text-lg">{leg.from} &rarr; {leg.to}</span>
+                            <span className="text-xs font-bold text-white bg-slate-900 rounded-full w-5 h-5 flex items-center justify-center">{idx + 1}</span>
+                            <span className="font-bold text-slate-900 text-lg">{leg.from} &rarr; {leg.to}</span>
                             {leg.isLive && (
                               <span className="inline-flex items-center gap-1 bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
                                 <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
@@ -1509,7 +1509,7 @@ function SearchPageContent() {
                         </div>
                         <div className="text-right shrink-0 ml-4">
                           {leg.price != null ? (
-                            <p className="text-2xl font-bold text-navy">${leg.price}</p>
+                            <p className="text-2xl font-bold text-slate-900">${leg.price}</p>
                           ) : (
                             <p className="text-sm text-gray-400">No price</p>
                           )}
@@ -1521,7 +1521,7 @@ function SearchPageContent() {
                             href={leg.bookingUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-skyblue hover:text-skyblue-dark font-medium transition"
+                            className="text-xs text-sky-400 hover:text-sky-600 font-medium transition"
                           >
                             Book on Google Flights &rarr;
                           </a>
@@ -1532,10 +1532,10 @@ function SearchPageContent() {
                 </div>
 
                 {/* Total price */}
-                <div className="mt-6 bg-gradient-to-r from-skyblue to-skyblue-dark rounded-xl p-5 text-center shadow-lg">
-                  <p className="text-navy/70 text-sm font-medium uppercase tracking-wide">Estimated Total</p>
-                  <p className="text-navy text-5xl font-bold mt-1">${multiCityResults.totalPrice}</p>
-                  <p className="text-navy/60 text-xs mt-2">Sum of individual one-way fares — actual multi-city fare may differ</p>
+                <div className="mt-6 bg-gradient-to-r from-sky-500 to-sky-600 rounded-xl p-5 text-center shadow-lg">
+                  <p className="text-slate-900/70 text-sm font-medium uppercase tracking-wide">Estimated Total</p>
+                  <p className="text-slate-900 text-5xl font-bold mt-1">${multiCityResults.totalPrice}</p>
+                  <p className="text-slate-900/60 text-xs mt-2">Sum of individual one-way fares — actual multi-city fare may differ</p>
                 </div>
               </div>
             )}
@@ -1545,20 +1545,20 @@ function SearchPageContent() {
               <div className="max-w-2xl mx-auto">
                 <div className="text-center mb-6">
                   <h2 className="text-2xl font-bold text-white mb-2">Cheapest Route Found</h2>
-                  <p className="text-skyblue-light">
+                  <p className="text-sky-300">
                     Checked {budgetOptimizeResult.permutationsChecked} route permutations
                   </p>
                 </div>
 
                 {/* Route visualization */}
                 <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-                  <div className={`px-6 py-5 text-center ${budgetOptimizeResult.withinBudget ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-skyblue to-skyblue-dark'}`}>
-                    <p className="text-navy/70 text-sm font-medium uppercase tracking-wide">
+                  <div className={`px-6 py-5 text-center ${budgetOptimizeResult.withinBudget ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-sky-500 to-sky-600'}`}>
+                    <p className="text-slate-900/70 text-sm font-medium uppercase tracking-wide">
                       {budgetOptimizeResult.withinBudget ? 'Within Budget!' : 'Estimated Total'}
                     </p>
-                    <p className="text-navy text-5xl font-bold mt-1">${budgetOptimizeResult.totalCost}</p>
+                    <p className="text-slate-900 text-5xl font-bold mt-1">${budgetOptimizeResult.totalCost}</p>
                     {budgetOptimizeResult.savings > 0 && (
-                      <p className="text-navy/80 text-sm mt-2 font-medium">
+                      <p className="text-slate-900/80 text-sm mt-2 font-medium">
                         Saves ${budgetOptimizeResult.savings} vs worst route order
                       </p>
                     )}
@@ -1569,9 +1569,9 @@ function SearchPageContent() {
                     <div className="flex items-center justify-center flex-wrap gap-1 text-sm">
                       {budgetOptimizeResult.legs.map((leg: { from: string; to: string; price: number | null }, idx: number) => (
                         <span key={idx} className="flex items-center gap-1">
-                          {idx === 0 && <span className="font-bold text-navy">{leg.from}</span>}
+                          {idx === 0 && <span className="font-bold text-slate-900">{leg.from}</span>}
                           <span className="text-gray-400 mx-1">&rarr;</span>
-                          <span className="font-bold text-navy">{leg.to}</span>
+                          <span className="font-bold text-slate-900">{leg.to}</span>
                           {leg.price != null && (
                             <span className="text-xs text-gray-400">(${leg.price})</span>
                           )}
@@ -1586,7 +1586,7 @@ function SearchPageContent() {
                         <div className="space-y-1">
                           {budgetOptimizeResult.bestRoute.map((city: string, idx: number) => (
                             <div key={idx} className="flex items-center justify-between text-sm">
-                              <span className="text-navy font-medium">{city}</span>
+                              <span className="text-slate-900 font-medium">{city}</span>
                               <span className="text-gray-500">{budgetOptimizeResult.cityDays[idx]} days</span>
                             </div>
                           ))}
@@ -1599,10 +1599,10 @@ function SearchPageContent() {
                       {budgetOptimizeResult.legs.map((leg: { from: string; to: string; price: number | null }, idx: number) => (
                         <div key={idx} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-white bg-navy rounded-full w-5 h-5 flex items-center justify-center">{idx + 1}</span>
-                            <span className="text-sm text-navy font-medium">{leg.from} &rarr; {leg.to}</span>
+                            <span className="text-xs font-bold text-white bg-slate-900 rounded-full w-5 h-5 flex items-center justify-center">{idx + 1}</span>
+                            <span className="text-sm text-slate-900 font-medium">{leg.from} &rarr; {leg.to}</span>
                           </div>
-                          <span className="font-bold text-navy">{leg.price != null ? `$${leg.price}` : 'N/A'}</span>
+                          <span className="font-bold text-slate-900">{leg.price != null ? `$${leg.price}` : 'N/A'}</span>
                         </div>
                       ))}
                     </div>
@@ -1808,10 +1808,10 @@ function SearchPageContent() {
                     { emoji: '\uD83D\uDEC2', title: 'Check Visas', desc: 'Your passport country is checked against each stopover destination. Visa-free and visa-on-arrival options are prioritized.' },
                     { emoji: '\uD83D\uDCB0', title: 'Calculate Value', desc: 'We compare the cost of flights + a multi-day stopover against a direct flight to find genuine "free vacation" deals.' },
                   ].map((step, i) => (
-                    <div key={i} className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
+                    <div key={i} className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-sky-500/20 text-center">
                       <p className="text-3xl mb-3">{step.emoji}</p>
                       <h3 className="text-white font-semibold mb-2">{step.title}</h3>
-                      <p className="text-sm text-skyblue-light/70">{step.desc}</p>
+                      <p className="text-sm text-sky-300/70">{step.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -1825,9 +1825,9 @@ function SearchPageContent() {
                   <h2 className="text-2xl font-bold text-white mb-2">
                     Top {discoverResults.length} Cheapest Destinations
                   </h2>
-                  <p className="text-skyblue-light">From {origin}</p>
+                  <p className="text-sky-300">From {origin}</p>
                 </div>
-                <p className="text-skyblue-light/60 text-xs text-center mb-6">
+                <p className="text-sky-300/60 text-xs text-center mb-6">
                   Prices are cached estimates — click to check current prices on Aviasales
                 </p>
                 <div className="space-y-4">
@@ -1851,7 +1851,7 @@ function SearchPageContent() {
                           </div>
                           <div className="flex-1 px-5 py-4">
                             <div className="flex items-baseline gap-2">
-                              <h3 className="text-xl font-bold text-navy">{r.city}</h3>
+                              <h3 className="text-xl font-bold text-slate-900">{r.city}</h3>
                               <span className="text-gray-400 text-sm">{r.destination}</span>
                             </div>
                             <p className="text-gray-500 text-sm mt-1">
@@ -1860,23 +1860,23 @@ function SearchPageContent() {
                           </div>
                           <div className="text-right px-5 py-4 shrink-0">
                             <p className="text-xs text-gray-400">from ~</p>
-                            <p className={`text-3xl font-bold ${i === 0 ? 'text-green-600' : 'text-navy'}`}>
+                            <p className={`text-3xl font-bold ${i === 0 ? 'text-green-600' : 'text-slate-900'}`}>
                               ${r.price}
                             </p>
-                            <p className="text-skyblue text-xs font-medium mt-1">Check on Aviasales &rarr;</p>
+                            <p className="text-sky-400 text-xs font-medium mt-1">Check on Aviasales &rarr;</p>
                           </div>
                         </div>
                       </button>
                       <div className="flex items-center gap-4 px-5 pb-2 pt-0">
                         <Link
                           href={`/trip-cost?destination=${encodeURIComponent(r.destination)}`}
-                          className="text-xs text-gray-400 hover:text-skyblue transition"
+                          className="text-xs text-gray-400 hover:text-sky-400 transition"
                         >
                           Plan a trip
                         </Link>
                         <Link
                           href={`/explore?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(r.destination)}`}
-                          className="text-xs text-gray-400 hover:text-skyblue transition"
+                          className="text-xs text-gray-400 hover:text-sky-400 transition"
                         >
                           Layover routes
                         </Link>
@@ -1901,7 +1901,7 @@ function SearchPageContent() {
               <div className="max-w-6xl mx-auto mt-8">
                 <div className="text-center mb-6">
                   <h2 className="text-2xl font-bold text-white mb-2">Popular This Weekend</h2>
-                  <p className="text-skyblue-light">Suggested routes from {origin} — click to check prices on Aviasales</p>
+                  <p className="text-sky-300">Suggested routes from {origin} — click to check prices on Aviasales</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {getPopularSuggestions(origin).map((sug) => (
@@ -1912,15 +1912,15 @@ function SearchPageContent() {
                         const link = buildFlightLink(origin, sug.dest, nextWeekend)
                         window.open(link, '_blank')
                       }}
-                      className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-skyblue/20 hover:border-skyblue/60 transition text-left"
+                      className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-sky-500/20 hover:border-sky-400/60 transition text-left"
                     >
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="text-white font-semibold text-lg">{sug.city}</p>
-                          <p className="text-skyblue-light text-sm">{origin} &rarr; {sug.dest}</p>
+                          <p className="text-sky-300 text-sm">{origin} &rarr; {sug.dest}</p>
                         </div>
                       </div>
-                      <p className="text-skyblue text-sm mt-3 font-medium">Check prices on Aviasales &rarr;</p>
+                      <p className="text-sky-400 text-sm mt-3 font-medium">Check prices on Aviasales &rarr;</p>
                     </button>
                   ))}
                 </div>
@@ -1931,20 +1931,20 @@ function SearchPageContent() {
             {tripType !== 'stopovers' && !calendarData && !exactDateResult && !flexResult && discoverResults.length === 0 && !multiCityResults && !budgetOptimizeResult && !emptyRoute && !error && (
               <div className="max-w-3xl mx-auto mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
+                  <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-sky-500/20 text-center">
                     <div className="text-4xl mb-3">&#128197;</div>
                     <h3 className="text-white font-semibold mb-2">Exact Dates</h3>
-                    <p className="text-skyblue-light text-sm">Know when you&apos;re flying? Get a live price and book directly.</p>
+                    <p className="text-sky-300 text-sm">Know when you&apos;re flying? Get a live price and book directly.</p>
                   </div>
-                  <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
+                  <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-sky-500/20 text-center">
                     <div className="text-4xl mb-3">&#128198;</div>
                     <h3 className="text-white font-semibold mb-2">Flexible Month</h3>
-                    <p className="text-skyblue-light text-sm">Set departure or return to &quot;Month&quot; to find the cheapest day.</p>
+                    <p className="text-sky-300 text-sm">Set departure or return to &quot;Month&quot; to find the cheapest day.</p>
                   </div>
-                  <div className="bg-navy-light/50 backdrop-blur-sm rounded-xl p-6 border border-skyblue/20 text-center">
+                  <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-sky-500/20 text-center">
                     <div className="text-4xl mb-3">&#9992;&#65039;</div>
                     <h3 className="text-white font-semibold mb-2">Anytime</h3>
-                    <p className="text-skyblue-light text-sm">Set to &quot;Anytime&quot; to find the absolute cheapest time in the next 6 months.</p>
+                    <p className="text-sky-300 text-sm">Set to &quot;Anytime&quot; to find the absolute cheapest time in the next 6 months.</p>
                   </div>
                 </div>
               </div>
@@ -1961,9 +1961,9 @@ function SearchPageContent() {
 export default function SearchPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-skyblue mb-4"></div>
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-sky-400 mb-4"></div>
           <p className="text-white text-lg">Loading...</p>
         </div>
       </div>

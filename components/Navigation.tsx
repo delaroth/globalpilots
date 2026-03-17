@@ -246,7 +246,7 @@ export default function Navigation() {
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
           <div className="w-8 h-8 bg-sky-400 rounded-full flex items-center justify-center">
-            <span className="text-navy text-xl font-bold">G</span>
+            <span className="text-slate-900 text-xl font-bold">G</span>
           </div>
           <span className="text-white text-xl font-bold">GlobePilots</span>
         </Link>
@@ -281,7 +281,7 @@ export default function Navigation() {
                       className="w-6 h-6 rounded-full"
                     />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-sky-400 flex items-center justify-center text-navy text-xs font-bold">
+                    <div className="w-6 h-6 rounded-full bg-sky-400 flex items-center justify-center text-slate-900 text-xs font-bold">
                       {(session.user.name || session.user.email || '?')[0].toUpperCase()}
                     </div>
                   )}
@@ -336,7 +336,7 @@ export default function Navigation() {
                 </Link>
                 <Link
                   href="/signup"
-                  className="bg-sky-400 hover:bg-sky-300 text-navy font-semibold px-4 py-1.5 rounded-full text-sm transition"
+                  className="bg-sky-400 hover:bg-sky-300 text-slate-900 font-semibold px-4 py-1.5 rounded-full text-sm transition"
                 >
                   Sign Up
                 </Link>
@@ -360,7 +360,7 @@ export default function Navigation() {
               {session.user.image ? (
                 <img src={session.user.image} alt="" className="w-7 h-7 rounded-full" />
               ) : (
-                <div className="w-7 h-7 rounded-full bg-sky-400 flex items-center justify-center text-navy text-xs font-bold">
+                <div className="w-7 h-7 rounded-full bg-sky-400 flex items-center justify-center text-slate-900 text-xs font-bold">
                   {(session.user.name || session.user.email || '?')[0].toUpperCase()}
                 </div>
               )}

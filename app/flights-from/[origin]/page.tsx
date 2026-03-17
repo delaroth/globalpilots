@@ -156,12 +156,12 @@ export default async function FlightsFromOriginPage({
       {/* Hero */}
       <section className="px-6 py-16 md:py-24">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-skyblue font-medium mb-2 tracking-wide uppercase text-sm">
+          <p className="text-sky-400 font-medium mb-2 tracking-wide uppercase text-sm">
             {airport.country} &middot; {airport.code}
           </p>
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
             Cheapest Flights from{' '}
-            <span className="text-skyblue">{airport.city}</span>
+            <span className="text-sky-400">{airport.city}</span>
           </h1>
           <p className="text-xl text-white/70 max-w-2xl mx-auto mb-8">
             Discover the best budget destinations you can fly to from {airport.city} ({airport.code}).
@@ -170,13 +170,13 @@ export default async function FlightsFromOriginPage({
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href={`/deals?origin=${airport.code}`}
-              className="bg-skyblue text-navy font-bold py-3 px-8 rounded-full hover:bg-skyblue-light transition transform hover:scale-105"
+              className="bg-sky-500 text-slate-900 font-bold py-3 px-8 rounded-full hover:bg-sky-500-light transition transform hover:scale-105"
             >
               See Live Deals from {airport.code}
             </Link>
             <Link
               href={`/search?origin=${airport.code}`}
-              className="border-2 border-skyblue text-skyblue font-bold py-3 px-8 rounded-full hover:bg-skyblue/10 transition transform hover:scale-105"
+              className="border-2 border-sky-400 text-sky-400 font-bold py-3 px-8 rounded-full hover:bg-sky-500/10 transition transform hover:scale-105"
             >
               Search Flights from {airport.code}
             </Link>
@@ -185,7 +185,7 @@ export default async function FlightsFromOriginPage({
       </section>
 
       {/* Top Destinations */}
-      <section className="px-6 py-16 bg-navy-light/30">
+      <section className="px-6 py-16 bg-slate-800/30">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-white mb-8 text-center">
             Top {topDestinations.length} Budget Destinations from {airport.city}
@@ -198,16 +198,16 @@ export default async function FlightsFromOriginPage({
                 <Link
                   key={dest.code}
                   href={`/cheap-flights/${destSlugify(dest.city)}`}
-                  className="group flex items-center gap-4 bg-white/[0.04] border border-white/10 hover:border-skyblue/40 rounded-xl p-5 transition-all hover:bg-white/[0.06]"
+                  className="group flex items-center gap-4 bg-white/[0.04] border border-white/10 hover:border-sky-400/40 rounded-xl p-5 transition-all hover:bg-white/[0.06]"
                 >
-                  <div className="w-10 h-10 bg-skyblue/10 rounded-full flex items-center justify-center shrink-0">
-                    <span className="text-skyblue font-bold text-sm">
+                  <div className="w-10 h-10 bg-sky-500/10 rounded-full flex items-center justify-center shrink-0">
+                    <span className="text-sky-400 font-bold text-sm">
                       {i + 1}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-white font-bold group-hover:text-skyblue transition truncate">
+                      <h3 className="text-white font-bold group-hover:text-sky-400 transition truncate">
                         {dest.city}
                       </h3>
                       <span className="text-xs text-white/40 font-mono">{dest.code}</span>
@@ -217,7 +217,7 @@ export default async function FlightsFromOriginPage({
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-skyblue font-bold text-lg">${budget}</p>
+                    <p className="text-sky-400 font-bold text-lg">${budget}</p>
                     <p className="text-white/40 text-xs">budget/day</p>
                   </div>
                 </Link>
@@ -253,13 +253,13 @@ export default async function FlightsFromOriginPage({
                       <td className="py-3 px-4">
                         <Link
                           href={`/cheap-flights/${destSlugify(dest.city)}`}
-                          className="text-white hover:text-skyblue font-medium transition"
+                          className="text-white hover:text-sky-400 font-medium transition"
                         >
                           {dest.city}, {dest.country}
                         </Link>
                       </td>
                       <td className="py-3 px-4 text-white/60 text-sm">{dest.region}</td>
-                      <td className="py-3 px-4 text-skyblue font-medium">${budget}</td>
+                      <td className="py-3 px-4 text-sky-400 font-medium">${budget}</td>
                       <td className="py-3 px-4 text-white/70">${mid}</td>
                       <td className="py-3 px-4 text-white/50 text-sm">
                         {dest.bestMonths.map((m) => monthNames[m - 1].slice(0, 3)).join(', ')}
@@ -274,7 +274,7 @@ export default async function FlightsFromOriginPage({
       </section>
 
       {/* Mystery CTA */}
-      <section className="px-6 py-16 bg-gradient-to-br from-skyblue/10 to-purple-600/10">
+      <section className="px-6 py-16 bg-gradient-to-br from-sky-500/10 to-purple-600/10">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-4">
             Mystery Vacation from {airport.city}
@@ -284,7 +284,7 @@ export default async function FlightsFromOriginPage({
           </p>
           <Link
             href={`/mystery?origin=${airport.code}`}
-            className="bg-skyblue text-navy font-bold py-3 px-8 rounded-full hover:bg-skyblue-light transition transform hover:scale-105"
+            className="bg-sky-500 text-slate-900 font-bold py-3 px-8 rounded-full hover:bg-sky-500-light transition transform hover:scale-105"
           >
             Start Mystery Vacation from {airport.city}
           </Link>

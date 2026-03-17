@@ -76,7 +76,7 @@ export default function DestinationCard({
 
       <div className="p-6">
         {/* Destination */}
-        <h3 className="text-2xl font-bold text-navy mb-1">{getCityName(destinationCode)}</h3>
+        <h3 className="text-2xl font-bold text-slate-900 mb-1">{getCityName(destinationCode)}</h3>
         <p className="text-gray-500 text-sm mb-2">
           {destinationCode} • cached estimate
         </p>
@@ -92,14 +92,14 @@ export default function DestinationCard({
           </div>
           <div className="bg-gray-50 rounded-lg p-3 text-center">
             <p className="text-xs text-gray-600">Departs in</p>
-            <p className="text-2xl font-bold text-navy">{daysAway}d</p>
+            <p className="text-2xl font-bold text-slate-900">{daysAway}d</p>
           </div>
         </div>
 
         {/* Book button */}
         <button
           onClick={handleBookClick}
-          className="w-full bg-skyblue hover:bg-skyblue-dark text-navy font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg transform active:scale-95"
+          className="w-full bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-3 px-6 rounded-lg transition shadow-md hover:shadow-lg transform active:scale-95"
         >
           Check on Aviasales
         </button>

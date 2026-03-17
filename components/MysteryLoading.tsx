@@ -77,7 +77,7 @@ export default function MysteryLoading({
   return (
     <div className="flex flex-col items-center justify-center">
       {/* Search Recap */}
-      <p className="text-skyblue-light text-lg font-medium mb-6 text-center">
+      <p className="text-sky-300 text-lg font-medium mb-6 text-center">
         {searchSummary || recapLine}
       </p>
 
@@ -86,7 +86,7 @@ export default function MysteryLoading({
         {/* Track */}
         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-skyblue to-skyblue-light rounded-full transition-all duration-300 ease-linear"
+            className="h-full bg-gradient-to-r from-sky-500 to-sky-500-light rounded-full transition-all duration-300 ease-linear"
             style={{ width: `${overallProgress}%` }}
           />
         </div>
@@ -129,15 +129,15 @@ export default function MysteryLoading({
       </p>
 
       {/* Estimated time */}
-      <p className="text-skyblue-light/70 text-sm mt-4">
+      <p className="text-sky-300/70 text-sm mt-4">
         Usually takes 8-12 seconds
       </p>
 
       {/* Loading dots */}
       <div className="flex gap-2 mt-4">
-        <div className="w-3 h-3 bg-skyblue rounded-full animate-bounce"></div>
-        <div className="w-3 h-3 bg-skyblue rounded-full animate-bounce [animation-delay:0.2s]"></div>
-        <div className="w-3 h-3 bg-skyblue rounded-full animate-bounce [animation-delay:0.4s]"></div>
+        <div className="w-3 h-3 bg-sky-500 rounded-full animate-bounce"></div>
+        <div className="w-3 h-3 bg-sky-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+        <div className="w-3 h-3 bg-sky-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
       </div>
     </div>
   )

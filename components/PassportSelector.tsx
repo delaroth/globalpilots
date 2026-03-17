@@ -90,7 +90,7 @@ export default function PassportSelector({
         className={`flex flex-wrap items-center gap-1.5 min-h-[42px] px-3 py-1.5 rounded-lg border-2 cursor-pointer transition ${
           isLight
             ? `border-gray-200 bg-white ${open ? 'border-sky-400' : 'hover:border-gray-300'}`
-            : `border-white/20 bg-white/5 ${open ? 'border-skyblue' : 'hover:border-white/30'}`
+            : `border-white/20 bg-white/5 ${open ? 'border-sky-400' : 'hover:border-white/30'}`
         }`}
         onClick={() => {
           setOpen(!open)
@@ -104,7 +104,7 @@ export default function PassportSelector({
               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                 isLight
                   ? 'bg-sky-100 text-sky-800'
-                  : 'bg-skyblue/20 text-skyblue-light'
+                  : 'bg-sky-500/20 text-sky-300'
               }`}
             >
               {p.flag} {p.name}
@@ -117,7 +117,7 @@ export default function PassportSelector({
                 className={`ml-0.5 rounded-full w-4 h-4 flex items-center justify-center text-[10px] leading-none ${
                   isLight
                     ? 'hover:bg-sky-200 text-sky-600'
-                    : 'hover:bg-skyblue/30 text-skyblue-light'
+                    : 'hover:bg-sky-500/30 text-sky-300'
                 }`}
               >
                 x
@@ -190,7 +190,7 @@ export default function PassportSelector({
                           : isSelected
                             ? isLight
                               ? 'bg-sky-50 text-sky-800 font-medium'
-                              : 'bg-skyblue/10 text-skyblue-light font-medium'
+                              : 'bg-sky-500/10 text-sky-300 font-medium'
                             : isLight
                               ? 'hover:bg-gray-50 text-gray-800'
                               : 'hover:bg-white/5 text-white/80'
@@ -199,7 +199,7 @@ export default function PassportSelector({
                       <span className="text-base">{p.flag}</span>
                       <span className="flex-1">{p.name}</span>
                       {isSelected && (
-                        <svg className={`w-4 h-4 ${isLight ? 'text-sky-500' : 'text-skyblue'}`} fill="currentColor" viewBox="0 0 20 20">
+                        <svg className={`w-4 h-4 ${isLight ? 'text-sky-500' : 'text-sky-400'}`} fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       )}

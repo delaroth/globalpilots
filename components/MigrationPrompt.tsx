@@ -136,7 +136,7 @@ export default function MigrationPrompt() {
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-md rounded-2xl border border-white/10 bg-navy/80 backdrop-blur-xl p-6 shadow-2xl"
+            className="relative w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 backdrop-blur-xl p-6 shadow-2xl"
           >
             {/* Idle state: prompt to import */}
             {status === 'idle' && (
@@ -148,7 +148,7 @@ export default function MigrationPrompt() {
                   <h2 className="text-2xl font-bold text-white mb-2">
                     Welcome back!
                   </h2>
-                  <p className="text-skyblue-light text-sm leading-relaxed">
+                  <p className="text-sky-300 text-sm leading-relaxed">
                     We found{' '}
                     <span className="font-bold text-white">
                       {localCounts.trips} saved trip{localCounts.trips !== 1 ? 's' : ''}
@@ -174,7 +174,7 @@ export default function MigrationPrompt() {
                   </button>
                   <button
                     onClick={handleImport}
-                    className="flex-1 rounded-lg bg-skyblue px-4 py-3 text-sm font-bold text-navy hover:bg-skyblue-light transition"
+                    className="flex-1 rounded-lg bg-sky-500 px-4 py-3 text-sm font-bold text-slate-900 hover:bg-sky-500-light transition"
                   >
                     Import
                   </button>
@@ -185,7 +185,7 @@ export default function MigrationPrompt() {
             {/* Migrating state */}
             {status === 'migrating' && (
               <div className="text-center py-4">
-                <div className="inline-block w-12 h-12 border-4 border-skyblue border-t-transparent rounded-full animate-spin mb-4" />
+                <div className="inline-block w-12 h-12 border-4 border-sky-400 border-t-transparent rounded-full animate-spin mb-4" />
                 <p className="text-white font-medium">Importing your data...</p>
               </div>
             )}
@@ -199,7 +199,7 @@ export default function MigrationPrompt() {
                 <h2 className="text-2xl font-bold text-white mb-2">
                   Imported!
                 </h2>
-                <p className="text-skyblue-light text-sm leading-relaxed mb-6">
+                <p className="text-sky-300 text-sm leading-relaxed mb-6">
                   {migratedCounts.trips > 0 && (
                     <span className="font-bold text-white">
                       {migratedCounts.trips} trip{migratedCounts.trips !== 1 ? 's' : ''}
@@ -219,7 +219,7 @@ export default function MigrationPrompt() {
 
                 <button
                   onClick={handleDismiss}
-                  className="w-full rounded-lg bg-skyblue px-4 py-3 text-sm font-bold text-navy hover:bg-skyblue-light transition"
+                  className="w-full rounded-lg bg-sky-500 px-4 py-3 text-sm font-bold text-slate-900 hover:bg-sky-500-light transition"
                 >
                   Continue
                 </button>
@@ -235,7 +235,7 @@ export default function MigrationPrompt() {
                 <h2 className="text-xl font-bold text-white mb-2">
                   Something went wrong
                 </h2>
-                <p className="text-skyblue-light text-sm mb-6">
+                <p className="text-sky-300 text-sm mb-6">
                   Your data is still safe on this device. Try again later.
                 </p>
                 <div className="flex gap-3">
@@ -247,7 +247,7 @@ export default function MigrationPrompt() {
                   </button>
                   <button
                     onClick={handleImport}
-                    className="flex-1 rounded-lg bg-skyblue px-4 py-3 text-sm font-bold text-navy hover:bg-skyblue-light transition"
+                    className="flex-1 rounded-lg bg-sky-500 px-4 py-3 text-sm font-bold text-slate-900 hover:bg-sky-500-light transition"
                   >
                     Retry
                   </button>

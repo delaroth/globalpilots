@@ -138,7 +138,7 @@ export default function TripHistory({
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className="fixed top-0 right-0 h-full w-full sm:w-[420px] z-50
-              bg-navy-dark/95 backdrop-blur-xl border-l border-white/10
+              bg-slate-950/95 backdrop-blur-xl border-l border-white/10
               flex flex-col"
           >
             {/* Header */}
