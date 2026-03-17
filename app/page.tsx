@@ -191,7 +191,7 @@ export default function Home() {
     : 'Choose where you want to go. AI plans everything else.'
 
   return (
-    <main className="min-h-screen flex flex-col bg-[#0a0a0f]">
+    <main className="min-h-screen flex flex-col bg-slate-950">
       <Navigation />
 
       {/* ── Section 1: Hero with toggle ── */}

@@ -227,7 +227,7 @@ export default function AdminDashboard() {
   // Login screen
   if (!secret) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
           <div className="rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-md p-8">
             <h1 className="text-xl font-bold text-white mb-1">GlobePilots Admin</h1>
@@ -262,7 +262,7 @@ export default function AdminDashboard() {
   // Loading state (initial)
   if (!data && loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-gray-400 text-lg">Loading analytics...</div>
       </div>
     )
@@ -271,7 +271,7 @@ export default function AdminDashboard() {
   // Error state with no data
   if (!data && error) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
         <div className="text-center">
           <div className="text-red-400 text-lg mb-4">{error}</div>
           <button onClick={fetchData} className="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm">
@@ -291,7 +291,7 @@ export default function AdminDashboard() {
       : 0
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
       <header className="border-b border-white/10 bg-white/[0.02] backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">

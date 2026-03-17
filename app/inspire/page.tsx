@@ -163,7 +163,7 @@ export default function InspirePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex flex-col">
+    <div className="min-h-screen bg-slate-950 flex flex-col">
       <Navigation />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -277,7 +277,7 @@ export default function InspirePage() {
                         <option
                           key={i.value}
                           value={i.value}
-                          className="bg-[#1a1a2e] text-white"
+                          className="bg-slate-900 text-white"
                         >
                           {i.label}
                         </option>

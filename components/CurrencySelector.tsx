@@ -103,7 +103,7 @@ export default function CurrencySelector({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 mt-1 w-full bg-[#1a1a2e] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute top-full left-0 mt-1 w-full bg-slate-900 border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
           <div className="p-2 border-b border-white/10">
             <input
               type="text"

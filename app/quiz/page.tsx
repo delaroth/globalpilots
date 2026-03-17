@@ -784,7 +784,7 @@ function QuizPageContent() {
 
 export default function QuizPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0f]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
       <QuizPageContent />
     </Suspense>
   )
