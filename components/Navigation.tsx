@@ -25,7 +25,7 @@ const navCategories: NavCategory[] = [
     gradient: true,
     items: [
       { href: '/mystery', label: 'Mystery Vacation', description: 'Let AI surprise you with a destination' },
-      { href: '/plan-my-trip', label: 'Plan My Trip', description: 'Choose your destination, AI plans the rest' },
+      { href: '/mystery', label: 'Plan My Trip', description: 'Choose your destination, AI plans the rest' },
     ],
   },
   {

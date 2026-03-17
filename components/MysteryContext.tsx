@@ -32,6 +32,7 @@ interface SearchParams {
   accommodationLevel: string
   budgetPriority: string
   customSplit?: { flights: number; hotels: number; activities: number }
+  destination?: string // Pre-selected destination (skips mystery pick, goes straight to AI planning)
 }
 
 interface MysteryContextType {
@@ -104,7 +105,74 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
       exclude: params.exclude && params.exclude.length > 0 ? params.exclude : undefined,
     }
 
-    // Phase 1: Quick pick
+    // If destination is pre-selected, skip quick pick and go straight to details
+    if (params.destination) {
+      console.log('[MysteryContext] Pre-selected destination:', params.destination, '— skipping quick pick')
+      const iata = params.destination
+      const airport = (globalThis as any).__majorAirports?.find?.((a: any) => a.code === iata)
+
+      const partialDest = {
+        destination: airport?.city || iata,
+        country: airport?.country || '',
+        iata,
+        city_code_IATA: iata,
+        estimated_flight_cost: 0,
+        indicativeFlightPrice: 0,
+        estimated_hotel_per_night: 0,
+        priceIsLive: false,
+        priceIsEstimate: true,
+        whyThisPlace: '',
+        why_its_perfect: '',
+        itinerary: [],
+        bestTimeToGo: '',
+        localTip: '',
+        insider_tip: '',
+        best_local_food: [],
+        day1: [], day2: [], day3: [],
+        budgetBreakdown: { flights: 0, hotel: 0, activities: 0, food: 0, total: 0 },
+      }
+
+      setState({ status: 'quick-ready', destination: partialDest, detailsLoading: true, error: null })
+
+      // Go straight to Phase 2: AI details
+      fetch('/api/ai-mystery/details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: abortController.signal,
+        body: JSON.stringify({
+          destination: airport?.city || iata,
+          country: airport?.country || '',
+          iata,
+          origin: params.origin,
+          budget: params.budget,
+          vibes: params.vibes,
+          dates: params.dates,
+          tripDuration: params.tripDuration,
+          flightPrice: 0,
+          accommodationLevel: params.accommodationLevel,
+          budgetPriority: params.budgetPriority,
+          customSplit: params.customSplit,
+          packageComponents: params.packageComponents,
+        }),
+      })
+        .then(async (res) => {
+          if (!res.ok) throw new Error('Failed to generate trip details')
+          const details = await res.json()
+          setState({
+            status: 'ready',
+            destination: { ...partialDest, ...details, destination: partialDest.destination, country: partialDest.country, iata, city_code_IATA: iata },
+            detailsLoading: false,
+            error: null,
+          })
+        })
+        .catch((err) => {
+          if (err.name === 'AbortError') return
+          setState({ status: 'error', destination: null, detailsLoading: false, error: err.message })
+        })
+      return
+    }
+
+    // Phase 1: Quick pick (mystery mode — AI picks destination)
     console.log('[MysteryContext] Phase 1: Quick pick API call...')
     fetch('/api/ai-mystery/quick', {
       method: 'POST',

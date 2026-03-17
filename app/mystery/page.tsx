@@ -105,6 +105,10 @@ export default function MysteryPage() {
   const [themeNotification, setThemeNotification] = useState<string | null>(null)
   const originSectionRef = useRef<HTMLDivElement>(null)
 
+  // "I know my destination" mode
+  const [knowDestination, setKnowDestination] = useState(false)
+  const [chosenDestination, setChosenDestination] = useState('')
+
   // Package builder state
   const [tripDuration, setTripDuration] = useState(3)
   const [packageComponents, setPackageComponents] = useState({
@@ -217,6 +221,11 @@ export default function MysteryPage() {
       return
     }
 
+    if (knowDestination && !chosenDestination && numCities === 1) {
+      setError('Please select your destination!')
+      return
+    }
+
     if (!budget || parseFloat(budget) <= 0) {
       setError('Please enter a budget greater than $0!')
       return
@@ -300,23 +309,42 @@ export default function MysteryPage() {
       return
     }
 
-    // --- Single-city mystery flow: delegate to global MysteryContext ---
+    // --- Single-city flow ---
     const requestDates = dateMode === 'specific'
       ? `${departDate}${flexibleDates ? ' (flexible \u00B13 days)' : ''}`
       : `flexible:${timeframe}`
 
-    mystery.startSearch({
-      origin: resolvedOrigin,
-      budget: currency.toUSD(parseFloat(budget)),
-      vibes: selectedVibes,
-      dates: requestDates,
-      tripDuration,
-      packageComponents,
-      email: emailForUpdates || undefined,
-      accommodationLevel,
-      budgetPriority,
-      customSplit: showAdvancedBudget ? customSplit : undefined,
-    })
+    if (knowDestination && chosenDestination) {
+      // User knows their destination — use plan-my-trip API via mystery context
+      // Pass the chosen destination so the quick-pick step is skipped
+      mystery.startSearch({
+        origin: resolvedOrigin,
+        budget: currency.toUSD(parseFloat(budget)),
+        vibes: selectedVibes,
+        dates: requestDates,
+        tripDuration,
+        packageComponents,
+        email: emailForUpdates || undefined,
+        accommodationLevel,
+        budgetPriority,
+        customSplit: showAdvancedBudget ? customSplit : undefined,
+        destination: chosenDestination, // pre-selected destination
+      })
+    } else {
+      // Mystery mode — AI picks the destination
+      mystery.startSearch({
+        origin: resolvedOrigin,
+        budget: currency.toUSD(parseFloat(budget)),
+        vibes: selectedVibes,
+        dates: requestDates,
+        tripDuration,
+        packageComponents,
+        email: emailForUpdates || undefined,
+        accommodationLevel,
+        budgetPriority,
+        customSplit: showAdvancedBudget ? customSplit : undefined,
+      })
+    }
   }
 
   const handleReset = () => {
@@ -481,10 +509,49 @@ export default function MysteryPage() {
                 </div>
                 <p className="text-sm text-gray-600 mt-2">
                   {numCities === 1
-                    ? 'AI will surprise you with one perfect destination'
+                    ? (knowDestination ? 'AI will plan your trip to ' + (chosenDestination || '...') : 'AI will surprise you with one perfect destination')
                     : `AI will plan a ${numCities}-city mystery route for you`}
                 </p>
               </div>
+
+              {/* Destination toggle — only for single city */}
+              {numCities === 1 && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-lg font-semibold text-navy">
+                      {knowDestination ? 'Where to? 📍' : 'Destination 🎲'}
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <span className="text-sm text-gray-500">{knowDestination ? 'I know where' : 'Surprise me'}</span>
+                      <button
+                        type="button"
+                        onClick={() => setKnowDestination(!knowDestination)}
+                        className={`relative w-11 h-6 rounded-full transition-colors ${
+                          knowDestination ? 'bg-skyblue' : 'bg-gray-300'
+                        }`}
+                      >
+                        <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow ${
+                          knowDestination ? 'translate-x-5' : 'translate-x-0.5'
+                        }`} />
+                      </button>
+                    </label>
+                  </div>
+
+                  {knowDestination ? (
+                    <AirportAutocomplete
+                      id="chosen-destination"
+                      label=""
+                      value={chosenDestination}
+                      onChange={setChosenDestination}
+                      placeholder="Search your destination city..."
+                    />
+                  ) : (
+                    <div className="bg-skyblue/10 border border-skyblue/30 rounded-lg px-4 py-3 text-center">
+                      <p className="text-skyblue-dark text-sm font-medium">AI will find the perfect destination based on your budget and vibes</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Budget */}
               <div className="mb-6">
@@ -954,7 +1021,9 @@ export default function MysteryPage() {
                 className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-bold text-xl py-5 px-6 rounded-lg transition shadow-2xl hover:shadow-3xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
               >
                 {numCities === 1 ? (
-                  <>&#x2728; Find My Destination &#x2728;</>
+                  knowDestination
+                    ? <>&#x2728; Plan My Trip &#x2728;</>
+                    : <>&#x2728; Find My Mystery Destination &#x2728;</>
                 ) : (
                   <>&#x1F5FA;&#xFE0F; Plan My Mystery Route</>
                 )}
