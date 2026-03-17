@@ -252,7 +252,9 @@ export default function AirportAutocomplete({
   return (
     <div className="space-y-2 relative" ref={dropdownRef}>
       <label htmlFor={id} className="block text-sm font-medium text-slate-900">
-        {label}
+        {label.endsWith(' *') ? (
+          <>{label.slice(0, -2)} <span className="text-red-500">*</span></>
+        ) : label}
       </label>
 
       {/* Display selected city or search input */}

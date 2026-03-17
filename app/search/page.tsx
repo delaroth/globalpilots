@@ -831,14 +831,18 @@ function SearchPageContent() {
             {/* Origin + Destination (hidden in multi-city non-budget mode) */}
             {(tripType !== 'multi-city' || (tripType === 'multi-city' && budgetMode)) && tripType !== 'stopovers' && (
               <div className={`grid grid-cols-1 ${tripType !== 'multi-city' ? 'md:grid-cols-2' : ''} gap-4`}>
-                <AirportAutocomplete id="origin" label="From" value={origin} onChange={setOrigin} placeholder="Departure city or code..." />
+                <div className="relative">
+                  <AirportAutocomplete id="origin" label="From *" value={origin} onChange={setOrigin} placeholder="Departure city or code..." />
+                </div>
                 {tripType !== 'multi-city' && (
-                  <AirportAutocomplete
-                    id="destination" label="To"
-                    value={destination} onChange={setDestination}
-                    placeholder='City, code, or "Anywhere"...'
-                    allowAnywhere
-                  />
+                  <div className="relative">
+                    <AirportAutocomplete
+                      id="destination" label="To *"
+                      value={destination} onChange={setDestination}
+                      placeholder='City, code, or "Anywhere"...'
+                      allowAnywhere
+                    />
+                  </div>
                 )}
               </div>
             )}
@@ -1142,20 +1146,38 @@ function SearchPageContent() {
               </div>
             )}
 
-            {/* Search button */}
-            <button type="submit" disabled={loading || stopoverLoading}
-              className={`w-full font-semibold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg ${
-                tripType === 'stopovers'
-                  ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white'
-                  : 'bg-sky-500 hover:bg-sky-600 text-slate-900'
-              }`}>
-              {stopoverLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Searching real-time flights...
-                </span>
-              ) : loading ? 'Searching...' : tripType === 'stopovers' ? 'Find Stopover Deals' : 'Search Flights'}
-            </button>
+            {/* Search + Clear buttons */}
+            <div className="flex gap-3">
+              <button type="submit" disabled={loading || stopoverLoading}
+                className={`flex-1 font-semibold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-lg ${
+                  tripType === 'stopovers'
+                    ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white'
+                    : 'bg-sky-500 hover:bg-sky-600 text-slate-900'
+                }`}>
+                {stopoverLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Searching real-time flights...
+                  </span>
+                ) : loading ? 'Searching...' : tripType === 'stopovers' ? 'Find Stopover Deals' : 'Search Flights'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOrigin(''); setDestination(''); setError('')
+                  setDepartureDate({ type: 'exact', exactDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0] })
+                  setReturnDateFlex({ type: 'exact', exactDate: new Date(Date.now() + 21 * 86400000).toISOString().split('T')[0] })
+                  setCalendarData(null); setExactDateResult(null); setFlexResult(null); setDiscoverResults([])
+                  setEmptyRoute(false); setMultiCityResults(null); setStopoverResult(null)
+                  setOneWayComparison(null); setBudgetOptimizeResult(null)
+                  setLegs([{ from: '', to: '', date: '' }, { from: '', to: '', date: '' }])
+                  setBudgetDestinations(['', '']); setBudgetTotal(''); setBudgetTripDays(''); setBudgetStartDate('')
+                }}
+                className="py-4 px-6 rounded-xl font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 transition text-lg"
+              >
+                Clear
+              </button>
+            </div>
           </div>
         </form>
 
@@ -1172,15 +1194,18 @@ function SearchPageContent() {
 
         {/* Loading spinner */}
         {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-sky-400"></div>
-            <p className="text-white mt-4 text-lg">
-              {destination === 'ANYWHERE' && 'Finding cheapest destinations...'}
-              {destination !== 'ANYWHERE' && tripType === 'multi-city' && `Searching ${legs.length} flight legs...`}
-              {destination !== 'ANYWHERE' && tripType !== 'multi-city' && departureDate.type === 'exact' && 'Checking flight prices...'}
-              {destination !== 'ANYWHERE' && tripType !== 'multi-city' && departureDate.type === 'month' && 'Finding cheapest days this month...'}
-              {destination !== 'ANYWHERE' && tripType !== 'multi-city' && departureDate.type === 'anytime' && 'Finding the cheapest time to fly...'}
-            </p>
+          <div className="max-w-3xl mx-auto mb-8">
+            <div className="bg-white/[0.04] backdrop-blur border border-white/10 rounded-2xl p-8 text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-sky-400/30 border-t-sky-400 mb-4"></div>
+              <p className="text-white text-lg font-medium">
+                {destination === 'ANYWHERE' && 'Searching flights... Finding cheapest destinations'}
+                {destination !== 'ANYWHERE' && tripType === 'multi-city' && `Searching flights... Checking ${legs.length} flight legs`}
+                {destination !== 'ANYWHERE' && tripType !== 'multi-city' && departureDate.type === 'exact' && 'Searching flights... Checking real-time prices'}
+                {destination !== 'ANYWHERE' && tripType !== 'multi-city' && departureDate.type === 'month' && 'Searching flights... Finding cheapest days this month'}
+                {destination !== 'ANYWHERE' && tripType !== 'multi-city' && departureDate.type === 'anytime' && 'Searching flights... Finding the cheapest time to fly'}
+              </p>
+              <p className="text-white/40 text-sm mt-2">This may take a few seconds</p>
+            </div>
           </div>
         )}
 

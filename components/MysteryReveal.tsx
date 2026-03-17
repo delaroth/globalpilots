@@ -234,7 +234,9 @@ export default function MysteryReveal({
   currencyFormat,
 }: MysteryRevealProps) {
   // Currency formatting: use provided formatter or default to USD
-  const fmt = currencyFormat || ((usd: number) => `$${usd}`)
+  // Guard: if price is 0 or falsy, show "Check prices" instead of "$0"
+  const rawFmt = currencyFormat || ((usd: number) => `$${usd}`)
+  const fmt = (amount: number) => (!amount ? 'Check prices' : rawFmt(amount))
   const [phase, setPhase] = useState<RevealPhase>('clues')
   const bookingRef = useRef<HTMLDivElement>(null)
   const [shareUrl, setShareUrl] = useState('')
@@ -557,7 +559,7 @@ export default function MysteryReveal({
   // -----------------------------------------------------------------------
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto pb-20 lg:pb-0">
       <AnimatePresence mode="wait">
         {/* ================================================================
             PHASE 1 — CLUE REVEAL
@@ -1229,13 +1231,16 @@ export default function MysteryReveal({
                     href={bookingBundle.flightUrl}
                     className="block w-full bg-emerald-500/90 hover:bg-emerald-500 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl text-center"
                   >
-                    Book Flights (~{fmt(flightPrice)}
-                    {isEstimate ? ' est.' : ''})
+                    {flightPrice ? (
+                      <>Book Flights (~{fmt(flightPrice)}{isEstimate ? ' est.' : ''})</>
+                    ) : (
+                      <>Search Flights</>
+                    )}
                     <span className="block text-sm font-normal mt-1 opacity-90">
                       {formatDate(effectiveDepartDate)} &middot;{' '}
                       {AFFILIATE_FLAGS.kiwi
-                        ? 'Book on Kiwi'
-                        : 'Book on Aviasales'}
+                        ? 'Search on Kiwi'
+                        : 'Search on Aviasales'}
                     </span>
                   </BookingTracker>
 
@@ -1247,11 +1252,14 @@ export default function MysteryReveal({
                     href={bookingBundle.hotelUrl}
                     className="block w-full bg-blue-500/90 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl text-center"
                   >
-                    Find Hotels (~${destination.estimated_hotel_per_night}
-                    /night)
+                    {destination.estimated_hotel_per_night ? (
+                      <>Find Hotels (~{fmt(destination.estimated_hotel_per_night)}/night)</>
+                    ) : (
+                      <>Search Hotels</>
+                    )}
                     <span className="block text-sm font-normal mt-1 opacity-90">
                       {formatDate(effectiveDepartDate)} &ndash;{' '}
-                      {formatDate(effectiveReturnDate)} &middot; Search on Agoda
+                      {formatDate(effectiveReturnDate)} &middot; Search on Booking.com
                     </span>
                   </BookingTracker>
 
@@ -1263,7 +1271,7 @@ export default function MysteryReveal({
                     href={bookingBundle.activitiesUrl}
                     className="block w-full bg-purple-500/90 hover:bg-purple-500 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl text-center"
                   >
-                    Book Activities
+                    Find Activities
                     <span className="block text-sm font-normal mt-1 opacity-90">
                       Browse on GetYourGuide
                     </span>
@@ -1939,6 +1947,30 @@ export default function MysteryReveal({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile sticky action bar */}
+      {phase === 'revealed' && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 p-3 bg-slate-950/95 backdrop-blur border-t border-white/10 lg:hidden">
+          <div className="flex gap-2 max-w-lg mx-auto">
+            {onReroll && rerollCount < maxRerolls && (
+              <button
+                onClick={onReroll}
+                className="flex-1 py-2.5 rounded-lg bg-white/10 text-white text-sm font-medium transition hover:bg-white/15"
+              >
+                Try Another
+              </button>
+            )}
+            <a
+              href={bookingBundle.flightUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-2.5 rounded-lg bg-sky-500 text-white text-sm font-bold text-center transition hover:bg-sky-400"
+            >
+              Book Flight
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

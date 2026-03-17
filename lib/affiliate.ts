@@ -418,6 +418,18 @@ export function buildBookingBundle(params: {
 }): { flightUrl: string; hotelUrl: string; activitiesUrl: string } {
   const { origin, destination, cityName, departDate, nights = 3, maxHotelPerNight, country } = params
 
+  // Fallback: if origin/destination/date are missing, use generic search URLs
+  if (!origin || !destination || !departDate) {
+    const searchText = cityName || destination || 'flights'
+    return {
+      flightUrl: `https://www.google.com/travel/flights?q=flights+to+${encodeURIComponent(searchText)}&curr=USD`,
+      hotelUrl: cityName
+        ? `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(cityName + (country ? ', ' + country : ''))}&group_adults=1&no_rooms=1`
+        : 'https://www.booking.com',
+      activitiesUrl: buildActivitiesLink(cityName || 'travel'),
+    }
+  }
+
   // Calculate return date from depart + nights
   const returnDate = (() => {
     const d = new Date(departDate + 'T00:00:00')

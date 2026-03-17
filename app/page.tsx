@@ -66,6 +66,16 @@ export default function Home() {
             113 destinations · 30 currencies · Live Google Flights data
           </p>
 
+          {/* Mobile hero CTA — above the fold */}
+          <div className="md:hidden mb-8">
+            <Link
+              href="/mystery"
+              className="inline-block w-full text-center py-4 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-400 text-white font-bold text-lg shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 transition-all"
+            >
+              Plan My Trip &rarr;
+            </Link>
+          </div>
+
           {/* ── Trust Bar ── */}
           <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-xs text-slate-400 mb-10">
             <span className="flex items-center gap-1.5">🔒 100% Free</span>
