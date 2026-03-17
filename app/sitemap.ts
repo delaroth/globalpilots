@@ -1,5 +1,10 @@
 import { MetadataRoute } from 'next'
 import { majorAirports } from '@/lib/geolocation'
+import { getAllDestinations, getAllRegions } from '@/lib/destination-costs'
+
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+}
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://globepilots.com'
@@ -10,6 +15,43 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date(),
     changeFrequency: 'weekly' as const,
     priority: 0.6,
+  }))
+
+  // SEO: cheap flights to each destination
+  const destinations = getAllDestinations()
+  const cheapFlightPages: MetadataRoute.Sitemap = destinations.map((d) => ({
+    url: `${baseUrl}/cheap-flights/${slugify(d.city)}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }))
+
+  // SEO: flights from major origins
+  const originAirportCodes = [
+    'ATL', 'JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'SFO', 'SEA', 'MIA', 'BOS',
+    'LHR', 'CDG', 'AMS', 'FRA', 'BCN', 'MAD', 'FCO', 'LIS',
+    'BKK', 'SIN', 'HKG', 'NRT', 'ICN', 'TPE', 'KUL', 'CGK',
+    'DXB', 'DOH', 'IST',
+    'SYD', 'MEL',
+    'DEL', 'BOM',
+    'GRU', 'EZE', 'BOG', 'LIM', 'SCL', 'MEX',
+    'YYZ', 'YVR',
+  ]
+  const originAirports = majorAirports.filter((a) => originAirportCodes.includes(a.code))
+  const flightsFromPages: MetadataRoute.Sitemap = originAirports.map((a) => ({
+    url: `${baseUrl}/flights-from/${slugify(a.city)}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }))
+
+  // SEO: budget travel by region
+  const regions = getAllRegions()
+  const budgetTravelPages: MetadataRoute.Sitemap = regions.map((r) => ({
+    url: `${baseUrl}/budget-travel/${slugify(r)}`,
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
   }))
 
   return [
@@ -109,6 +151,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
 
+    // SEO index pages
+    {
+      url: `${baseUrl}/cheap-flights`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/flights-from`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/budget-travel`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+
     // About & Legal
     {
       url: `${baseUrl}/how-it-works`,
@@ -147,5 +209,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
     ...mysteryFlightPages,
+    ...cheapFlightPages,
+    ...flightsFromPages,
+    ...budgetTravelPages,
   ]
 }

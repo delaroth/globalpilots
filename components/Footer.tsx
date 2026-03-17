@@ -6,18 +6,11 @@ export default function Footer() {
 
   const columns = [
     {
-      title: 'Discover',
-      links: [
-        { href: '/mystery', label: 'Mystery Vacation' },
-        { href: '/quiz', label: 'Destination Quiz' },
-        { href: '/inspire', label: 'Inspire Me' },
-      ],
-    },
-    {
-      title: 'Flights',
+      title: 'Find Flights',
       links: [
         { href: '/search', label: 'Flight Search' },
         { href: '/search?tab=stopovers', label: 'Smart Stopovers' },
+        { href: '/search?tab=multi', label: 'Multi-city' },
       ],
     },
     {
@@ -25,12 +18,15 @@ export default function Footer() {
       links: [
         { href: '/trip-cost', label: 'Trip Costs' },
         { href: '/whats-happening', label: 'Festival Calendar' },
+        { href: '/inspire', label: 'Inspire Me' },
+        { href: '/quiz', label: 'Destination Quiz' },
       ],
     },
     {
       title: 'Deals',
       links: [
         { href: '/deals', label: "This Month's Deals" },
+        { href: '/deals?mode=quick', label: 'Quick Escape' },
         { href: '/leaderboard', label: 'Leaderboard' },
       ],
     },
@@ -49,10 +45,17 @@ export default function Footer() {
               <span className="text-white text-2xl font-bold">GlobePilot</span>
             </div>
             <p className="text-skyblue-light text-sm mb-4">
-              Budget in. Adventure out.
+              Set your budget. Pick your vibe. Get surprised.
             </p>
+            {/* Mystery Vacation — prominent standalone link */}
+            <Link
+              href="/mystery"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-semibold px-4 py-2 rounded-full hover:shadow-lg hover:shadow-purple-500/25 transition mb-3"
+            >
+              Mystery Vacation
+            </Link>
             <p className="text-skyblue-light/70 text-xs">
-              AI-powered travel planning that helps you plan your next adventure with any budget.
+              AI-powered travel planning that finds your perfect mystery destination.
             </p>
           </div>
 
@@ -74,11 +77,8 @@ export default function Footer() {
               </ul>
             </div>
           ))}
-        </div>
 
-        {/* About & Legal row */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-8">
-          <div className="col-span-2" />
+          {/* About column fills the remaining space */}
           <div>
             <h3 className="text-white font-semibold mb-3 text-sm">About</h3>
             <ul className="space-y-2 text-skyblue-light text-sm">
@@ -104,6 +104,11 @@ export default function Footer() {
               </li>
             </ul>
           </div>
+        </div>
+
+        {/* Legal row */}
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-8">
+          <div className="col-span-2" />
           <div>
             <h3 className="text-white font-semibold mb-3 text-sm">Legal</h3>
             <ul className="space-y-2 text-skyblue-light text-sm">

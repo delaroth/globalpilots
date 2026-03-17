@@ -20,18 +20,11 @@ interface NavCategory {
 
 const categories: NavCategory[] = [
   {
-    label: 'Discover',
-    items: [
-      { href: '/mystery', label: 'Mystery Vacation', emoji: '\u2708\uFE0F' },
-      { href: '/quiz', label: 'Destination Quiz', emoji: '\uD83E\uDDE9' },
-      { href: '/inspire', label: 'Inspire Me', emoji: '\uD83D\uDCA1' },
-    ],
-  },
-  {
-    label: 'Flights',
+    label: 'Find Flights',
     items: [
       { href: '/search', label: 'Flight Search', emoji: '\uD83D\uDD0D' },
       { href: '/search?tab=stopovers', label: 'Smart Stopovers', emoji: '\uD83D\uDDFA\uFE0F' },
+      { href: '/search?tab=multi', label: 'Multi-city', emoji: '\u2708\uFE0F' },
     ],
   },
   {
@@ -39,12 +32,15 @@ const categories: NavCategory[] = [
     items: [
       { href: '/trip-cost', label: 'Trip Costs', emoji: '\uD83D\uDCB0' },
       { href: '/whats-happening', label: 'Festival Calendar', emoji: '\uD83C\uDF89' },
+      { href: '/inspire', label: 'Inspire Me', emoji: '\uD83D\uDCA1' },
+      { href: '/quiz', label: 'Destination Quiz', emoji: '\uD83E\uDDE9' },
     ],
   },
   {
     label: 'Deals',
     items: [
       { href: '/deals', label: "This Month's Deals", emoji: '\uD83C\uDFF7\uFE0F' },
+      { href: '/deals?mode=quick', label: 'Quick Escape', emoji: '\uD83D\uDE80' },
       { href: '/leaderboard', label: 'Leaderboard', emoji: '\uD83C\uDFC6' },
     ],
   },
@@ -187,6 +183,8 @@ export default function Navigation() {
   const pathname = usePathname()
   const { data: session, status } = useSession()
 
+  const isMysteryActive = pathname === '/mystery' || pathname.startsWith('/mystery/')
+
   return (
     <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -200,6 +198,16 @@ export default function Navigation() {
 
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center space-x-1">
+          {/* Mystery Vacation — standalone gradient pill */}
+          <Link
+            href="/mystery"
+            className={`bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold transition hover:shadow-lg hover:shadow-purple-500/25 hover:scale-105 ${
+              isMysteryActive ? 'ring-2 ring-white/30' : ''
+            }`}
+          >
+            Mystery Vacation
+          </Link>
+
           {categories.map((cat) => (
             <DesktopDropdown key={cat.label} category={cat} pathname={pathname} />
           ))}
@@ -326,6 +334,17 @@ export default function Navigation() {
       {mobileMenuOpen && (
         <div className="lg:hidden mt-4 pb-4 border-t border-skyblue/20 pt-4">
           <div className="flex flex-col space-y-1">
+            {/* Mystery Vacation — standalone prominent link on mobile */}
+            <Link
+              href="/mystery"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center gap-2.5 mx-2 px-4 py-3 rounded-xl text-sm font-semibold transition bg-gradient-to-r from-purple-500 to-pink-500 text-white ${
+                isMysteryActive ? 'ring-2 ring-white/30' : ''
+              }`}
+            >
+              <span>Mystery Vacation</span>
+            </Link>
+
             {categories.map((cat) => (
               <MobileCategory
                 key={cat.label}

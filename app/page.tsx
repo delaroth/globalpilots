@@ -1,108 +1,484 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import InstallPrompt from '@/components/InstallPrompt'
 import SocialProof from '@/components/SocialProof'
+import AirportAutocomplete from '@/components/AirportAutocomplete'
+import CurrencySelector from '@/components/CurrencySelector'
+import { useCurrency } from '@/hooks/useCurrency'
+import { useMystery } from '@/components/MysteryContext'
 import Link from 'next/link'
 
-const categoryCards = [
-  {
-    title: 'Discover',
-    tagline: "Don't know where to go? Let us surprise you.",
-    href: '/mystery',
-    gradient: 'from-purple-600 to-pink-600',
-    bgGradient: 'from-purple-600/20 to-pink-600/20',
-    border: 'border-purple-400/30 hover:border-purple-400/60',
-    subFeatures: ['Mystery Vacation', 'Destination Quiz', 'Inspire Me'],
-  },
-  {
-    title: 'Flights',
-    tagline: 'Find the cheapest way to get there.',
-    href: '/search',
-    gradient: 'from-sky-500 to-cyan-500',
-    bgGradient: 'from-sky-500/20 to-cyan-500/20',
-    border: 'border-sky-400/30 hover:border-sky-400/60',
-    subFeatures: ['Search', 'Stopovers', 'Multi-city'],
-  },
-  {
-    title: 'Plan',
-    tagline: "Know what it'll cost before you book.",
-    href: '/trip-cost',
-    gradient: 'from-amber-500 to-orange-500',
-    bgGradient: 'from-amber-500/20 to-orange-500/20',
-    border: 'border-amber-400/30 hover:border-amber-400/60',
-    subFeatures: ['Trip Costs', 'Festival Calendar'],
-  },
-  {
-    title: 'Deals',
-    tagline: "Today's cheapest trips from your airport.",
-    href: '/deals',
-    gradient: 'from-emerald-500 to-green-500',
-    bgGradient: 'from-emerald-500/20 to-green-500/20',
-    border: 'border-emerald-400/30 hover:border-emerald-400/60',
-    subFeatures: ['This Month', 'Quick Escape', 'Leaderboard'],
-  },
+// ── Vibe quick-pick options ──────────────────────────────────────────────────
+const vibeOptions = [
+  { emoji: '\u{1F3D6}', label: 'Beach', value: 'beach' },
+  { emoji: '\u{1F3D9}', label: 'City', value: 'city' },
+  { emoji: '\u{1F3D4}', label: 'Adventure', value: 'adventure' },
+  { emoji: '\u{1F35C}', label: 'Food', value: 'food' },
+  { emoji: '\u{1F33F}', label: 'Nature', value: 'nature' },
 ]
 
-export default function Home() {
+// ── Static fallback destinations (from destination-costs) ────────────────────
+const staticDestinations = [
+  { name: 'Bangkok', country: 'Thailand', airportCode: 'BKK', flightPrice: null, dailyCost: 105, flag: '\u{1F1F9}\u{1F1ED}' },
+  { name: 'Lisbon', country: 'Portugal', airportCode: 'LIS', flightPrice: null, dailyCost: 140, flag: '\u{1F1F5}\u{1F1F9}' },
+  { name: 'Medellin', country: 'Colombia', airportCode: 'MDE', flightPrice: null, dailyCost: 85, flag: '\u{1F1E8}\u{1F1F4}' },
+  { name: 'Bali', country: 'Indonesia', airportCode: 'DPS', flightPrice: null, dailyCost: 80, flag: '\u{1F1EE}\u{1F1E9}' },
+  { name: 'Tokyo', country: 'Japan', airportCode: 'TYO', flightPrice: null, dailyCost: 160, flag: '\u{1F1EF}\u{1F1F5}' },
+  { name: 'Budapest', country: 'Hungary', airportCode: 'BUD', flightPrice: null, dailyCost: 100, flag: '\u{1F1ED}\u{1F1FA}' },
+]
+
+// ── Trending Destinations ────────────────────────────────────────────────────
+interface TrendingDest {
+  name: string
+  country: string
+  airportCode: string
+  flightPrice: number | null
+  dailyCost: number | null
+  flag: string | null
+}
+
+function TrendingSection({ currency }: { currency: ReturnType<typeof useCurrency> }) {
+  const [destinations, setDestinations] = useState<TrendingDest[]>([])
+  const [loading, setLoading] = useState(true)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    fetch('/api/inspire')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.destinations?.length > 0) {
+          setDestinations(data.destinations.slice(0, 6))
+        } else {
+          setDestinations(staticDestinations)
+        }
+        setLoading(false)
+      })
+      .catch(() => {
+        setDestinations(staticDestinations)
+        setLoading(false)
+      })
+  }, [])
+
+  const gradients = [
+    'from-purple-600/80 to-pink-600/80',
+    'from-sky-600/80 to-cyan-600/80',
+    'from-amber-600/80 to-orange-600/80',
+    'from-emerald-600/80 to-green-600/80',
+    'from-rose-600/80 to-red-600/80',
+    'from-indigo-600/80 to-violet-600/80',
+  ]
+
+  if (loading) {
+    return (
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex-shrink-0 w-56 h-36 rounded-2xl bg-white/[0.04] animate-pulse"
+          />
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <main className="min-h-screen flex flex-col">
+    <div className="relative">
+      <div
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto pb-4 scroll-smooth snap-x snap-mandatory scrollbar-hide"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {destinations.map((dest, i) => (
+          <Link
+            key={dest.airportCode}
+            href={`/inspire?highlight=${dest.airportCode}`}
+            className={`flex-shrink-0 w-56 rounded-2xl bg-gradient-to-br ${gradients[i % gradients.length]} p-5 snap-start hover:scale-[1.03] transition-transform cursor-pointer border border-white/10`}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              {dest.flag && <span className="text-xl">{dest.flag}</span>}
+              <div>
+                <h3 className="text-white font-bold text-base leading-tight">{dest.name}</h3>
+                <p className="text-white/60 text-xs">{dest.country}</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              {dest.flightPrice != null && (
+                <p className="text-white/90 text-sm font-medium">
+                  From {currency.format(dest.flightPrice)}
+                </p>
+              )}
+              {dest.dailyCost != null && (
+                <p className="text-white/60 text-xs">
+                  ~{currency.format(dest.dailyCost)}/day
+                </p>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Homepage ─────────────────────────────────────────────────────────────────
+export default function Home() {
+  const currency = useCurrency()
+  const mystery = useMystery()
+
+  // Hero mini-form state
+  const [budget, setBudget] = useState('')
+  const [origin, setOrigin] = useState('')
+  const [selectedVibes, setSelectedVibes] = useState<string[]>([])
+
+  const toggleVibe = (value: string) => {
+    setSelectedVibes((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    )
+  }
+
+  const handleSurpriseMe = () => {
+    if (!budget || !origin) return
+
+    mystery.startSearch({
+      origin,
+      budget: currency.toUSD(parseFloat(budget)),
+      vibes: selectedVibes,
+      dates: 'flexible:next-3-months',
+      tripDuration: 5,
+      packageComponents: {
+        includeFlight: true,
+        includeHotel: true,
+        includeItinerary: true,
+        includeTransportation: true,
+      },
+      accommodationLevel: 'mid-range',
+      budgetPriority: 'balanced',
+    })
+  }
+
+  const canSubmit = budget && parseFloat(budget) > 0 && origin
+
+  return (
+    <main className="min-h-screen flex flex-col bg-[#0a0a0f]">
       <Navigation />
 
-      {/* Hero Section */}
-      <section className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="max-w-5xl w-full text-center space-y-10">
-          {/* Tagline */}
-          <div className="space-y-4">
-            <h1 className="text-5xl md:text-7xl font-bold text-white">
-              Budget in.
-            </h1>
-            <h1 className="text-5xl md:text-7xl font-bold text-skyblue">
-              Adventure out.
-            </h1>
-            <p className="text-xl text-skyblue-light mt-6 max-w-2xl mx-auto">
-              Smart travel tools that help you discover destinations, find creative routes, and book your next adventure
-            </p>
-          </div>
+      {/* ── Section 1: Hero — Mystery Vacation inline form ── */}
+      <section className="relative overflow-hidden">
+        {/* Background gradient pattern */}
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-950/40 via-[#0a0a0f] to-[#0a0a0f]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-r from-purple-600/10 to-pink-600/10 rounded-full blur-3xl" />
 
-          {/* Category Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 max-w-4xl mx-auto">
-            {categoryCards.map((card) => (
-              <Link
-                key={card.title}
-                href={card.href}
-                className={`group relative overflow-hidden bg-gradient-to-br ${card.bgGradient} backdrop-blur-sm rounded-2xl p-8 border ${card.border} hover:shadow-2xl transition-all transform hover:scale-[1.03] text-left`}
-              >
-                {/* Gradient accent bar */}
-                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${card.gradient}`} />
+        <div className="relative max-w-4xl mx-auto px-6 pt-16 pb-20 text-center">
+          {/* Headline */}
+          <h1 className="text-5xl md:text-7xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Where Will You End Up?
+            </span>
+          </h1>
+          <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-10">
+            Set your budget. Pick your vibe. We&apos;ll find your perfect mystery destination.
+          </p>
 
-                <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-skyblue transition">
-                  {card.title}
-                </h2>
-                <p className="text-skyblue-light text-sm mb-5">
-                  {card.tagline}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {card.subFeatures.map((sub) => (
-                    <span
-                      key={sub}
-                      className="text-xs bg-white/10 text-white/70 px-2.5 py-1 rounded-full"
-                    >
-                      {sub}
-                    </span>
-                  ))}
+          {/* Inline mini-form */}
+          <div className="max-w-3xl mx-auto bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-6 md:p-8 text-left">
+            {/* Row 1: Budget + Currency + Vibes */}
+            <div className="space-y-5">
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Budget input + currency */}
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-white/60 mb-2">
+                    Total Budget
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">
+                        {currency.symbol}
+                      </span>
+                      <input
+                        type="number"
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        placeholder="800"
+                        min="100"
+                        className="w-full pl-8 pr-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition text-sm"
+                      />
+                    </div>
+                    <CurrencySelector
+                      code={currency.code}
+                      currencies={currency.currencies}
+                      onChange={currency.setCurrency}
+                    />
+                  </div>
                 </div>
-                <span className="inline-flex items-center text-skyblue font-semibold text-sm mt-4 group-hover:translate-x-1 transition-transform">
-                  Explore &rarr;
-                </span>
+
+                {/* Vibe quick-picks */}
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-white/60 mb-2">
+                    Vibe
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {vibeOptions.map((vibe) => {
+                      const isSelected = selectedVibes.includes(vibe.value)
+                      return (
+                        <button
+                          key={vibe.value}
+                          type="button"
+                          onClick={() => toggleVibe(vibe.value)}
+                          className={`px-3 py-2 rounded-xl text-sm font-medium transition border ${
+                            isSelected
+                              ? 'bg-purple-500/20 border-purple-400/50 text-purple-300'
+                              : 'bg-white/[0.04] border-white/10 text-white/60 hover:bg-white/[0.08] hover:text-white/80'
+                          }`}
+                        >
+                          <span className="mr-1">{vibe.emoji}</span>
+                          {vibe.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Origin + Surprise Me button */}
+              <div className="flex flex-col md:flex-row gap-4 items-end">
+                <div className="flex-1 w-full">
+                  <label className="block text-sm font-medium text-white/60 mb-2">
+                    Flying from
+                  </label>
+                  {/* Dark-themed wrapper for AirportAutocomplete */}
+                  <div className="airport-dark-theme">
+                    <AirportAutocomplete
+                      id="hero-origin"
+                      label=""
+                      value={origin}
+                      onChange={setOrigin}
+                      placeholder="City or airport code..."
+                      persistKey="origin"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSurpriseMe}
+                  disabled={!canSubmit}
+                  className={`w-full md:w-auto px-8 py-3 rounded-xl font-bold text-base transition whitespace-nowrap ${
+                    canSubmit
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/25 hover:scale-105 cursor-pointer'
+                      : 'bg-white/10 text-white/30 cursor-not-allowed'
+                  }`}
+                >
+                  Surprise Me
+                </button>
+              </div>
+            </div>
+
+            {/* Customize link */}
+            <div className="mt-4 text-center">
+              <Link
+                href="/mystery"
+                className="text-sm text-white/40 hover:text-purple-400 transition"
+              >
+                Or customize your search (dates, accommodation, trip length) &rarr;
               </Link>
-            ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <SocialProof />
+      {/* ── Section 2: Three unique value props ── */}
+      <section className="max-w-5xl mx-auto px-6 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="text-center space-y-3">
+            <div className="text-3xl">&#10024;</div>
+            <h3 className="text-white font-bold text-lg">Destinations You&apos;d Never Think Of</h3>
+            <p className="text-white/50 text-sm">
+              Our AI picks from 50+ live destinations based on your vibe and budget
+            </p>
+          </div>
+          <div className="text-center space-y-3">
+            <div className="text-3xl">&#128176;</div>
+            <h3 className="text-white font-bold text-lg">Total Trip Cost, Not Just Flights</h3>
+            <p className="text-white/50 text-sm">
+              We show flights + hotels + food + activities so you know the real price
+            </p>
+          </div>
+          <div className="text-center space-y-3">
+            <div className="text-3xl">&#128506;</div>
+            <h3 className="text-white font-bold text-lg">Turn Layovers Into Free Vacations</h3>
+            <p className="text-white/50 text-sm">
+              Add a visa-free stopover city and actually save money
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 3: Trending Now ── */}
+      <section className="max-w-5xl mx-auto px-6 pb-16 w-full">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-white">Trending Now</h2>
+          <Link href="/inspire" className="text-sm text-purple-400 hover:text-purple-300 transition">
+            See all destinations &rarr;
+          </Link>
+        </div>
+        <TrendingSection currency={currency} />
+      </section>
+
+      {/* ── Section 4: Quick tools ── */}
+      <section className="max-w-5xl mx-auto px-6 pb-16 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link
+            href="/search"
+            className="group bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 hover:border-sky-400/30 hover:bg-sky-500/5 transition"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-2xl">&#128269;</span>
+              <h3 className="text-white font-bold group-hover:text-sky-400 transition">Search Flights</h3>
+            </div>
+            <p className="text-white/40 text-sm">Compare prices across dates and airports</p>
+          </Link>
+          <Link
+            href="/deals"
+            className="group bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 hover:border-emerald-400/30 hover:bg-emerald-500/5 transition"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-2xl">&#127991;&#65039;</span>
+              <h3 className="text-white font-bold group-hover:text-emerald-400 transition">This Month&apos;s Deals</h3>
+            </div>
+            <p className="text-white/40 text-sm">Cheapest flights from your airport right now</p>
+          </Link>
+          <Link
+            href="/trip-cost"
+            className="group bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 hover:border-amber-400/30 hover:bg-amber-500/5 transition"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <span className="text-2xl">&#128176;</span>
+              <h3 className="text-white font-bold group-hover:text-amber-400 transition">Trip Cost Calculator</h3>
+            </div>
+            <p className="text-white/40 text-sm">Know what it costs before you go</p>
+          </Link>
+        </div>
+      </section>
+
+      {/* ── Section 5: Social Proof ── */}
+      <section className="max-w-5xl mx-auto px-6 pb-16 w-full">
+        <SocialProof />
+      </section>
+
+      {/* ── Section 6: How It Works ── */}
+      <section className="max-w-4xl mx-auto px-6 pb-20 w-full text-center">
+        <h2 className="text-2xl font-bold text-white mb-8">How It Works</h2>
+        <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold text-sm">
+              1
+            </div>
+            <span className="text-white/70 font-medium">Set your budget</span>
+          </div>
+          <span className="hidden md:block text-white/20 text-2xl">&rarr;</span>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-pink-500/20 border border-pink-500/30 flex items-center justify-center text-pink-400 font-bold text-sm">
+              2
+            </div>
+            <span className="text-white/70 font-medium">Pick your vibe</span>
+          </div>
+          <span className="hidden md:block text-white/20 text-2xl">&rarr;</span>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-400 font-bold text-sm">
+              3
+            </div>
+            <span className="text-white/70 font-medium">Get surprised</span>
+          </div>
+        </div>
+        <Link
+          href="/about"
+          className="inline-block mt-6 text-sm text-white/40 hover:text-purple-400 transition"
+        >
+          Learn more about how it works &rarr;
+        </Link>
+      </section>
+
       <Footer />
       <InstallPrompt />
+
+      {/* Styles for dark-themed AirportAutocomplete */}
+      <style jsx global>{`
+        .airport-dark-theme .space-y-2 > label {
+          display: none;
+        }
+        .airport-dark-theme input {
+          background: rgba(255, 255, 255, 0.06) !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+          color: white !important;
+          border-radius: 0.75rem !important;
+        }
+        .airport-dark-theme input::placeholder {
+          color: rgba(255, 255, 255, 0.3) !important;
+        }
+        .airport-dark-theme input:focus {
+          border-color: rgba(168, 85, 247, 0.5) !important;
+        }
+        .airport-dark-theme .bg-gray-50 {
+          background: rgba(255, 255, 255, 0.06) !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        .airport-dark-theme .text-navy,
+        .airport-dark-theme .font-semibold.text-navy {
+          color: white !important;
+        }
+        .airport-dark-theme .text-gray-600,
+        .airport-dark-theme .text-sm.text-gray-600 {
+          color: rgba(255, 255, 255, 0.5) !important;
+        }
+        .airport-dark-theme .text-gray-500 {
+          color: rgba(255, 255, 255, 0.4) !important;
+        }
+        .airport-dark-theme .hover\\:bg-gray-200:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+        }
+        .airport-dark-theme .text-gray-400 {
+          color: rgba(255, 255, 255, 0.3) !important;
+        }
+        .airport-dark-theme .text-xs.text-gray-400 {
+          color: rgba(255, 255, 255, 0.3) !important;
+        }
+        .airport-dark-theme .bg-skyblue\\/10 {
+          background: rgba(168, 85, 247, 0.15) !important;
+        }
+        .airport-dark-theme .text-skyblue {
+          color: rgb(192, 132, 252) !important;
+        }
+        .airport-dark-theme button.text-xs.font-medium.text-skyblue {
+          color: rgb(192, 132, 252) !important;
+        }
+        .airport-dark-theme .bg-white {
+          background: #1a1a2e !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+        .airport-dark-theme .hover\\:bg-skyblue\\/10:hover {
+          background: rgba(168, 85, 247, 0.1) !important;
+        }
+        .airport-dark-theme .border-gray-100 {
+          border-color: rgba(255, 255, 255, 0.06) !important;
+        }
+        .airport-dark-theme .font-semibold:not(.text-navy) {
+          color: white !important;
+        }
+        .airport-dark-theme .text-blue-700 {
+          color: rgb(192, 132, 252) !important;
+        }
+        .airport-dark-theme .text-blue-500 {
+          color: rgba(168, 85, 247, 0.7) !important;
+        }
+        .airport-dark-theme .bg-blue-50\\/50 {
+          background: rgba(168, 85, 247, 0.08) !important;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </main>
   )
 }

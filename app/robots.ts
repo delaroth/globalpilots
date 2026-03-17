@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/dashboard/', '/login/', '/signup/'],
+        disallow: ['/api/', '/dashboard/', '/admin/', '/login/', '/signup/'],
       },
     ],
     sitemap: 'https://globepilots.com/sitemap.xml',
