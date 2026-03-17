@@ -16,11 +16,11 @@ import type { SavedTrip } from '@/lib/trip-history'
 import { useMystery } from '@/components/MysteryContext'
 
 const vibeOptions = [
-  { emoji: '\u{1F3D6}', label: 'Beach', value: 'beach' },
-  { emoji: '\u{1F3D9}', label: 'City Break', value: 'city' },
-  { emoji: '\u{1F3D4}', label: 'Adventure', value: 'adventure' },
-  { emoji: '\u{1F35C}', label: 'Food & Culture', value: 'food' },
-  { emoji: '\u{1F33F}', label: 'Nature', value: 'nature' },
+  { label: 'Beach', value: 'beach' },
+  { label: 'City', value: 'city' },
+  { label: 'Adventure', value: 'adventure' },
+  { label: 'Food', value: 'food' },
+  { label: 'Nature', value: 'nature' },
 ]
 
 const timeframeOptions = [
@@ -32,11 +32,11 @@ const timeframeOptions = [
 ]
 
 const accommodationLevels = [
-  { label: 'Hostel', value: 'hostel', icon: '\u{1F3D5}\uFE0F', desc: '$10-30/night', maxPerNight: 30 },
-  { label: 'Budget', value: 'budget', icon: '\u{1F3E0}', desc: '$30-60/night', maxPerNight: 60 },
-  { label: 'Mid-Range', value: 'mid-range', icon: '\u{1F3E8}', desc: '$60-120/night', maxPerNight: 120 },
-  { label: 'Upscale', value: 'upscale', icon: '\u{1F3E9}', desc: '$120-250/night', maxPerNight: 250 },
-  { label: 'Luxury', value: 'luxury', icon: '\u2728', desc: '$250+/night', maxPerNight: 500 },
+  { label: 'Hostel', value: 'hostel', desc: '$10-30/night', maxPerNight: 30 },
+  { label: 'Budget', value: 'budget', desc: '$30-60/night', maxPerNight: 60 },
+  { label: 'Mid-Range', value: 'mid-range', desc: '$60-120/night', maxPerNight: 120 },
+  { label: 'Upscale', value: 'upscale', desc: '$120-250/night', maxPerNight: 250 },
+  { label: 'Luxury', value: 'luxury', desc: '$250+/night', maxPerNight: 500 },
 ]
 
 const budgetPriorities = [
@@ -47,14 +47,6 @@ const budgetPriorities = [
 ]
 
 const travellerTypes = ['Solo', 'Couple', 'Group']
-
-const quickThemes = [
-  { emoji: '\u{1F3D6}\uFE0F', label: 'Beach Escape', vibes: ['beach'], budgetMin: '500', budgetMax: '800', color: 'from-cyan-400 to-blue-400' },
-  { emoji: '\u{1F3D9}\uFE0F', label: 'City Culture', vibes: ['city', 'food'], budgetMin: '600', budgetMax: '1000', color: 'from-purple-400 to-pink-400' },
-  { emoji: '\u{1F3D4}\uFE0F', label: 'Adventure Trip', vibes: ['adventure', 'nature'], budgetMin: '400', budgetMax: '700', color: 'from-green-400 to-emerald-500' },
-  { emoji: '\u{1F35C}', label: 'Foodie Tour', vibes: ['food'], budgetMin: '500', budgetMax: '900', color: 'from-orange-400 to-red-400' },
-  { emoji: '\u{1F392}', label: 'Budget Backpacker', vibes: [], budgetMin: '300', budgetMax: '500', color: 'from-yellow-400 to-amber-500' },
-]
 
 const regionOptions = [
   { label: 'Any Region', value: 'Any' },
@@ -100,11 +92,6 @@ export default function MysteryPage() {
   const [tripHistoryOpen, setTripHistoryOpen] = useState(false)
   const [compareTrips, setCompareTrips] = useState<SavedTrip[] | null>(null)
 
-  // Theme state
-  const [activeTheme, setActiveTheme] = useState<string | null>(null)
-  const [themeNotification, setThemeNotification] = useState<string | null>(null)
-  const originSectionRef = useRef<HTMLDivElement>(null)
-
   // "I know my destination" mode
   const [knowDestination, setKnowDestination] = useState(false)
   const [chosenDestination, setChosenDestination] = useState('')
@@ -122,6 +109,9 @@ export default function MysteryPage() {
   const [budgetPriority, setBudgetPriority] = useState('balanced')
   const [showAdvancedBudget, setShowAdvancedBudget] = useState(false)
   const [customSplit, setCustomSplit] = useState({ flights: 35, hotels: 35, activities: 30 })
+
+  // More Options section toggle
+  const [moreOptionsOpen, setMoreOptionsOpen] = useState(false)
 
   // Whether a single-city mystery search is active (from context)
   const isSingleCitySearching = mystery.isVisible && numCities === 1
@@ -251,7 +241,7 @@ export default function MysteryPage() {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       if (selectedDate < today) {
-        setError('Please select a future date! Time travel tickets are unfortunately not available yet. \u{1F570}\uFE0F')
+        setError('Please select a future date! Time travel tickets are unfortunately not available yet.')
         return
       }
     }
@@ -315,8 +305,7 @@ export default function MysteryPage() {
       : `flexible:${timeframe}`
 
     if (knowDestination && chosenDestination) {
-      // User knows their destination — use plan-my-trip API via mystery context
-      // Pass the chosen destination so the quick-pick step is skipped
+      // User knows their destination -- use plan-my-trip API via mystery context
       mystery.startSearch({
         origin: resolvedOrigin,
         budget: currency.toUSD(parseFloat(budget)),
@@ -331,7 +320,7 @@ export default function MysteryPage() {
         destination: chosenDestination, // pre-selected destination
       })
     } else {
-      // Mystery mode — AI picks the destination
+      // Mystery mode -- AI picks the destination
       mystery.startSearch({
         origin: resolvedOrigin,
         budget: currency.toUSD(parseFloat(budget)),
@@ -349,50 +338,6 @@ export default function MysteryPage() {
 
   const handleReset = () => {
     handleCancel()
-    setActiveTheme(null)
-    setThemeNotification(null)
-  }
-
-  const handleThemeSelect = (theme: typeof quickThemes[number]) => {
-    if (theme.vibes.length > 0) {
-      setSelectedVibes(theme.vibes)
-    }
-    setBudget(theme.budgetMax)
-
-    const maxBudget = parseInt(theme.budgetMax)
-    if (maxBudget < 500) {
-      setAccommodationLevel('budget')
-    } else if (maxBudget <= 800) {
-      setAccommodationLevel('mid-range')
-    } else {
-      setAccommodationLevel('upscale')
-    }
-
-    const durationMap: Record<string, number> = {
-      'Beach Escape': 5,
-      'City Culture': 4,
-      'Adventure Trip': 7,
-      'Foodie Tour': 4,
-      'Budget Backpacker': 7,
-    }
-    setTripDuration(durationMap[theme.label] || 5)
-
-    const priorityMap: Record<string, string> = {
-      'Beach Escape': 'hotels',
-      'City Culture': 'balanced',
-      'Adventure Trip': 'flights',
-      'Foodie Tour': 'activities',
-      'Budget Backpacker': 'balanced',
-    }
-    setBudgetPriority(priorityMap[theme.label] || 'balanced')
-
-    setActiveTheme(theme.label)
-    setError('')
-    setThemeNotification(`Form pre-filled from ${theme.label} theme`)
-
-    setTimeout(() => {
-      originSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }, 100)
   }
 
   // Multi-city results visible
@@ -427,10 +372,10 @@ export default function MysteryPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Mystery Vacation &#x2728;
+            AI Trip Planner
           </h1>
           <p className="text-xl text-skyblue-light">
-            Let AI surprise you with the perfect destination
+            Set your budget and vibe. AI does the rest.
           </p>
           <div className="mt-4">
             <SocialProof />
@@ -439,306 +384,15 @@ export default function MysteryPage() {
 
         {/* Form -- always visible, greyed out while searching */}
         <div className="max-w-3xl mx-auto">
-          {/* Quick Picks / Theme Buttons */}
-          <div className={`mb-6 ${isSearching ? 'opacity-50 pointer-events-none' : ''}`}>
-            <h2 className="text-lg font-semibold text-white text-center mb-4">Quick Picks</h2>
-            <div className="flex flex-wrap justify-center gap-3">
-              {quickThemes.map((theme) => (
-                <button
-                  key={theme.label}
-                  type="button"
-                  onClick={() => handleThemeSelect(theme)}
-                  disabled={isSearching}
-                  className={`bg-gradient-to-r ${theme.color} text-white font-semibold px-5 py-2.5 rounded-full shadow-lg transition-all transform hover:scale-105 hover:shadow-xl active:scale-95 text-sm ${
-                    activeTheme === theme.label ? 'ring-4 ring-white/60 scale-105' : ''
-                  }`}
-                >
-                  {theme.emoji} {theme.label}
-                  <span className="block text-xs font-normal opacity-80">
-                    ${theme.budgetMin}-${theme.budgetMax}
-                  </span>
-                </button>
-              ))}
-            </div>
-            {activeTheme && (
-              <p className="text-center text-skyblue-light text-sm mt-3">
-                {activeTheme} selected! Pick your city and dates below, then hit Surprise Me.
-              </p>
-            )}
-          </div>
-
-          {/* Theme auto-fill notification */}
-          {themeNotification && (
-            <div className="mb-4 bg-skyblue/10 border border-skyblue/30 rounded-lg px-4 py-3 flex items-center justify-between animate-fade-in">
-              <p className="text-skyblue-light text-sm font-medium">
-                {themeNotification}
-              </p>
-              <button
-                type="button"
-                onClick={() => setThemeNotification(null)}
-                className="text-skyblue-light/70 hover:text-white ml-4 text-lg leading-none"
-                aria-label="Dismiss notification"
-              >
-                &#x2715;
-              </button>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className={`bg-white rounded-2xl shadow-2xl p-6 md:p-8 transition-opacity ${isSearching ? 'opacity-60' : ''}`}>
             <fieldset disabled={isSearching}>
-              {/* Number of Destinations */}
-              <div className="mb-6">
-                <label className="block text-lg font-semibold text-navy mb-3">
-                  How many destinations? &#x1F5FA;&#xFE0F;
-                </label>
-                <div className="grid grid-cols-5 gap-3">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setNumCities(n)}
-                      className={`py-3 rounded-lg font-bold text-lg transition-all ${
-                        numCities === n
-                          ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue/50'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-sm text-gray-600 mt-2">
-                  {numCities === 1
-                    ? (knowDestination ? 'AI will plan your trip to ' + (chosenDestination || '...') : 'AI will surprise you with one perfect destination')
-                    : `AI will plan a ${numCities}-city mystery route for you`}
-                </p>
-              </div>
 
-              {/* Destination toggle — only for single city */}
-              {numCities === 1 && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-lg font-semibold text-navy">
-                      {knowDestination ? 'Where to? 📍' : 'Destination 🎲'}
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <span className="text-sm text-gray-500">{knowDestination ? 'I know where' : 'Surprise me'}</span>
-                      <button
-                        type="button"
-                        onClick={() => setKnowDestination(!knowDestination)}
-                        className={`relative w-11 h-6 rounded-full transition-colors ${
-                          knowDestination ? 'bg-skyblue' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow ${
-                          knowDestination ? 'translate-x-5' : 'translate-x-0.5'
-                        }`} />
-                      </button>
-                    </label>
-                  </div>
+              {/* ===== SECTION 1: ESSENTIALS ===== */}
 
-                  {knowDestination ? (
-                    <AirportAutocomplete
-                      id="chosen-destination"
-                      label=""
-                      value={chosenDestination}
-                      onChange={setChosenDestination}
-                      placeholder="Search your destination city..."
-                    />
-                  ) : (
-                    <div className="bg-skyblue/10 border border-skyblue/30 rounded-lg px-4 py-3 text-center">
-                      <p className="text-skyblue-dark text-sm font-medium">AI will find the perfect destination based on your budget and vibes</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Budget */}
-              <div className="mb-6">
-                <label htmlFor="budget" className="block text-lg font-semibold text-navy mb-2">
-                  What&apos;s your budget? &#x1F4B0;
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-xl">
-                      {currency.symbol}
-                    </span>
-                    <input
-                      type="number"
-                      id="budget"
-                      value={budget}
-                      onChange={(e) => {
-                        setBudget(e.target.value)
-                        if (error) setError('')
-                      }}
-                      placeholder="1500"
-                      min="100"
-                      className="w-full pl-8 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-lg"
-                      required
-                    />
-                  </div>
-                  <CurrencySelector
-                    code={currency.code}
-                    currencies={currency.currencies}
-                    onChange={currency.setCurrency}
-                    compact
-                  />
-                </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  {numCities === 1
-                    ? 'Total budget for flights + accommodation + activities'
-                    : `Total budget for all ${numCities} cities \u2014 flights + daily expenses`}
-                  {!currency.isUSD && budget && Number(budget) > 0 && currency.rate && (
-                    <span className="text-gray-400 ml-1">
-                      (\u2248 ${currency.toUSD(Number(budget))} USD)
-                    </span>
-                  )}
-                </p>
-              </div>
-
-              {/* Accommodation Level */}
-              <div className="mb-6">
-                <label className="block text-lg font-semibold text-navy mb-3">
-                  What kind of stays? &#x1F6CF;&#xFE0F;
-                </label>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                  {accommodationLevels.map((level) => (
-                    <button
-                      key={level.value}
-                      type="button"
-                      onClick={() => setAccommodationLevel(level.value)}
-                      className={`py-3 px-2 rounded-lg font-medium transition-all text-center ${
-                        accommodationLevel === level.value
-                          ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue/50'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <div className="text-xl mb-1">{level.icon}</div>
-                      <div className="text-sm font-semibold">{level.label}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{level.desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Budget Priority */}
-              <div className="mb-6">
-                <label className="block text-lg font-semibold text-navy mb-3">
-                  Where should we focus your budget? &#x1F3AF;
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {budgetPriorities.map((priority) => (
-                    <button
-                      key={priority.value}
-                      type="button"
-                      onClick={() => {
-                        setBudgetPriority(priority.value)
-                        setCustomSplit(priority.split)
-                        setShowAdvancedBudget(false)
-                      }}
-                      className={`py-3 px-4 rounded-lg font-medium transition-all text-left ${
-                        budgetPriority === priority.value
-                          ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue/50'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <div className="text-sm font-semibold">{priority.label}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {priority.desc}
-                        <span className="text-gray-400 ml-1">
-                          ({priority.split.flights}/{priority.split.hotels}/{priority.split.activities})
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Advanced Budget Split Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setShowAdvancedBudget(!showAdvancedBudget)}
-                  className="mt-3 text-sm text-skyblue hover:text-skyblue/80 transition flex items-center gap-1"
-                >
-                  <span className={`transition-transform ${showAdvancedBudget ? 'rotate-90' : ''}`}>&#x25B8;</span>
-                  {showAdvancedBudget ? 'Hide custom split' : 'Customize exact split'}
-                </button>
-
-                {/* Collapsible Advanced Sliders */}
-                {showAdvancedBudget && (
-                  <div className="mt-3 bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-3">
-                    {budget && Number(budget) > 0 && (
-                      <p className="text-xs text-gray-500 mb-2">
-                        After 8% buffer (${Math.floor(Number(budget) * 0.08)}), allocating ${Math.floor(Number(budget) * 0.92)}:
-                      </p>
-                    )}
-                    {[
-                      { key: 'flights' as const, label: 'Flights', emoji: '\u2708\uFE0F' },
-                      { key: 'hotels' as const, label: 'Hotels', emoji: '\u{1F3E8}' },
-                      { key: 'activities' as const, label: 'Food & Activities', emoji: '\u{1F3AD}' },
-                    ].map(({ key, label, emoji }) => {
-                      const pct = customSplit[key]
-                      const amount = budget ? Math.floor(Number(budget) * 0.92 * (pct / 100)) : 0
-                      return (
-                        <div key={key}>
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-sm font-medium text-gray-700">
-                              {emoji} {label}
-                            </span>
-                            <span className="text-sm text-gray-600 font-semibold tabular-nums">
-                              {pct}%{amount > 0 ? ` ($${amount})` : ''}
-                            </span>
-                          </div>
-                          <input
-                            type="range"
-                            min={5}
-                            max={80}
-                            value={pct}
-                            onChange={(e) => {
-                              const newVal = Number(e.target.value)
-                              const diff = newVal - customSplit[key]
-                              const others = (['flights', 'hotels', 'activities'] as const).filter(k => k !== key)
-                              const otherTotal = others.reduce((s, k) => s + customSplit[k], 0)
-                              const newSplit = { ...customSplit, [key]: newVal }
-                              for (const ok of others) {
-                                const share = otherTotal > 0 ? customSplit[ok] / otherTotal : 0.5
-                                newSplit[ok] = Math.max(5, Math.round(customSplit[ok] - diff * share))
-                              }
-                              const sum = newSplit.flights + newSplit.hotels + newSplit.activities
-                              if (sum !== 100) {
-                                const largest = others.reduce((a, b) => newSplit[a] >= newSplit[b] ? a : b)
-                                newSplit[largest] += 100 - sum
-                              }
-                              setCustomSplit(newSplit)
-                              setBudgetPriority('custom')
-                            }}
-                            className="w-full h-2 rounded-full appearance-none cursor-pointer accent-skyblue bg-gray-200"
-                          />
-                        </div>
-                      )
-                    })}
-                    <div className="flex gap-2 pt-1">
-                      {budgetPriorities.map(p => (
-                        <button
-                          key={p.value}
-                          type="button"
-                          onClick={() => {
-                            setCustomSplit(p.split)
-                            setBudgetPriority(p.value)
-                          }}
-                          className="text-xs px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-600 transition"
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Departure City */}
-              <div className="mb-6" ref={originSectionRef}>
-                <label htmlFor="origin" className="block text-lg font-semibold text-navy mb-2">
-                  Where are you flying from? &#x2708;&#xFE0F;
+              {/* Row 1: Flying from */}
+              <div className="mb-5">
+                <label htmlFor="origin" className="block text-sm font-medium text-gray-600 mb-1.5">
+                  Flying from
                 </label>
                 <AirportAutocomplete
                   id="origin"
@@ -751,248 +405,516 @@ export default function MysteryPage() {
                 />
               </div>
 
-              {/* Travel Dates */}
-              <div className="mb-6">
-                <label className="block text-lg font-semibold text-navy mb-2">
-                  When do you want to go? &#x1F4C5;
-                </label>
-                <div className="flex rounded-lg overflow-hidden border-2 border-gray-200 mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setDateMode('specific')}
-                    className={`flex-1 py-2.5 text-sm font-semibold transition-all ${
-                      dateMode === 'specific'
-                        ? 'bg-skyblue text-navy'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    Specific Date
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDateMode('flexible')}
-                    className={`flex-1 py-2.5 text-sm font-semibold transition-all ${
-                      dateMode === 'flexible'
-                        ? 'bg-skyblue text-navy'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    Flexible Timeframe
-                  </button>
+              {/* Row 2: Destination (single-city only) */}
+              {numCities <= 1 && (
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-medium text-gray-600">
+                      Destination
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setKnowDestination(!knowDestination)}
+                      className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 transition"
+                    >
+                      <span>{knowDestination ? 'I know where I\'m going' : 'Surprise me'}</span>
+                      <div className={`relative w-9 h-5 rounded-full transition-colors ${
+                        knowDestination ? 'bg-skyblue' : 'bg-gray-300'
+                      }`}>
+                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow ${
+                          knowDestination ? 'translate-x-4' : 'translate-x-0.5'
+                        }`} />
+                      </div>
+                    </button>
+                  </div>
+
+                  {knowDestination ? (
+                    <AirportAutocomplete
+                      id="chosen-destination"
+                      label=""
+                      value={chosenDestination}
+                      onChange={setChosenDestination}
+                      placeholder="Search your destination city..."
+                    />
+                  ) : (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 text-center">
+                      <p className="text-blue-600 text-sm">AI picks your perfect destination</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Row 3: Budget + Trip length (side by side on desktop) */}
+              <div className="mb-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Budget */}
+                <div>
+                  <label htmlFor="budget" className="block text-sm font-medium text-gray-600 mb-1.5">
+                    Budget
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">
+                        {currency.symbol}
+                      </span>
+                      <input
+                        type="number"
+                        id="budget"
+                        value={budget}
+                        onChange={(e) => {
+                          setBudget(e.target.value)
+                          if (error) setError('')
+                        }}
+                        placeholder="1500"
+                        min="100"
+                        className="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg focus:border-skyblue focus:ring-1 focus:ring-skyblue focus:outline-none transition text-navy"
+                        required
+                      />
+                    </div>
+                    <CurrencySelector
+                      code={currency.code}
+                      currencies={currency.currencies}
+                      onChange={currency.setCurrency}
+                      compact
+                    />
+                  </div>
+                  {!currency.isUSD && budget && Number(budget) > 0 && currency.rate && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      &asymp; ${currency.toUSD(Number(budget))} USD
+                    </p>
+                  )}
                 </div>
 
-                {dateMode === 'specific' && (
-                  <>
-                    <input
-                      type="date"
-                      id="departDate"
-                      value={departDate}
-                      onChange={(e) => setDepartDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
-                      required
-                    />
-                    <label className="flex items-center mt-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={flexibleDates}
-                        onChange={(e) => setFlexibleDates(e.target.checked)}
-                        className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
-                      />
-                      <span className="ml-2 text-gray-700">
-                        My dates are flexible (&plusmn;3 days)
+                {/* Trip length */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                    Trip length
+                  </label>
+                  <div className="pt-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-navy font-semibold text-lg tabular-nums">
+                        {tripDuration} day{tripDuration !== 1 ? 's' : ''}
                       </span>
-                    </label>
-                  </>
-                )}
-
-                {dateMode === 'flexible' && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {timeframeOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setTimeframe(option.value)}
-                        className={`py-3 px-4 rounded-lg font-medium transition-all text-sm ${
-                          timeframe === option.value
-                            ? 'bg-skyblue text-navy shadow-lg ring-2 ring-skyblue/50'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
+                    </div>
+                    <input
+                      type="range"
+                      min={numCities === 1 ? 2 : Math.max(5, numCities * 2)}
+                      max={numCities === 1 ? 21 : 60}
+                      value={tripDuration}
+                      onChange={(e) => setTripDuration(parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
+                    />
+                    <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                      <span>{numCities === 1 ? 2 : Math.max(5, numCities * 2)} days</span>
+                      <span>{numCities === 1 ? 21 : 60} days</span>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
 
-              {/* Vibes */}
+              {/* Row 4: Vibes */}
               <div className="mb-6">
-                <label className="block text-lg font-semibold text-navy mb-3">
-                  What&apos;s your vibe? &#x1F3AD; (Select all that apply)
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  Vibes
                 </label>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
                   {vibeOptions.map((vibe) => (
                     <button
                       key={vibe.value}
                       type="button"
                       onClick={() => handleVibeToggle(vibe.value)}
-                      className={`px-6 py-3 rounded-full font-medium transition-all transform hover:scale-105 ${
+                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
                         selectedVibes.includes(vibe.value)
-                          ? 'bg-skyblue text-navy shadow-lg'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-skyblue text-navy shadow-sm ring-1 ring-skyblue/50'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
-                      {vibe.emoji} {vibe.label}
+                      {vibe.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Region -- multi-city only */}
-              {numCities > 1 && (
-                <div className="mb-6">
-                  <label htmlFor="region" className="block text-lg font-semibold text-navy mb-2">
-                    Region preference &#x1F30D;
-                  </label>
-                  <select
-                    id="region"
-                    value={region}
-                    onChange={(e) => setRegion(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy bg-white"
-                  >
-                    {regionOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Traveller Type -- single city only */}
-              {numCities === 1 && (
-                <div className="mb-6">
-                  <label className="block text-lg font-semibold text-navy mb-3">
-                    Travelling as... &#x1F465;
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {travellerTypes.map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => setTravellerType(type)}
-                        className={`py-3 rounded-lg font-medium transition-all ${
-                          travellerType === type
-                            ? 'bg-skyblue text-navy shadow-lg'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Trip Duration */}
+              {/* ===== SECTION 2: MORE OPTIONS (collapsible) ===== */}
               <div className="mb-6">
-                <label className="block text-lg font-semibold text-navy mb-2">
-                  Trip Duration: {tripDuration} day{tripDuration !== 1 ? 's' : ''} &#x1F5D3;&#xFE0F;
-                </label>
-                <input
-                  type="range"
-                  min={numCities === 1 ? 3 : Math.max(5, numCities * 2)}
-                  max={numCities === 1 ? 14 : 60}
-                  value={tripDuration}
-                  onChange={(e) => setTripDuration(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
-                />
-                <div className="flex justify-between text-sm text-gray-600 mt-1">
-                  <span>{numCities === 1 ? 3 : Math.max(5, numCities * 2)} days</span>
-                  <span>{numCities === 1 ? 14 : 60} days</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setMoreOptionsOpen(!moreOptionsOpen)}
+                  className="text-sm text-gray-500 hover:text-gray-700 transition flex items-center gap-1"
+                >
+                  <span className={`transition-transform inline-block ${moreOptionsOpen ? 'rotate-90' : ''}`}>&#x25B8;</span>
+                  More options
+                </button>
+
+                {moreOptionsOpen && (
+                  <div className="mt-4 space-y-5 pt-4 border-t border-gray-100">
+
+                    {/* When to go */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                        When to go
+                      </label>
+                      <div className="flex rounded-lg overflow-hidden border border-gray-300 mb-3">
+                        <button
+                          type="button"
+                          onClick={() => setDateMode('specific')}
+                          className={`flex-1 py-2 text-sm font-medium transition-all ${
+                            dateMode === 'specific'
+                              ? 'bg-skyblue text-navy'
+                              : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          Specific Date
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDateMode('flexible')}
+                          className={`flex-1 py-2 text-sm font-medium transition-all ${
+                            dateMode === 'flexible'
+                              ? 'bg-skyblue text-navy'
+                              : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          Flexible Timeframe
+                        </button>
+                      </div>
+
+                      {dateMode === 'specific' && (
+                        <>
+                          <input
+                            type="date"
+                            id="departDate"
+                            value={departDate}
+                            onChange={(e) => setDepartDate(e.target.value)}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-skyblue focus:ring-1 focus:ring-skyblue focus:outline-none transition text-navy"
+                            required
+                          />
+                          <label className="flex items-center mt-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={flexibleDates}
+                              onChange={(e) => setFlexibleDates(e.target.checked)}
+                              className="w-4 h-4 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                            />
+                            <span className="ml-2 text-sm text-gray-600">
+                              My dates are flexible (&plusmn;3 days)
+                            </span>
+                          </label>
+                        </>
+                      )}
+
+                      {dateMode === 'flexible' && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {timeframeOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setTimeframe(option.value)}
+                              className={`py-2 px-3 rounded-lg font-medium transition-all text-sm ${
+                                timeframe === option.value
+                                  ? 'bg-skyblue text-navy ring-1 ring-skyblue/50'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Accommodation */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                        Accommodation
+                      </label>
+                      <div className="flex gap-2">
+                        {accommodationLevels.map((level) => (
+                          <button
+                            key={level.value}
+                            type="button"
+                            onClick={() => setAccommodationLevel(level.value)}
+                            className={`flex-1 py-2 px-1 rounded-lg font-medium transition-all text-center text-xs ${
+                              accommodationLevel === level.value
+                                ? 'bg-skyblue text-navy ring-1 ring-skyblue/50'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            <div className="font-semibold">{level.label}</div>
+                            <div className="text-[10px] text-gray-400 mt-0.5">{level.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Budget priority */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                        Budget priority
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {budgetPriorities.map((priority) => (
+                          <button
+                            key={priority.value}
+                            type="button"
+                            onClick={() => {
+                              setBudgetPriority(priority.value)
+                              setCustomSplit(priority.split)
+                              setShowAdvancedBudget(false)
+                            }}
+                            className={`py-2 px-3 rounded-lg font-medium transition-all text-left text-sm ${
+                              budgetPriority === priority.value
+                                ? 'bg-skyblue text-navy ring-1 ring-skyblue/50'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            <div className="font-semibold text-xs">{priority.label}</div>
+                            <div className="text-[10px] text-gray-400 mt-0.5">{priority.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Advanced Budget Split Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvancedBudget(!showAdvancedBudget)}
+                        className="mt-2 text-xs text-gray-400 hover:text-gray-600 transition flex items-center gap-1"
+                      >
+                        <span className={`transition-transform inline-block ${showAdvancedBudget ? 'rotate-90' : ''}`}>&#x25B8;</span>
+                        {showAdvancedBudget ? 'Hide custom split' : 'Customize exact split'}
+                      </button>
+
+                      {/* Collapsible Advanced Sliders */}
+                      {showAdvancedBudget && (
+                        <div className="mt-2 bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-3">
+                          {budget && Number(budget) > 0 && (
+                            <p className="text-xs text-gray-500 mb-2">
+                              After 8% buffer (${Math.floor(Number(budget) * 0.08)}), allocating ${Math.floor(Number(budget) * 0.92)}:
+                            </p>
+                          )}
+                          {[
+                            { key: 'flights' as const, label: 'Flights' },
+                            { key: 'hotels' as const, label: 'Hotels' },
+                            { key: 'activities' as const, label: 'Food & Activities' },
+                          ].map(({ key, label }) => {
+                            const pct = customSplit[key]
+                            const amount = budget ? Math.floor(Number(budget) * 0.92 * (pct / 100)) : 0
+                            return (
+                              <div key={key}>
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="text-sm font-medium text-gray-700">
+                                    {label}
+                                  </span>
+                                  <span className="text-sm text-gray-600 font-semibold tabular-nums">
+                                    {pct}%{amount > 0 ? ` ($${amount})` : ''}
+                                  </span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min={5}
+                                  max={80}
+                                  value={pct}
+                                  onChange={(e) => {
+                                    const newVal = Number(e.target.value)
+                                    const diff = newVal - customSplit[key]
+                                    const others = (['flights', 'hotels', 'activities'] as const).filter(k => k !== key)
+                                    const otherTotal = others.reduce((s, k) => s + customSplit[k], 0)
+                                    const newSplit = { ...customSplit, [key]: newVal }
+                                    for (const ok of others) {
+                                      const share = otherTotal > 0 ? customSplit[ok] / otherTotal : 0.5
+                                      newSplit[ok] = Math.max(5, Math.round(customSplit[ok] - diff * share))
+                                    }
+                                    const sum = newSplit.flights + newSplit.hotels + newSplit.activities
+                                    if (sum !== 100) {
+                                      const largest = others.reduce((a, b) => newSplit[a] >= newSplit[b] ? a : b)
+                                      newSplit[largest] += 100 - sum
+                                    }
+                                    setCustomSplit(newSplit)
+                                    setBudgetPriority('custom')
+                                  }}
+                                  className="w-full h-2 rounded-full appearance-none cursor-pointer accent-skyblue bg-gray-200"
+                                />
+                              </div>
+                            )
+                          })}
+                          <div className="flex gap-2 pt-1">
+                            {budgetPriorities.map(p => (
+                              <button
+                                key={p.value}
+                                type="button"
+                                onClick={() => {
+                                  setCustomSplit(p.split)
+                                  setBudgetPriority(p.value)
+                                }}
+                                className="text-xs px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-600 transition"
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Multi-city: How many destinations (only show if not already 1, or allow changing) */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                        How many destinations
+                      </label>
+                      <div className="flex gap-2">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setNumCities(n)}
+                            className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
+                              numCities === n
+                                ? 'bg-skyblue text-navy ring-1 ring-skyblue/50'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {numCities === 1
+                          ? (knowDestination ? 'AI will plan your trip to ' + (chosenDestination || '...') : 'AI picks one perfect destination')
+                          : `AI will plan a ${numCities}-city mystery route`}
+                      </p>
+                    </div>
+
+                    {/* Region -- multi-city only */}
+                    {numCities > 1 && (
+                      <div>
+                        <label htmlFor="region" className="block text-sm font-medium text-gray-600 mb-1.5">
+                          Region preference
+                        </label>
+                        <select
+                          id="region"
+                          value={region}
+                          onChange={(e) => setRegion(e.target.value)}
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-skyblue focus:ring-1 focus:ring-skyblue focus:outline-none transition text-navy bg-white text-sm"
+                        >
+                          {regionOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Traveller Type -- single city only */}
+                    {numCities === 1 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                          Travelling as
+                        </label>
+                        <div className="flex gap-2">
+                          {travellerTypes.map((type) => (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => setTravellerType(type)}
+                              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+                                travellerType === type
+                                  ? 'bg-skyblue text-navy ring-1 ring-skyblue/50'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              {type}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Package Components -- single city only */}
+                    {numCities === 1 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                          Include in your plan
+                        </label>
+                        <div className="space-y-2">
+                          <label className="flex items-center cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={packageComponents.includeFlight}
+                              onChange={(e) => setPackageComponents({...packageComponents, includeFlight: e.target.checked})}
+                              className="w-4 h-4 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                            />
+                            <span className="ml-2 text-sm text-gray-600 group-hover:text-gray-800 transition">
+                              Flight (TravelPayouts affiliate link)
+                            </span>
+                          </label>
+                          <label className="flex items-center cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={packageComponents.includeHotel}
+                              onChange={(e) => setPackageComponents({...packageComponents, includeHotel: e.target.checked})}
+                              className="w-4 h-4 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                            />
+                            <span className="ml-2 text-sm text-gray-600 group-hover:text-gray-800 transition">
+                              Hotel recommendations with prices
+                            </span>
+                          </label>
+                          <label className="flex items-center cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={packageComponents.includeItinerary}
+                              onChange={(e) => setPackageComponents({...packageComponents, includeItinerary: e.target.checked})}
+                              className="w-4 h-4 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                            />
+                            <span className="ml-2 text-sm text-gray-600 group-hover:text-gray-800 transition">
+                              Daily itinerary with activities
+                            </span>
+                          </label>
+                          <label className="flex items-center cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={packageComponents.includeTransportation}
+                              onChange={(e) => setPackageComponents({...packageComponents, includeTransportation: e.target.checked})}
+                              className="w-4 h-4 text-skyblue border-gray-300 rounded focus:ring-skyblue"
+                            />
+                            <span className="ml-2 text-sm text-gray-600 group-hover:text-gray-800 transition">
+                              Local transportation tips
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Email Capture -- single city only */}
+                    {numCities === 1 && (
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-1.5">
+                          Email (optional)
+                        </label>
+                        <input
+                          type="email"
+                          id="email"
+                          value={emailForUpdates}
+                          onChange={(e) => setEmailForUpdates(e.target.value)}
+                          placeholder="your@email.com"
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-skyblue focus:ring-1 focus:ring-skyblue focus:outline-none transition text-navy text-sm"
+                        />
+                        <p className="text-xs text-gray-400 mt-1">
+                          Get your trip details and travel tips via email
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Package Components -- single city only */}
-              {numCities === 1 && (<div className="mb-6">
-                <label className="block text-lg font-semibold text-navy mb-3">
-                  What should we include? &#x1F4E6;
-                </label>
-                <div className="space-y-3">
-                  <label className="flex items-center cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={packageComponents.includeFlight}
-                      onChange={(e) => setPackageComponents({...packageComponents, includeFlight: e.target.checked})}
-                      className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
-                    />
-                    <span className="ml-3 text-gray-700 group-hover:text-navy transition">
-                      &#x2708;&#xFE0F; Flight (TravelPayouts affiliate link)
-                    </span>
-                  </label>
-                  <label className="flex items-center cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={packageComponents.includeHotel}
-                      onChange={(e) => setPackageComponents({...packageComponents, includeHotel: e.target.checked})}
-                      className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
-                    />
-                    <span className="ml-3 text-gray-700 group-hover:text-navy transition">
-                      &#x1F3E8; Hotel recommendations with prices
-                    </span>
-                  </label>
-                  <label className="flex items-center cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={packageComponents.includeItinerary}
-                      onChange={(e) => setPackageComponents({...packageComponents, includeItinerary: e.target.checked})}
-                      className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
-                    />
-                    <span className="ml-3 text-gray-700 group-hover:text-navy transition">
-                      &#x1F4CD; Daily itinerary with activities
-                    </span>
-                  </label>
-                  <label className="flex items-center cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={packageComponents.includeTransportation}
-                      onChange={(e) => setPackageComponents({...packageComponents, includeTransportation: e.target.checked})}
-                      className="w-5 h-5 text-skyblue border-gray-300 rounded focus:ring-skyblue"
-                    />
-                    <span className="ml-3 text-gray-700 group-hover:text-navy transition">
-                      &#x1F68C; Local transportation tips
-                    </span>
-                  </label>
-                </div>
-              </div>)}
-
-              {/* Email Capture -- single city only */}
-              {numCities === 1 && (
-                <div className="mb-8">
-                  <label htmlFor="email" className="block text-lg font-semibold text-navy mb-2">
-                    Email (optional) &#x1F4E7;
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={emailForUpdates}
-                    onChange={(e) => setEmailForUpdates(e.target.value)}
-                    placeholder="your@email.com"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy"
-                  />
-                  <p className="text-sm text-gray-600 mt-1">
-                    Get your trip details and travel tips via email
-                  </p>
-                </div>
-              )}
             </fieldset>
 
             {/* Error Message */}
             {error && (
               <div
                 ref={errorRef}
-                className="mb-6 bg-red-50 border-2 border-red-500 rounded-lg p-4 shadow-lg animate-shake"
+                className="mb-6 bg-red-50 border border-red-400 rounded-lg p-4 animate-shake"
               >
-                <p className="text-red-700 font-semibold text-center text-lg">&#x274C; {error}</p>
+                <p className="text-red-700 font-medium text-center text-sm">{error}</p>
               </div>
             )}
 
@@ -1005,27 +927,20 @@ export default function MysteryPage() {
               .animate-shake {
                 animation: shake 0.5s ease-in-out;
               }
-              @keyframes fade-in {
-                from { opacity: 0; transform: translateY(-8px); }
-                to { opacity: 1; transform: translateY(0); }
-              }
-              .animate-fade-in {
-                animation: fade-in 0.3s ease-out;
-              }
             `}</style>
 
             {/* Submit / Cancel Buttons */}
             {!isSearching ? (
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-bold text-xl py-5 px-6 rounded-lg transition shadow-2xl hover:shadow-3xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+                className="w-full bg-gradient-to-r from-skyblue to-skyblue-dark hover:from-skyblue-dark hover:to-skyblue text-navy font-bold text-lg py-4 px-6 rounded-lg transition shadow-xl hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 {numCities === 1 ? (
                   knowDestination
-                    ? <>&#x2728; Plan My Trip &#x2728;</>
-                    : <>&#x2728; Find My Mystery Destination &#x2728;</>
+                    ? 'Plan My Trip'
+                    : 'Find My Mystery Destination'
                 ) : (
-                  <>&#x1F5FA;&#xFE0F; Plan My Mystery Route</>
+                  'Plan My Mystery Route'
                 )}
               </button>
             ) : (
@@ -1033,15 +948,15 @@ export default function MysteryPage() {
                 <button
                   type="button"
                   disabled
-                  className="flex-1 bg-gradient-to-r from-skyblue/50 to-skyblue-dark/50 text-navy/60 font-bold text-xl py-5 px-6 rounded-lg cursor-not-allowed flex items-center justify-center gap-3"
+                  className="flex-1 bg-gradient-to-r from-skyblue/50 to-skyblue-dark/50 text-navy/60 font-bold text-lg py-4 px-6 rounded-lg cursor-not-allowed flex items-center justify-center gap-3"
                 >
-                  <div className="inline-block w-6 h-6 border-3 border-navy/40 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="inline-block w-5 h-5 border-2 border-navy/40 border-t-transparent rounded-full animate-spin"></div>
                   <span>Searching...</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-6 py-5 rounded-lg border-2 border-red-300 text-red-600 font-semibold hover:bg-red-50 transition"
+                  className="px-6 py-4 rounded-lg border border-red-300 text-red-600 font-medium hover:bg-red-50 transition text-sm"
                 >
                   Cancel
                 </button>
@@ -1084,7 +999,7 @@ export default function MysteryPage() {
 
           {/* Info */}
           <div className="mt-8 text-center">
-            <p className="text-skyblue-light">
+            <p className="text-skyblue-light text-sm">
               Our AI will find you a unique destination that matches your preferences and budget
             </p>
           </div>
