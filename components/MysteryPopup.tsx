@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useMystery } from '@/components/MysteryContext'
 import { useCurrency } from '@/hooks/useCurrency'
@@ -85,6 +85,7 @@ function MysteryPanel() {
   const { state, minimize, dismiss, searchParams, rerollCount, maxRerolls, handleReroll, handleShowAnother } = useMystery()
   const currency = useCurrency()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Lock body scroll when panel is open
   useEffect(() => {
@@ -127,7 +128,11 @@ function MysteryPanel() {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: '100%', opacity: 0.5 }}
         transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-        className="relative w-full sm:max-w-[800px] max-h-[90vh] sm:max-h-[80vh] rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl border border-white/10"
+        className={`relative w-full overflow-hidden shadow-2xl border border-white/10 ${
+          isFullscreen
+            ? 'max-w-none max-h-none h-screen rounded-none'
+            : 'sm:max-w-[800px] max-h-[90vh] sm:max-h-[80vh] rounded-t-2xl sm:rounded-2xl'
+        }`}
         style={{
           background: 'linear-gradient(145deg, rgba(15,23,42,0.97) 0%, rgba(30,41,59,0.97) 100%)',
           backdropFilter: 'blur(20px) saturate(180%)',
@@ -164,6 +169,18 @@ function MysteryPanel() {
               title="Minimize"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 10l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition hidden sm:flex"
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            >
+              {isFullscreen ? (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2v4H2M10 14v-4h4M2 10h4v4M14 6h-4V2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 6V2h4M14 10v4h-4M10 2h4v4M6 14H2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              )}
             </button>
             <button
               onClick={dismiss}

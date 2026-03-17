@@ -335,6 +335,17 @@ export async function POST(request: NextRequest) {
     const pool = vibeMatched.length > 0 ? vibeMatched : candidates
     const picked = pool[Math.floor(Math.random() * pool.length)]
 
+    // Build runner-up alternatives (next 2-3 candidates excluding the picked one)
+    const alternativeCandidates = scored
+      .filter(d => d.destination !== picked.destination)
+      .slice(0, 3)
+      .map(d => ({
+        destination: d.destination,
+        city: d.city || d.destination,
+        country: d.country || '',
+        price: d.price,
+      }))
+
     // Estimate hotel price
     const costData = getDestinationCost(picked.destination)
     const accomTierMap: Record<string, 'budget' | 'mid' | 'comfort'> = {
@@ -422,7 +433,7 @@ export async function POST(request: NextRequest) {
       destination_found: result.iata,
     })
 
-    return NextResponse.json({ ...result, cachedBasicInfo })
+    return NextResponse.json({ ...result, cachedBasicInfo, alternatives: alternativeCandidates })
   } catch (error) {
     console.error('[Quick] Error:', error)
     return NextResponse.json(

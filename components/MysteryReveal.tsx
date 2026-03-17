@@ -854,16 +854,20 @@ export default function MysteryReveal({
                         </h3>
                         <div className="space-y-3">
                           {destination.hotel_recommendations.map((hotel, idx) => (
-                            <div
+                            <a
                               key={idx}
-                              className="bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10"
+                              href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.name + ', ' + destination.destination + ', ' + destination.country)}&checkin=${effectiveDepartDate}&checkout=${effectiveReturnDate}&group_adults=1&no_rooms=1&order=price`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition group cursor-pointer"
                             >
                               <div className="flex justify-between items-start mb-2">
-                                <h4 className="font-semibold text-white">
+                                <h4 className="font-semibold text-white group-hover:text-sky-400 transition">
                                   {hotel.name}
+                                  <span className="text-xs text-white/30 ml-2 group-hover:text-sky-400/50">↗</span>
                                 </h4>
                                 <p className="text-emerald-400 font-bold whitespace-nowrap ml-4">
-                                  ${hotel.estimated_price_per_night}/night
+                                  {fmt(hotel.estimated_price_per_night)}/night
                                 </p>
                               </div>
                               <p className="text-sm text-white/50 mb-1">
@@ -872,7 +876,10 @@ export default function MysteryReveal({
                               <p className="text-sm text-white/70">
                                 {hotel.why_recommended}
                               </p>
-                            </div>
+                              <p className="text-xs text-sky-400/60 mt-2 group-hover:text-sky-400 transition">
+                                View on Booking.com →
+                              </p>
+                            </a>
                           ))}
                         </div>
                       </FadeIn>
