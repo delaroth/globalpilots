@@ -45,6 +45,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }))
 
+  // SEO: best time to visit each destination
+  const bestTimePages: MetadataRoute.Sitemap = destinations.map((d) => ({
+    url: `${baseUrl}/best-time/${slugify(d.city)}`,
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.7,
+  }))
+
   // SEO: budget travel by region
   const regions = getAllRegions()
   const budgetTravelPages: MetadataRoute.Sitemap = regions.map((r) => ({
@@ -176,6 +184,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.8,
     },
+    {
+      url: `${baseUrl}/best-time`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
 
     // About & Legal
     {
@@ -218,5 +232,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...cheapFlightPages,
     ...flightsFromPages,
     ...budgetTravelPages,
+    ...bestTimePages,
   ]
 }

@@ -20,6 +20,7 @@ import PriceCalendar from '@/components/PriceCalendar'
 import CurrencySelector from '@/components/CurrencySelector'
 import { useCurrency } from '@/hooks/useCurrency'
 import Link from 'next/link'
+import PassportSelector from '@/components/PassportSelector'
 
 // Lazy load CalendarGrid — only rendered after a flexible-month search completes
 const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
@@ -106,32 +107,6 @@ interface StopoverSearchResult {
   serpApiCallsUsed: number
   serpApiRemaining: number
 }
-
-const PASSPORT_OPTIONS = [
-  { code: 'US', label: 'United States' },
-  { code: 'UK', label: 'United Kingdom' },
-  { code: 'CA', label: 'Canada' },
-  { code: 'AU', label: 'Australia' },
-  { code: 'DE', label: 'Germany' },
-  { code: 'FR', label: 'France' },
-  { code: 'NL', label: 'Netherlands' },
-  { code: 'JP', label: 'Japan' },
-  { code: 'KR', label: 'South Korea' },
-  { code: 'SG', label: 'Singapore' },
-  { code: 'NZ', label: 'New Zealand' },
-  { code: 'IE', label: 'Ireland' },
-  { code: 'IT', label: 'Italy' },
-  { code: 'ES', label: 'Spain' },
-  { code: 'SE', label: 'Sweden' },
-  { code: 'NO', label: 'Norway' },
-  { code: 'DK', label: 'Denmark' },
-  { code: 'CH', label: 'Switzerland' },
-  { code: 'AT', label: 'Austria' },
-  { code: 'IN', label: 'India' },
-  { code: 'TH', label: 'Thailand' },
-  { code: 'BR', label: 'Brazil' },
-  { code: 'MX', label: 'Mexico' },
-]
 
 const VERDICT_CONFIG = {
   'free-vacation': { emoji: '\uD83C\uDF89', label: 'Free Vacation', color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30' },
@@ -296,7 +271,7 @@ function SearchPageContent() {
   // Stopovers state
   const { format: fmtCurrency, code: currencyCode, setCurrency, currencies } = useCurrency()
   const [stopoverMaxDays, setStopoverMaxDays] = useState(14)
-  const [stopoverPassport, setStopoverPassport] = useState('US')
+  const [stopoverPassports, setStopoverPassports] = useState<string[]>(['US'])
   const [stopoverBudget, setStopoverBudget] = useState<'budget' | 'mid' | 'comfort'>('mid')
   const [stopoverLoading, setStopoverLoading] = useState(false)
   const [stopoverError, setStopoverError] = useState('')
@@ -454,7 +429,7 @@ function SearchPageContent() {
           destination: destination.toUpperCase(),
           depart_date: departureDate.exactDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
           max_days: String(stopoverMaxDays),
-          passport: stopoverPassport,
+          passport: stopoverPassports.join(','),
           budget: stopoverBudget,
         })
 
@@ -959,22 +934,19 @@ function SearchPageContent() {
                       onChange={e => setStopoverMaxDays(Number(e.target.value))}
                       className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
                     >
-                      {[5, 7, 10, 14, 21, 30].map(d => (
+                      {[1, 2, 3, 5, 7, 10, 14, 21, 30, 45, 60].map(d => (
                         <option key={d} value={d}>{d} days</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-navy mb-1">Passport</label>
-                    <select
-                      value={stopoverPassport}
-                      onChange={e => setStopoverPassport(e.target.value)}
-                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-skyblue focus:outline-none transition text-navy text-sm"
-                    >
-                      {PASSPORT_OPTIONS.map(p => (
-                        <option key={p.code} value={p.code}>{p.label}</option>
-                      ))}
-                    </select>
+                    <PassportSelector
+                      selected={stopoverPassports}
+                      onChange={setStopoverPassports}
+                      maxSelections={3}
+                      variant="light"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-navy mb-1">Budget</label>

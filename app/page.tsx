@@ -51,9 +51,9 @@ export default function Home() {
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-sky-950/30 via-slate-950 to-slate-950" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full blur-3xl bg-sky-600/[0.06]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90vw] h-[50vh] md:w-[800px] md:h-[600px] rounded-full blur-3xl bg-sky-600/[0.06]" />
 
-        <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-24 text-center">
+        <div className="relative max-w-5xl mx-auto px-6 pt-12 pb-16 md:pt-20 md:pb-24 text-center">
           <h1 className="text-5xl md:text-7xl font-bold mb-5">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-cyan-300 to-blue-400">
               Budget In. Adventure Out.
@@ -62,9 +62,17 @@ export default function Home() {
           <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-4">
             AI-powered trip planning with live flight prices, total cost breakdowns, and destinations you&apos;d never think of.
           </p>
-          <p className="text-sm text-slate-500 mb-12">
+          <p className="text-sm text-slate-500 mb-6 md:mb-12">
             113 destinations · 30 currencies · Live Google Flights data
           </p>
+
+          {/* ── Trust Bar ── */}
+          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-xs text-slate-400 mb-10">
+            <span className="flex items-center gap-1.5">🔒 100% Free</span>
+            <span className="flex items-center gap-1.5">✈️ Powered by Google Flights</span>
+            <span className="flex items-center gap-1.5">💳 No Payment Info Collected</span>
+            <span className="flex items-center gap-1.5">🛡️ No Hidden Fees</span>
+          </div>
 
           {/* ── 3 Feature Cards ── */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-left">
@@ -165,12 +173,47 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Why GlobePilots? ── */}
+      <section className="max-w-4xl mx-auto px-6 pb-16 text-center">
+        <h2 className="text-2xl font-bold text-white mb-3">Why GlobePilots?</h2>
+        <p className="text-slate-400 mb-8 max-w-2xl mx-auto">
+          Google Flights shows flight prices. We show your total trip cost — flights + hotels + food + activities — so you know the real price before you book.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left text-sm">
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-4">
+            <p className="text-white font-medium mb-1">Google Flights</p>
+            <p className="text-slate-500">Shows flight prices only</p>
+          </div>
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-4">
+            <p className="text-white font-medium mb-1">Skyscanner / Kayak</p>
+            <p className="text-slate-500">Compares flight prices across airlines</p>
+          </div>
+          <div className="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4">
+            <p className="text-sky-400 font-medium mb-1">GlobePilots</p>
+            <p className="text-slate-300">Total trip cost + AI destination picking + visa checks + stopover savings + 30 currencies</p>
+          </div>
+        </div>
+      </section>
+
       {/* ── Social Proof ── */}
       <section className="max-w-5xl mx-auto px-6 pb-16 w-full">
         <SocialProof />
       </section>
 
+      {/* Extra bottom padding on mobile for sticky CTA */}
+      <div className="pb-16 lg:pb-0" />
+
       <Footer />
+
+      {/* ── Mobile Sticky CTA ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 p-3 bg-slate-950/95 backdrop-blur border-t border-white/10 lg:hidden">
+        <Link
+          href="/mystery"
+          className="block w-full text-center py-3 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-400 text-white font-bold text-sm shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 transition-all"
+        >
+          Plan My Trip →
+        </Link>
+      </div>
     </main>
   )
 }

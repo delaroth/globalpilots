@@ -18,7 +18,10 @@ export async function GET(request: NextRequest) {
   const destination = sp.get('destination')?.toUpperCase()
   const departDate = sp.get('depart_date')
   const maxTravelDays = parseInt(sp.get('max_days') || '14', 10)
-  const passportCountry = sp.get('passport')?.toUpperCase() || 'US'
+  const passportRaw = sp.get('passport')?.toUpperCase() || 'US'
+  // Support comma-separated passports (e.g. "US,DE,GB") — use first as primary
+  const passportCountries = passportRaw.split(',').map(s => s.trim()).filter(Boolean)
+  const passportCountry = passportCountries[0] || 'US'
   const budgetTier = (sp.get('budget') || 'mid') as BudgetTier
   const maxStopoverDays = sp.get('stopover_days') ? parseInt(sp.get('stopover_days')!, 10) : undefined
 
@@ -40,8 +43,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Origin and destination must be different' }, { status: 400 })
   }
 
-  if (maxTravelDays < 3 || maxTravelDays > 60) {
-    return NextResponse.json({ error: 'max_days must be between 3 and 60' }, { status: 400 })
+  if (maxTravelDays < 1 || maxTravelDays > 90) {
+    return NextResponse.json({ error: 'max_days must be between 1 and 90' }, { status: 400 })
   }
 
   const searchDate = departDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
@@ -53,6 +56,7 @@ export async function GET(request: NextRequest) {
       departDate: searchDate,
       maxTravelDays,
       passportCountry,
+      passportCountries,
       budgetTier,
       maxStopoverDays,
     })

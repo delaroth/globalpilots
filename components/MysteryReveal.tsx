@@ -280,6 +280,31 @@ export default function MysteryReveal({
     })
   }
 
+  // Email capture
+  const [captureEmail, setCaptureEmail] = useState('')
+  const [emailCaptured, setEmailCaptured] = useState(false)
+
+  const handleEmailCapture = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!captureEmail) return
+    try {
+      await fetch('/api/price-track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: captureEmail,
+          origin: origin || 'ANY',
+          destination: iata,
+          targetPrice: flightPrice || 500,
+        }),
+      })
+      setEmailCaptured(true)
+    } catch {
+      // Silently fail — non-critical
+      setEmailCaptured(true)
+    }
+  }
+
   // Dynamically import destination-costs
   const [costData, setCostData] = useState<DestinationCost | undefined>(undefined)
   useEffect(() => {
@@ -753,6 +778,7 @@ export default function MysteryReveal({
                               {destination.googleFlightsPriceLevel === 'low' ? 'Great Price' : destination.googleFlightsPriceLevel === 'high' ? 'Prices Are High' : 'Typical Price'}
                             </span>
                           )}
+                          <p className="text-xs text-amber-400/60 mt-1">Flights at this price typically sell out within 24-48 hours</p>
                         </div>
                         <div>
                           <p className="text-sm text-white/50">
@@ -796,6 +822,14 @@ export default function MysteryReveal({
                     : isEstimate
                     ? `~${fmt(flightPrice)} est. is an estimated price based on regional averages. Actual price confirmed on booking.`
                     : `~${fmt(flightPrice)} is an indicative cached price. Actual price confirmed on Aviasales.`}
+                </motion.p>
+
+                {/* Urgency signal */}
+                <motion.p
+                  {...staggerChild(5)}
+                  className="text-xs text-amber-400/70 text-center"
+                >
+                  Flights at this price typically sell out within 24-48 hours
                 </motion.p>
 
                 {/* Why It's Perfect */}
@@ -1234,6 +1268,7 @@ export default function MysteryReveal({
                       Browse on GetYourGuide
                     </span>
                   </BookingTracker>
+                  <p className="text-xs text-white/40 text-center mt-2">You book directly with the airline or hotel. GlobePilots never handles your payment.</p>
                 </motion.div>
 
                 {/* ============================================================
@@ -1652,8 +1687,29 @@ export default function MysteryReveal({
                   </motion.div>
                 )}
 
-                {/* ---- Continue Planning Links ---- */}
+                {/* ---- Email capture — shown after full reveal ---- */}
                 <motion.div {...staggerChild(17)}>
+                  <div className="mt-6 bg-white/[0.04] border border-white/10 rounded-xl p-5 text-center">
+                    <p className="text-white font-medium mb-1">Track prices for this trip</p>
+                    <p className="text-white/50 text-sm mb-3">We&apos;ll email you if flights to {destination.destination} drop in price</p>
+                    <form onSubmit={handleEmailCapture} className="flex gap-2 max-w-md mx-auto">
+                      <input
+                        type="email"
+                        placeholder="your@email.com"
+                        value={captureEmail}
+                        onChange={(e) => setCaptureEmail(e.target.value)}
+                        className="flex-1 px-4 py-2.5 bg-white/[0.06] border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-sky-500/50"
+                      />
+                      <button type="submit" className="px-4 py-2.5 bg-sky-500 hover:bg-sky-400 text-white rounded-lg text-sm font-medium transition">
+                        Track Price
+                      </button>
+                    </form>
+                    {emailCaptured && <p className="text-emerald-400 text-sm mt-2">We&apos;ll let you know when prices drop!</p>}
+                  </div>
+                </motion.div>
+
+                {/* ---- Continue Planning Links ---- */}
+                <motion.div {...staggerChild(18)}>
                   <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
                     <span className="text-xs text-white/30 mr-1">
                       Continue planning:
@@ -1683,7 +1739,7 @@ export default function MysteryReveal({
 
                 {/* ---- Re-roll Section ---- */}
                 {onReroll && (
-                  <motion.div {...staggerChild(18)}>
+                  <motion.div {...staggerChild(19)}>
                     <div className="border-t border-white/10 pt-6">
                       {rerollCount < maxRerolls ? (
                         <div className="text-center">
@@ -1711,7 +1767,7 @@ export default function MysteryReveal({
                 )}
 
                 {/* ---- Save Trip + Show Another + Share ---- */}
-                <motion.div {...staggerChild(19)}>
+                <motion.div {...staggerChild(20)}>
                   {/* Save Trip */}
                   <div className="mb-4 flex justify-center">
                     <SaveTripButton
@@ -1774,7 +1830,7 @@ export default function MysteryReveal({
 
                 {/* Share URL display */}
                 {shareUrl && (
-                  <motion.div {...staggerChild(20)}>
+                  <motion.div {...staggerChild(21)}>
                     <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
                       <p className="text-sm font-semibold text-emerald-400 mb-2">
                         Shareable link created!
@@ -1805,7 +1861,7 @@ export default function MysteryReveal({
                 )}
 
                 {/* ---- Dare a Friend + Download Story Card ---- */}
-                <motion.div {...staggerChild(21)}>
+                <motion.div {...staggerChild(22)}>
                   <div className="grid grid-cols-2 gap-4">
                     {/* Dare a Friend */}
                     <button

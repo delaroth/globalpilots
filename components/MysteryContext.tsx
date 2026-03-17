@@ -32,6 +32,7 @@ interface SearchParams {
   accommodationLevel: string
   budgetPriority: string
   customSplit?: { flights: number; hotels: number; activities: number }
+  passports?: string[] // ISO alpha-2 codes for visa filtering (e.g. ['US', 'DE'])
   destination?: string // Pre-selected destination (skips mystery pick, goes straight to AI planning)
 }
 

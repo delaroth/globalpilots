@@ -82,7 +82,8 @@
       "mcp__vercel__get_runtime_logs",
       "Bash(node:*)",
       "Bash(cd:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(sed:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -165,7 +165,7 @@ function TripCostContent() {
         </div>
 
         {/* Calculator Form */}
-        <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 mb-8">
+        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl shadow-2xl p-6 md:p-8 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Destination */}
             <div>
@@ -187,13 +187,13 @@ function TripCostContent() {
             <div>
               {!showOrigin ? (
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-navy">
+                  <label className="block text-sm font-medium text-white">
                     Origin (for flight estimate)
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowOrigin(true)}
-                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-skyblue hover:text-skyblue transition text-left"
+                    className="w-full px-4 py-3 border-2 border-dashed border-white/10 rounded-lg text-slate-500 hover:border-skyblue hover:text-skyblue transition text-left"
                   >
                     + Add origin airport for flight estimate
                   </button>
@@ -212,7 +212,7 @@ function TripCostContent() {
 
           {/* Trip Length Slider */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-navy mb-2">
+            <label className="block text-sm font-medium text-white mb-2">
               Trip Length: <span className="text-skyblue font-bold text-lg">{days} {days === 1 ? 'day' : 'days'}</span>
             </label>
             <input
@@ -221,9 +221,9 @@ function TripCostContent() {
               max="30"
               value={days}
               onChange={e => setDays(parseInt(e.target.value, 10))}
-              className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
+              className="w-full h-3 bg-white/[0.06] rounded-lg appearance-none cursor-pointer accent-skyblue"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <div className="flex justify-between text-xs text-slate-500 mt-1">
               <span>1 day</span>
               <span>1 week</span>
               <span>2 weeks</span>
@@ -233,7 +233,7 @@ function TripCostContent() {
 
           {/* Budget Tier Selector */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-navy mb-3">Budget Tier</label>
+            <label className="block text-sm font-medium text-white mb-3">Budget Tier</label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {(['budget', 'mid', 'comfort'] as BudgetTier[]).map(t => (
                 <button
@@ -243,20 +243,20 @@ function TripCostContent() {
                   className={`relative p-4 rounded-xl border-2 transition-all text-left ${
                     tier === t
                       ? 'border-skyblue bg-skyblue/10 shadow-lg scale-[1.02]'
-                      : 'border-gray-200 hover:border-gray-300'
+                      : 'border-white/[0.08] hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className={`font-bold ${tier === t ? 'text-skyblue' : 'text-navy'}`}>
+                    <span className={`font-bold ${tier === t ? 'text-skyblue' : 'text-white'}`}>
                       {tierLabels[t]}
                     </span>
                     {tier === t && (
-                      <span className="bg-skyblue text-white text-xs px-2 py-0.5 rounded-full">
+                      <span className="bg-sky-500 text-white text-xs px-2 py-0.5 rounded-full">
                         Selected
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500">{tierDescriptions[t]}</p>
+                  <p className="text-xs text-slate-500">{tierDescriptions[t]}</p>
                 </button>
               ))}
             </div>
@@ -265,7 +265,7 @@ function TripCostContent() {
           {/* Quick Pick Destinations */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="block text-sm font-medium text-navy">Quick Pick</label>
+              <label className="block text-sm font-medium text-white">Quick Pick</label>
               <div className="flex gap-1 flex-wrap">
                 {regions.map(r => (
                   <button
@@ -274,8 +274,8 @@ function TripCostContent() {
                     onClick={() => setQuickPickRegion(r)}
                     className={`text-xs px-2 py-1 rounded-full transition ${
                       quickPickRegion === r
-                        ? 'bg-skyblue text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-sky-500 text-white'
+                        : 'bg-white/[0.06] text-slate-400 hover:bg-white/[0.1]'
                     }`}
                   >
                     {r === 'all' ? 'All' : r}
@@ -293,8 +293,8 @@ function TripCostContent() {
                     onClick={() => handleQuickPick(d.code)}
                     className={`text-sm px-3 py-1.5 rounded-full border transition ${
                       destination === d.code
-                        ? 'bg-navy text-white border-navy'
-                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-skyblue hover:bg-skyblue/5'
+                        ? 'bg-sky-500 text-white border-sky-500'
+                        : 'bg-white/[0.06] text-slate-400 border-white/[0.08] hover:border-skyblue hover:bg-skyblue/5'
                     }`}
                   >
                     {d.city} <span className="text-xs opacity-70">${dailyTotal}/day</span>
@@ -345,16 +345,16 @@ function TripCostContent() {
             {/* Cost Breakdown */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Visual Bars */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-navy mb-4">Cost Breakdown</h3>
+              <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-white mb-4">Cost Breakdown</h3>
                 <div className="space-y-4">
                   {result.flightEstimate && (
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600">Flights</span>
-                        <span className="font-semibold text-navy">${result.flightEstimate}</span>
+                        <span className="text-slate-400">Flights</span>
+                        <span className="font-semibold text-white">${result.flightEstimate}</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-6 overflow-hidden">
+                      <div className="w-full bg-white/[0.06] rounded-full h-6 overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-orange-400 to-orange-500 rounded-full flex items-center justify-end pr-2"
                           style={{ width: `${getBarWidth(result.flightEstimate, result.totalEstimatedCost)}%` }}
@@ -374,10 +374,10 @@ function TripCostContent() {
                   ].map(item => (
                     <div key={item.label}>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600">{item.label}</span>
-                        <span className="font-semibold text-navy">${item.value}</span>
+                        <span className="text-slate-400">{item.label}</span>
+                        <span className="font-semibold text-white">${item.value}</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-6 overflow-hidden">
+                      <div className="w-full bg-white/[0.06] rounded-full h-6 overflow-hidden">
                         <div
                           className={`h-full bg-gradient-to-r ${item.color} rounded-full flex items-center justify-end pr-2`}
                           style={{ width: `${getBarWidth(item.value, result.totalEstimatedCost)}%` }}
@@ -393,70 +393,70 @@ function TripCostContent() {
               </div>
 
               {/* Daily Breakdown Table */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-navy mb-4">Daily Breakdown</h3>
+              <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-white mb-4">Daily Breakdown</h3>
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b-2 border-gray-100">
-                      <th className="text-left text-sm text-gray-500 pb-2">Category</th>
-                      <th className="text-right text-sm text-gray-500 pb-2">Per Day</th>
-                      <th className="text-right text-sm text-gray-500 pb-2">{result.days} Days</th>
+                    <tr className="border-b-2 border-white/[0.08]">
+                      <th className="text-left text-sm text-slate-500 pb-2">Category</th>
+                      <th className="text-right text-sm text-slate-500 pb-2">Per Day</th>
+                      <th className="text-right text-sm text-slate-500 pb-2">{result.days} Days</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-gray-50">
-                      <td className="py-3 text-navy flex items-center gap-2">
+                    <tr className="border-b border-white/[0.06]">
+                      <td className="py-3 text-white flex items-center gap-2">
                         <span className="w-3 h-3 rounded-full bg-blue-400 inline-block" />
                         Hotels
                       </td>
-                      <td className="text-right text-navy font-medium">${result.dailyCosts.hotel}</td>
-                      <td className="text-right text-navy font-bold">${result.breakdown.hotel}</td>
+                      <td className="text-right text-white font-medium">${result.dailyCosts.hotel}</td>
+                      <td className="text-right text-white font-bold">${result.breakdown.hotel}</td>
                     </tr>
-                    <tr className="border-b border-gray-50">
-                      <td className="py-3 text-navy flex items-center gap-2">
+                    <tr className="border-b border-white/[0.06]">
+                      <td className="py-3 text-white flex items-center gap-2">
                         <span className="w-3 h-3 rounded-full bg-green-400 inline-block" />
                         Food
                       </td>
-                      <td className="text-right text-navy font-medium">${result.dailyCosts.food}</td>
-                      <td className="text-right text-navy font-bold">${result.breakdown.food}</td>
+                      <td className="text-right text-white font-medium">${result.dailyCosts.food}</td>
+                      <td className="text-right text-white font-bold">${result.breakdown.food}</td>
                     </tr>
-                    <tr className="border-b border-gray-50">
-                      <td className="py-3 text-navy flex items-center gap-2">
+                    <tr className="border-b border-white/[0.06]">
+                      <td className="py-3 text-white flex items-center gap-2">
                         <span className="w-3 h-3 rounded-full bg-yellow-400 inline-block" />
                         Transport
                       </td>
-                      <td className="text-right text-navy font-medium">${result.dailyCosts.transport}</td>
-                      <td className="text-right text-navy font-bold">${result.breakdown.transport}</td>
+                      <td className="text-right text-white font-medium">${result.dailyCosts.transport}</td>
+                      <td className="text-right text-white font-bold">${result.breakdown.transport}</td>
                     </tr>
-                    <tr className="border-b border-gray-50">
-                      <td className="py-3 text-navy flex items-center gap-2">
+                    <tr className="border-b border-white/[0.06]">
+                      <td className="py-3 text-white flex items-center gap-2">
                         <span className="w-3 h-3 rounded-full bg-purple-400 inline-block" />
                         Activities
                       </td>
-                      <td className="text-right text-navy font-medium">${result.dailyCosts.activities}</td>
-                      <td className="text-right text-navy font-bold">${result.breakdown.activities}</td>
+                      <td className="text-right text-white font-medium">${result.dailyCosts.activities}</td>
+                      <td className="text-right text-white font-bold">${result.breakdown.activities}</td>
                     </tr>
                     {result.flightEstimate && (
-                      <tr className="border-b border-gray-50">
-                        <td className="py-3 text-navy flex items-center gap-2">
+                      <tr className="border-b border-white/[0.06]">
+                        <td className="py-3 text-white flex items-center gap-2">
                           <span className="w-3 h-3 rounded-full bg-orange-400 inline-block" />
                           Flights (round trip est.)
                         </td>
-                        <td className="text-right text-gray-400">-</td>
-                        <td className="text-right text-navy font-bold">${result.flightEstimate}</td>
+                        <td className="text-right text-slate-500">-</td>
+                        <td className="text-right text-white font-bold">${result.flightEstimate}</td>
                       </tr>
                     )}
-                    <tr className="bg-gray-50 font-bold">
-                      <td className="py-3 text-navy pl-5">Total</td>
-                      <td className="text-right text-navy">${result.dailyTotal}/day</td>
-                      <td className="text-right text-navy text-lg">${result.totalEstimatedCost}</td>
+                    <tr className="bg-white/[0.06] font-bold">
+                      <td className="py-3 text-white pl-5">Total</td>
+                      <td className="text-right text-white">${result.dailyTotal}/day</td>
+                      <td className="text-right text-white text-lg">${result.totalEstimatedCost}</td>
                     </tr>
                   </tbody>
                 </table>
 
                 {/* Best months */}
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-sm text-gray-600 mb-2 font-medium">Best months to visit:</p>
+                <div className="mt-4 pt-4 border-t border-white/[0.08]">
+                  <p className="text-sm text-slate-400 mb-2 font-medium">Best months to visit:</p>
                   <div className="flex flex-wrap gap-1.5">
                     {result.destination.bestMonths.map(m => (
                       <span key={m} className="bg-skyblue/10 text-skyblue text-xs px-2 py-1 rounded-full font-medium">
@@ -469,8 +469,8 @@ function TripCostContent() {
             </div>
 
             {/* Compare Tiers */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-navy mb-4">Compare All Tiers</h3>
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-white mb-4">Compare All Tiers</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {(['budget', 'mid', 'comfort'] as BudgetTier[]).map(t => {
                   const calc = calculateTripCost(result.destination.code, result.days, t)
@@ -483,22 +483,22 @@ function TripCostContent() {
                       className={`p-5 rounded-xl border-2 text-left transition-all ${
                         isSelected
                           ? 'border-skyblue bg-skyblue/5 shadow-md'
-                          : 'border-gray-200 hover:border-gray-300'
+                          : 'border-white/[0.08] hover:border-white/20'
                       }`}
                     >
                       <div className="flex justify-between items-start mb-3">
-                        <h4 className={`font-bold ${isSelected ? 'text-skyblue' : 'text-navy'}`}>
+                        <h4 className={`font-bold ${isSelected ? 'text-skyblue' : 'text-white'}`}>
                           {tierLabels[t]}
                         </h4>
                         {isSelected && (
-                          <span className="bg-skyblue text-white text-xs px-2 py-0.5 rounded-full">Current</span>
+                          <span className="bg-sky-500 text-white text-xs px-2 py-0.5 rounded-full">Current</span>
                         )}
                       </div>
-                      <p className="text-3xl font-extrabold text-navy mb-1">
+                      <p className="text-3xl font-extrabold text-white mb-1">
                         ${(calc.totalCost + (result.flightEstimate || 0)).toLocaleString()}
                       </p>
-                      <p className="text-sm text-gray-500">${calc.dailyTotal}/day</p>
-                      <div className="mt-3 space-y-1 text-xs text-gray-500">
+                      <p className="text-sm text-slate-500">${calc.dailyTotal}/day</p>
+                      <div className="mt-3 space-y-1 text-xs text-slate-500">
                         <div className="flex justify-between">
                           <span>Hotel</span><span>${calc.dailyCosts.hotel}/day</span>
                         </div>
@@ -520,15 +520,15 @@ function TripCostContent() {
 
             {/* Saving Tips */}
             {result.destination.savingTips.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-navy mb-4">
+              <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-white mb-4">
                   Money-Saving Tips for {result.destination.city}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {result.destination.savingTips.map((tip, idx) => (
-                    <div key={idx} className="flex gap-3 bg-green-50 rounded-lg p-3">
+                    <div key={idx} className="flex gap-3 bg-green-500/10 rounded-lg p-3">
                       <span className="text-green-500 font-bold text-lg shrink-0">$</span>
-                      <p className="text-sm text-gray-700">{tip}</p>
+                      <p className="text-sm text-slate-400">{tip}</p>
                     </div>
                   ))}
                 </div>
@@ -537,8 +537,8 @@ function TripCostContent() {
 
             {/* Booking Buttons */}
             {bookingBundle && (
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-navy mb-4">Ready to Book?</h3>
+              <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-white mb-4">Ready to Book?</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <a
                     href={bookingBundle.flightUrl}
@@ -574,7 +574,7 @@ function TripCostContent() {
                     </span>
                   </a>
                 </div>
-                <p className="text-xs text-gray-400 text-center mt-3">
+                <p className="text-xs text-slate-500 text-center mt-3">
                   Prices are estimates based on averages. Actual costs may vary by season and availability.
                 </p>
               </div>

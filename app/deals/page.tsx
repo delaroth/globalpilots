@@ -452,6 +452,9 @@ export default function DealsPage() {
                           </span>
                         )}
                       </div>
+                      {d.flightPrice && (
+                        <p className="text-[10px] text-white/30">Prices updated today</p>
+                      )}
 
                       {/* TripCostBadge in normal mode */}
                       {viewMode === 'deals' && d.flightPrice && (
@@ -463,6 +466,13 @@ export default function DealsPage() {
                         const vs = calculateValueScore({ flightPrice: d.flightPrice, dailyCost: d.dailyCost, airportCode: d.airportCode })
                         return <ValueBadge score={vs.score} label={vs.label} />
                       })()}
+
+                      {/* Urgency signal */}
+                      {d.flightPrice && (
+                        <p className="text-xs text-amber-400/70">
+                          Prices change frequently — book early for this rate
+                        </p>
+                      )}
 
                       {/* Dates */}
                       {d.startDate && d.endDate && (

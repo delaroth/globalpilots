@@ -11,7 +11,7 @@
  */
 
 import { getSerpApiUsage } from './serpapi'
-import { checkVisaRequirement } from '@/lib/enrichment/visa'
+import { checkVisaRequirement, checkBestVisaStatus } from '@/lib/enrichment/visa'
 import { getDestinationCost, type BudgetTier } from '@/lib/destination-costs'
 import { calculateSideQuestValue } from '@/lib/flight-intelligence/side-quest'
 import { getAirportCoords } from '@/data/airport-coordinates'
@@ -183,6 +183,7 @@ export async function discoverStopovers(params: {
   departDate: string
   maxTravelDays: number
   passportCountry: string
+  passportCountries?: string[] // Multiple passports — uses best visa status
   budgetTier?: BudgetTier
   maxStopoverDays?: number
 }): Promise<LayoverSearchResult> {
@@ -192,6 +193,7 @@ export async function discoverStopovers(params: {
     departDate,
     maxTravelDays,
     passportCountry,
+    passportCountries,
     budgetTier = 'mid',
   } = params
 
@@ -282,7 +284,9 @@ export async function discoverStopovers(params: {
     const country = getCountryForAirport(code)
     if (!country) continue
 
-    const visa = checkVisaRequirement(passportCountry, country)
+    const visa = passportCountries && passportCountries.length > 1
+      ? checkBestVisaStatus(passportCountries, country)
+      : checkVisaRequirement(passportCountry, country)
     const hasCosts = !!getDestinationCost(code)
 
     // Score: visa-free=100, visa-on-arrival=75, e-visa=50, visa-required=0

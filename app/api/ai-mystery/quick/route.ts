@@ -8,6 +8,7 @@ import { searchKiwiInspiration } from '@/lib/kiwi'
 import { AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { trackFeatureUse } from '@/lib/analytics'
 import { getCachedDestination, cacheDestination, incrementRevealCount, buildBasicInfo } from '@/lib/destination-cache'
+import { checkVisaRequirement } from '@/lib/enrichment/visa'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,6 +26,7 @@ interface QuickRequest {
   budgetPriority?: string
   customSplit?: { flights: number; hotels: number; activities: number }
   packageComponents?: PackageComponents
+  passports?: string[] // ISO alpha-2 codes for visa filtering
 }
 
 // Hardcoded fallback destinations by region for thin-cache scenarios
@@ -152,7 +154,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
     }
 
-    const { origin, budget, vibes, dates, tripDuration = 3, exclude = [] } = body
+    const { origin, budget, vibes, dates, tripDuration = 3, exclude = [], passports = [] } = body
     const accommodationLevel = body.accommodationLevel || 'mid-range'
     const budgetPriority = body.budgetPriority || 'balanced'
     const components: PackageComponents = body.packageComponents || {
@@ -320,12 +322,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Pick best destination matching vibes
+    // Pick best destination matching vibes + visa status
     // Score each destination, then pick from top 5 (weighted random for variety)
-    const scored = priceInfo.map(d => ({
-      ...d,
-      score: vibeScore(d.city || d.destination, d.country || '', vibes),
-    })).sort((a, b) => b.score - a.score)
+    const scored = priceInfo.map(d => {
+      let score = vibeScore(d.city || d.destination, d.country || '', vibes)
+
+      // Add visa score when passports are provided
+      if (passports.length > 0 && d.country) {
+        let bestVisaScore = -5 // default to visa-required penalty
+        for (const passport of passports) {
+          const visa = checkVisaRequirement(passport, d.country)
+          const visaScoreMap: Record<string, number> = {
+            'visa-free': 10,
+            'visa-on-arrival': 5,
+            'e-visa': 2,
+            'visa-required': -5,
+          }
+          const vs = visaScoreMap[visa.status] ?? -5
+          if (vs > bestVisaScore) bestVisaScore = vs
+        }
+        score += bestVisaScore
+      }
+
+      return { ...d, score }
+    }).sort((a, b) => b.score - a.score)
 
     // Take top 5 or all if fewer
     const candidates = scored.slice(0, Math.min(5, scored.length))

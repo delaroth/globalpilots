@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Mystery Vacation Generator — AI Picks Your Trip | GlobePilot',
+  title: 'AI Trip Planner — Mystery Vacation & Trip Planning | GlobePilots',
   description:
-    'Let AI surprise you with the perfect vacation. Set your budget and preferences, and discover an unexpected dream destination with flights, hotels, and activities included.',
+    'Set your budget and vibe. AI finds your perfect destination with live flight prices, daily cost breakdowns, and personalized itineraries.',
   keywords: [
     'mystery vacation',
     'surprise trip generator',
@@ -14,16 +14,16 @@ export const metadata: Metadata = {
     'budget vacation generator',
   ],
   openGraph: {
-    title: 'Mystery Vacation Generator | GlobePilot',
+    title: 'AI Trip Planner | GlobePilots',
     description:
-      'Set your budget, pick your vibes, and let AI surprise you with the perfect destination. Your next adventure awaits!',
+      'Set your budget. Pick your vibe. Get surprised.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Mystery Vacation Generator | GlobePilot',
+    title: 'AI Trip Planner | GlobePilots',
     description:
-      'Let AI surprise you with the perfect vacation destination based on your budget and preferences.',
+      'Set your budget. Pick your vibe. Get surprised.',
   },
 }
 

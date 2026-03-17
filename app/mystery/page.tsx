@@ -17,6 +17,7 @@ import TripHistory from '@/components/TripHistory'
 import CompareReveals from '@/components/CompareReveals'
 import type { SavedTrip } from '@/lib/trip-history'
 import { useMystery } from '@/components/MysteryContext'
+import PassportSelector from '@/components/PassportSelector'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -178,6 +179,9 @@ function MysteryPageContent() {
   const [selectedVibes, setSelectedVibes] = useState<string[]>([])
   const [error, setError] = useState('')
   const errorRef = useRef<HTMLDivElement>(null)
+
+  // Passport
+  const [passports, setPassports] = useState<string[]>([])
 
   // Destination
   const [knowDestination, setKnowDestination] = useState(false)
@@ -491,6 +495,7 @@ function MysteryPageContent() {
         accommodationLevel,
         budgetPriority: effectiveBudgetPriority,
         customSplit: splitPayload,
+        passports: passports.length > 0 ? passports : undefined,
         destination: chosenDestination,
       })
     } else {
@@ -504,6 +509,7 @@ function MysteryPageContent() {
         accommodationLevel,
         budgetPriority: effectiveBudgetPriority,
         customSplit: splitPayload,
+        passports: passports.length > 0 ? passports : undefined,
       })
     }
   }
@@ -565,6 +571,19 @@ function MysteryPageContent() {
                     onSearchChange={setOriginInputText}
                     placeholder="Search your departure city..."
                     persistKey="origin"
+                  />
+                </div>
+
+                {/* ── Passport (for visa-free filtering) ──────────────── */}
+                <div className="mb-5">
+                  <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                    Passport <span className="text-gray-400 font-normal">(for visa-free destinations)</span>
+                  </label>
+                  <PassportSelector
+                    selected={passports}
+                    onChange={setPassports}
+                    maxSelections={3}
+                    variant="light"
                   />
                 </div>
 

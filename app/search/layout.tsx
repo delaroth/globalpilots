@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Smart Flight Search — Flexible Dates & Calendar | GlobePilot',
+  title: 'Smart Flight Search — Live Google Flights Prices | GlobePilots',
   description:
-    'Search flights with exact dates, monthly calendar view, or flexible day-of-week mode. Find the cheapest days to fly and save on your next trip.',
+    'Compare real-time flight prices, flexible dates, nearby airports, and smart stopovers. Find the cheapest way to fly.',
   keywords: [
     'flight search',
     'cheap flights',
@@ -14,16 +14,16 @@ export const metadata: Metadata = {
     'flight comparison',
   ],
   openGraph: {
-    title: 'Smart Flight Search | GlobePilot',
+    title: 'Smart Flight Search | GlobePilots',
     description:
-      'Search flights your way — exact dates, monthly calendar, or flexible day-of-week. Find the cheapest days to fly.',
+      'Compare real-time flight prices, flexible dates, nearby airports, and smart stopovers. Find the cheapest way to fly.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Smart Flight Search | GlobePilot',
+    title: 'Smart Flight Search | GlobePilots',
     description:
-      'Flexible flight search with calendar view. Find the cheapest days to fly.',
+      'Compare real-time flight prices, flexible dates, nearby airports, and smart stopovers. Find the cheapest way to fly.',
   },
 }
 
