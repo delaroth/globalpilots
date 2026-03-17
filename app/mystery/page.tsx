@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import AirportAutocomplete from '@/components/AirportAutocomplete'
@@ -59,7 +60,8 @@ const regionOptions = [
   { label: 'Americas', value: 'Americas' },
 ]
 
-export default function MysteryPage() {
+function MysteryPageContent() {
+  const searchParams = useSearchParams()
   const getTwoWeeksFromNow = () => {
     const date = new Date()
     date.setDate(date.getDate() + 14)
@@ -107,13 +109,44 @@ export default function MysteryPage() {
     includeTransportation: false,
   })
   const [emailForUpdates, setEmailForUpdates] = useState('')
-  const [accommodationLevel, setAccommodationLevel] = useState('mid-range')
+  const [selectedAccommodation, setSelectedAccommodation] = useState<string[]>(['mid-range'])
+  // Pass the highest selected level to the API (determines max hotel budget)
+  const accommodationOrder = ['hostel', 'budget', 'mid-range', 'upscale', 'luxury']
+  const accommodationLevel = selectedAccommodation.length > 0
+    ? selectedAccommodation.reduce((highest, curr) =>
+        accommodationOrder.indexOf(curr) > accommodationOrder.indexOf(highest) ? curr : highest
+      )
+    : 'mid-range'
+  const toggleAccommodation = (value: string) => {
+    setSelectedAccommodation(prev =>
+      prev.includes(value) ? (prev.length > 1 ? prev.filter(v => v !== value) : prev) : [...prev, value]
+    )
+  }
   const [budgetPriority, setBudgetPriority] = useState('balanced')
   const [showAdvancedBudget, setShowAdvancedBudget] = useState(false)
   const [customSplit, setCustomSplit] = useState({ flights: 35, hotels: 35, activities: 30 })
 
   // More Options section toggle
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false)
+
+  // Pre-fill from URL params (e.g., from Inspire page: /mystery?destination=BKK&budget=1200)
+  useEffect(() => {
+    const dest = searchParams.get('destination') || searchParams.get('dest')
+    const orig = searchParams.get('origin')
+    const budgetParam = searchParams.get('budget')
+    const dateParam = searchParams.get('date')
+
+    if (dest) {
+      setKnowDestination(true)
+      setChosenDestination(dest.toUpperCase())
+    }
+    if (orig) setOrigin(orig.toUpperCase())
+    if (budgetParam) setBudget(budgetParam)
+    if (dateParam) {
+      setDateMode('specific')
+      setDepartDate(dateParam)
+    }
+  }, [searchParams])
 
   // Whether a single-city mystery search is active (from context)
   const isSingleCitySearching = mystery.isVisible && numCities === 1
@@ -389,23 +422,31 @@ export default function MysteryPage() {
               {/* Row 2: Destination (single-city only) */}
               {numCities <= 1 && (
                 <div className="mb-5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-sm font-medium text-gray-600">
-                      Destination
-                    </label>
+                  <label className="block text-sm font-medium text-gray-600 mb-1.5">
+                    Destination
+                  </label>
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-3">
                     <button
                       type="button"
-                      onClick={() => setKnowDestination(!knowDestination)}
-                      className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 transition"
+                      onClick={() => setKnowDestination(false)}
+                      className={`flex-1 py-2.5 text-sm font-medium transition ${
+                        !knowDestination
+                          ? 'bg-sky-500 text-white'
+                          : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                      }`}
                     >
-                      <span>{knowDestination ? 'I know where I\'m going' : 'Surprise me'}</span>
-                      <div className={`relative w-9 h-5 rounded-full transition-colors ${
-                        knowDestination ? 'bg-skyblue' : 'bg-gray-300'
-                      }`}>
-                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow ${
-                          knowDestination ? 'translate-x-4' : 'translate-x-0.5'
-                        }`} />
-                      </div>
+                      🎲 Surprise Me
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKnowDestination(true)}
+                      className={`flex-1 py-2.5 text-sm font-medium transition ${
+                        knowDestination
+                          ? 'bg-sky-500 text-white'
+                          : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                      }`}
+                    >
+                      📍 Choose Destination
                     </button>
                   </div>
 
@@ -418,8 +459,8 @@ export default function MysteryPage() {
                       placeholder="Search your destination city..."
                     />
                   ) : (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 text-center">
-                      <p className="text-blue-600 text-sm">AI picks your perfect destination</p>
+                    <div className="bg-sky-50 border border-sky-100 rounded-lg px-4 py-2.5 text-center">
+                      <p className="text-sky-600 text-sm">AI finds the perfect destination for your budget and vibes</p>
                     </div>
                   )}
                 </div>
@@ -479,7 +520,7 @@ export default function MysteryPage() {
                     <input
                       type="range"
                       min={numCities === 1 ? 2 : Math.max(5, numCities * 2)}
-                      max={numCities === 1 ? 21 : 60}
+                      max={numCities === 1 ? 21 : Math.max(30, numCities * 7)}
                       value={tripDuration}
                       onChange={(e) => setTripDuration(parseInt(e.target.value))}
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-skyblue"
@@ -604,20 +645,20 @@ export default function MysteryPage() {
                       )}
                     </div>
 
-                    {/* Accommodation */}
+                    {/* Accommodation (multi-select) */}
                     <div>
                       <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                        Accommodation
+                        Accommodation <span className="text-gray-400 font-normal">(select one or more)</span>
                       </label>
                       <div className="flex gap-2">
                         {accommodationLevels.map((level) => (
                           <button
                             key={level.value}
                             type="button"
-                            onClick={() => setAccommodationLevel(level.value)}
+                            onClick={() => toggleAccommodation(level.value)}
                             className={`flex-1 py-2 px-1 rounded-lg font-medium transition-all text-center text-xs ${
-                              accommodationLevel === level.value
-                                ? 'bg-skyblue text-navy ring-1 ring-skyblue/50'
+                              selectedAccommodation.includes(level.value)
+                                ? 'bg-sky-500 text-white ring-1 ring-sky-400/50'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                           >
@@ -742,15 +783,15 @@ export default function MysteryPage() {
                       <label className="block text-sm font-medium text-gray-600 mb-1.5">
                         How many destinations
                       </label>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map((n) => (
+                      <div className="flex gap-1.5 flex-wrap">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                           <button
                             key={n}
                             type="button"
                             onClick={() => setNumCities(n)}
-                            className={`w-10 h-10 rounded-lg font-bold text-sm transition-all ${
+                            className={`w-9 h-9 rounded-lg font-bold text-sm transition-all ${
                               numCities === n
-                                ? 'bg-skyblue text-navy ring-1 ring-skyblue/50'
+                                ? 'bg-sky-500 text-white ring-1 ring-sky-400/50'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                           >
@@ -784,8 +825,8 @@ export default function MysteryPage() {
                       </div>
                     )}
 
-                    {/* Traveller Type -- single city only */}
-                    {numCities === 1 && (
+                    {/* Traveller Type */}
+                    {(
                       <div>
                         <label className="block text-sm font-medium text-gray-600 mb-1.5">
                           Travelling as
@@ -809,8 +850,8 @@ export default function MysteryPage() {
                       </div>
                     )}
 
-                    {/* Package Components -- single city only */}
-                    {numCities === 1 && (
+                    {/* Package Components */}
+                    {(
                       <div>
                         <label className="block text-sm font-medium text-gray-600 mb-1.5">
                           Include in your plan
@@ -864,8 +905,8 @@ export default function MysteryPage() {
                       </div>
                     )}
 
-                    {/* Email Capture -- single city only */}
-                    {numCities === 1 && (
+                    {/* Email Capture */}
+                    {(
                       <div>
                         <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-1.5">
                           Email (optional)
@@ -1025,5 +1066,13 @@ export default function MysteryPage() {
 
       <Footer />
     </div>
+  )
+}
+
+export default function MysteryPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+      <MysteryPageContent />
+    </Suspense>
   )
 }

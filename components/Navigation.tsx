@@ -16,6 +16,7 @@ interface NavLink {
 interface NavCategory {
   label: string
   gradient?: boolean // for "AI Trip Planner" special styling
+  directLink?: string // if set, renders as a simple link (no dropdown)
   items: NavLink[]
 }
 
@@ -30,10 +31,8 @@ const navCategories: NavCategory[] = [
   },
   {
     label: 'Find Flights',
-    items: [
-      { href: '/search', label: 'Flight Search', description: 'Compare prices across dates and airlines' },
-      { href: '/search?tab=stopovers', label: 'Smart Stopovers', description: 'Turn layovers into free vacations' },
-    ],
+    directLink: '/search',
+    items: [],
   },
   {
     label: 'Plan',
@@ -71,6 +70,22 @@ function DesktopDropdown({
   const isActive = category.items.some(
     (item) => pathname === item.href || pathname.startsWith(item.href.split('?')[0] + '/')
   )
+
+  // Direct link — no dropdown
+  if (category.directLink) {
+    return (
+      <Link
+        href={category.directLink}
+        className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+          isActive
+            ? 'text-sky-400 bg-sky-400/10'
+            : 'text-white/90 hover:text-sky-400 hover:bg-white/[0.04]'
+        }`}
+      >
+        {category.label}
+      </Link>
+    )
+  }
 
   return (
     <div
@@ -143,9 +158,24 @@ function MobileCategory({
 }) {
   const [expanded, setExpanded] = useState(false)
 
-  const isActive = category.items.some(
-    (item) => pathname === item.href || pathname.startsWith(item.href.split('?')[0] + '/')
-  )
+  const isActive = category.directLink
+    ? pathname === category.directLink
+    : category.items.some((item) => pathname === item.href || pathname.startsWith(item.href.split('?')[0] + '/'))
+
+  // Direct link — render as simple nav link on mobile too
+  if (category.directLink) {
+    return (
+      <Link
+        href={category.directLink}
+        onClick={onNavigate}
+        className={`block px-4 py-3 rounded-lg transition font-medium ${
+          isActive ? 'bg-sky-500/10 text-sky-400' : 'text-white hover:bg-white/[0.04]'
+        }`}
+      >
+        {category.label}
+      </Link>
+    )
+  }
 
   return (
     <div>
