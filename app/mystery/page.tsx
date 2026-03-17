@@ -410,10 +410,17 @@ function MysteryPageContent() {
       includeTransportation: true,
     }
 
+    // Trip duration: 0 means AI decides — use a sensible default and tell the API it's flexible
+    const effectiveDuration = tripDuration === 0 ? 5 : tripDuration
+    const isFlexibleDuration = tripDuration === 0
+
     // Build dates string
-    const requestDates = showSpecificDates
+    let requestDates = showSpecificDates
       ? `${departDate}${flexibleDates ? ' (flexible \u00B13 days)' : ''}`
       : `flexible:${timeframe}`
+    if (isFlexibleDuration) {
+      requestDates += ' (flexible trip length - optimize for budget)'
+    }
 
     // Vibes: if none selected, default to a broad set so the API has something to work with
     const vibes = selectedVibes.length > 0 ? selectedVibes : ['city', 'beach', 'food']
@@ -436,7 +443,7 @@ function MysteryPageContent() {
           body: JSON.stringify({
             origin: resolvedOrigin,
             totalBudget: parseFloat(budget),
-            totalDays: tripDuration,
+            totalDays: effectiveDuration,
             numCities,
             region: region !== 'Any' ? region : undefined,
             vibe: vibes,
@@ -479,7 +486,7 @@ function MysteryPageContent() {
         budget: currency.toUSD(parseFloat(budget)),
         vibes,
         dates: requestDates,
-        tripDuration,
+        tripDuration: effectiveDuration,
         packageComponents,
         accommodationLevel,
         budgetPriority: effectiveBudgetPriority,
@@ -492,7 +499,7 @@ function MysteryPageContent() {
         budget: currency.toUSD(parseFloat(budget)),
         vibes,
         dates: requestDates,
-        tripDuration,
+        tripDuration: effectiveDuration,
         packageComponents,
         accommodationLevel,
         budgetPriority: effectiveBudgetPriority,
@@ -743,6 +750,24 @@ function MysteryPageContent() {
                   <label className="block text-sm font-medium text-gray-600 mb-1.5">
                     When & how long
                   </label>
+
+                  {/* Quick flexible option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTimeframe('anytime')
+                      setTripDuration(0) // 0 = AI decides
+                      setShowSpecificDates(false)
+                    }}
+                    className={`w-full mb-3 py-2 rounded-lg text-sm font-medium transition border ${
+                      timeframe === 'anytime' && tripDuration === 0 && !showSpecificDates
+                        ? 'bg-sky-50 border-sky-200 text-sky-700'
+                        : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                    }`}
+                  >
+                    ✨ Fully flexible — AI picks the best dates & trip length for my budget
+                  </button>
+
                   <div className="grid grid-cols-2 gap-3">
                     {/* Timeframe / date display */}
                     {!showSpecificDates ? (
@@ -770,11 +795,17 @@ function MysteryPageContent() {
                       onChange={(e) => setTripDuration(parseInt(e.target.value))}
                       className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-skyblue focus:ring-1 focus:ring-skyblue focus:outline-none transition text-navy bg-white text-sm"
                     >
+                      <option value={0}>AI picks best length</option>
                       {durationOptions.map(d => (
                         <option key={d} value={d}>{d} days</option>
                       ))}
                     </select>
                   </div>
+                  {tripDuration === 0 && (
+                    <p className="text-xs text-sky-600/80 mt-1.5">
+                      AI will optimize trip length based on your budget and destination costs
+                    </p>
+                  )}
 
                   {/* Toggle specific dates / flexible */}
                   {!showSpecificDates ? (

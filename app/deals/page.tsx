@@ -158,10 +158,21 @@ export default function DealsPage() {
   }, [fetchDeals])
 
   function buildBookingLink(d: Deal): string {
-    const dep = d.startDate || ''
-    const ret = d.endDate || ''
-    const base = `https://www.aviasales.com/search/${origin.trim().toUpperCase() || 'JFK'}${dep.replace(/-/g, '')}${d.airportCode}${ret.replace(/-/g, '')}1`
-    return base
+    // Format date from YYYY-MM-DD to DDMM for Aviasales
+    const formatDate = (dateStr: string) => {
+      if (!dateStr) return ''
+      const parts = dateStr.split('-')
+      if (parts.length !== 3) return ''
+      return parts[2] + parts[1] // DD + MM
+    }
+    const dep = formatDate(d.startDate || '')
+    const ret = formatDate(d.endDate || '')
+    const orig = origin.trim().toUpperCase() || 'JFK'
+    if (!dep) {
+      // No dates — use Google Flights as fallback
+      return `https://www.google.com/travel/flights?q=flights+from+${orig}+to+${d.airportCode}&curr=USD`
+    }
+    return `https://www.aviasales.com/search/${orig}${dep}${d.airportCode}${ret}1`
   }
 
   function buildMysteryLink(d: Deal): string {
