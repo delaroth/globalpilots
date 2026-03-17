@@ -1,88 +1,97 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 
-// ── Navigation categories ────────────────────────────────────────────────────
+// ── Navigation structure ────────────────────────────────────────────────────
 
-interface NavItem {
+interface NavLink {
   href: string
   label: string
-  emoji: string
+  description: string
 }
 
 interface NavCategory {
   label: string
-  items: NavItem[]
+  gradient?: boolean // for "AI Trip Planner" special styling
+  items: NavLink[]
 }
 
-const categories: NavCategory[] = [
+const navCategories: NavCategory[] = [
+  {
+    label: 'AI Trip Planner',
+    gradient: true,
+    items: [
+      { href: '/mystery', label: 'Mystery Vacation', description: 'Let AI surprise you with a destination' },
+      { href: '/plan-my-trip', label: 'Plan My Trip', description: 'Choose your destination, AI plans the rest' },
+    ],
+  },
   {
     label: 'Find Flights',
     items: [
-      { href: '/search', label: 'Flight Search', emoji: '\uD83D\uDD0D' },
-      { href: '/search?tab=stopovers', label: 'Smart Stopovers', emoji: '\uD83D\uDDFA\uFE0F' },
-      { href: '/search?tab=multi', label: 'Multi-city', emoji: '\u2708\uFE0F' },
+      { href: '/search', label: 'Flight Search', description: 'Compare prices across dates and airlines' },
+      { href: '/search?tab=stopovers', label: 'Smart Stopovers', description: 'Turn layovers into free vacations' },
     ],
   },
   {
     label: 'Plan',
     items: [
-      { href: '/trip-cost', label: 'Trip Costs', emoji: '\uD83D\uDCB0' },
-      { href: '/whats-happening', label: 'Festival Calendar', emoji: '\uD83C\uDF89' },
-      { href: '/inspire', label: 'Inspire Me', emoji: '\uD83D\uDCA1' },
-      { href: '/quiz', label: 'Destination Quiz', emoji: '\uD83E\uDDE9' },
+      { href: '/trip-cost', label: 'Trip Costs', description: 'Know the real price before you go' },
+      { href: '/whats-happening', label: 'Festival Calendar', description: 'Events and festivals worldwide' },
+      { href: '/inspire', label: 'Inspire Me', description: 'Explore trending destinations' },
+      { href: '/quiz', label: 'Destination Quiz', description: 'Find your perfect match' },
     ],
   },
   {
     label: 'Deals',
     items: [
-      { href: '/deals', label: "This Month's Deals", emoji: '\uD83C\uDFF7\uFE0F' },
-      { href: '/deals?mode=quick', label: 'Quick Escape', emoji: '\uD83D\uDE80' },
-      { href: '/leaderboard', label: 'Leaderboard', emoji: '\uD83C\uDFC6' },
+      { href: '/deals', label: "This Month's Deals", description: 'Cheapest flights from your airport' },
+      { href: '/leaderboard', label: 'Leaderboard', description: 'Top destinations by popularity' },
     ],
   },
 ]
 
 // ── Desktop dropdown ─────────────────────────────────────────────────────────
 
-function DesktopDropdown({ category, pathname }: { category: NavCategory; pathname: string }) {
-  const [open, setOpen] = useState(false)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
+function DesktopDropdown({
+  category,
+  pathname,
+  isOpen,
+  onOpen,
+  onClose,
+}: {
+  category: NavCategory
+  pathname: string
+  isOpen: boolean
+  onOpen: () => void
+  onClose: () => void
+}) {
   const isActive = category.items.some(
     (item) => pathname === item.href || pathname.startsWith(item.href.split('?')[0] + '/')
   )
 
-  const handleEnter = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    setOpen(true)
-  }
-
-  const handleLeave = () => {
-    timeoutRef.current = setTimeout(() => setOpen(false), 150)
-  }
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    }
-  }, [])
-
   return (
-    <div className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
+    <div
+      className="relative"
+      onMouseEnter={onOpen}
+      onMouseLeave={onClose}
+    >
       <button
-        className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
-          isActive
-            ? 'text-skyblue bg-skyblue/10'
-            : 'text-white hover:text-skyblue hover:bg-white/[0.04]'
+        className={`px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1 ${
+          category.gradient
+            ? 'bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-bold'
+            : isActive
+              ? 'text-sky-400 bg-sky-400/10'
+              : 'text-white/90 hover:text-sky-400 hover:bg-white/[0.04]'
         }`}
       >
         {category.label}
         <svg
-          className={`inline-block w-3.5 h-3.5 ml-1 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''} ${
+            category.gradient ? 'text-pink-400' : isActive ? 'text-sky-400' : 'text-white/50'
+          }`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -91,24 +100,29 @@ function DesktopDropdown({ category, pathname }: { category: NavCategory; pathna
         </svg>
       </button>
 
-      {open && (
-        <div className="absolute left-0 top-full pt-1 z-50">
-          <div className="bg-[#1a1a2e]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[200px]">
-            {category.items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition ${
-                  pathname === item.href || (item.href.includes('?') && pathname === item.href.split('?')[0])
-                    ? 'bg-skyblue/10 text-skyblue'
-                    : 'text-white/80 hover:bg-white/[0.06] hover:text-white'
-                }`}
-              >
-                <span className="text-base">{item.emoji}</span>
-                <span>{item.label}</span>
-              </Link>
-            ))}
+      {isOpen && (
+        <div className="absolute left-0 top-full pt-2 z-50">
+          <div className="w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2">
+            {category.items.map((item) => {
+              const isItemActive =
+                pathname === item.href ||
+                (item.href.includes('?') && pathname === item.href.split('?')[0])
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onClose}
+                  className={`block px-4 py-2.5 transition ${
+                    isItemActive
+                      ? 'bg-sky-50 text-sky-600'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-sky-600'
+                  }`}
+                >
+                  <span className="block text-sm font-medium">{item.label}</span>
+                  <span className="block text-xs text-gray-400 mt-0.5">{item.description}</span>
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}
@@ -138,10 +152,16 @@ function MobileCategory({
       <button
         onClick={() => setExpanded(!expanded)}
         className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition ${
-          isActive ? 'bg-skyblue/10 text-skyblue' : 'text-white hover:bg-white/[0.04]'
+          category.gradient
+            ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-white'
+            : isActive
+              ? 'bg-sky-500/10 text-sky-400'
+              : 'text-white hover:bg-white/[0.04]'
         }`}
       >
-        <span className="font-medium">{category.label}</span>
+        <span className={`font-medium ${category.gradient ? 'bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-bold' : ''}`}>
+          {category.label}
+        </span>
         <svg
           className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
           fill="none"
@@ -159,14 +179,14 @@ function MobileCategory({
               key={item.href}
               href={item.href}
               onClick={onNavigate}
-              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-lg text-sm transition ${
+              className={`block px-4 py-2.5 rounded-lg transition ${
                 pathname === item.href
-                  ? 'bg-skyblue text-navy font-semibold'
+                  ? 'bg-sky-500/20 text-sky-400'
                   : 'text-white/70 hover:bg-white/[0.04] hover:text-white'
               }`}
             >
-              <span>{item.emoji}</span>
-              <span>{item.label}</span>
+              <span className="block text-sm font-medium">{item.label}</span>
+              <span className="block text-xs text-white/40 mt-0.5">{item.description}</span>
             </Link>
           ))}
         </div>
@@ -180,36 +200,38 @@ function MobileCategory({
 export default function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const pathname = usePathname()
   const { data: session, status } = useSession()
 
-  const isMysteryActive = pathname === '/mystery' || pathname.startsWith('/mystery/')
+  // Close dropdown on route change
+  useEffect(() => {
+    setOpenDropdown(null)
+    setMobileMenuOpen(false)
+  }, [pathname])
 
   return (
-    <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-skyblue/20">
+    <nav className="w-full px-6 py-4 bg-navy/50 backdrop-blur-sm border-b border-white/10">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-skyblue rounded-full flex items-center justify-center">
+        <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
+          <div className="w-8 h-8 bg-sky-400 rounded-full flex items-center justify-center">
             <span className="text-navy text-xl font-bold">G</span>
           </div>
-          <span className="text-white text-xl font-bold">GlobePilot</span>
+          <span className="text-white text-xl font-bold">GlobePilots</span>
         </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center space-x-1">
-          {/* Mystery Vacation — standalone gradient pill */}
-          <Link
-            href="/mystery"
-            className={`bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold transition hover:shadow-lg hover:shadow-purple-500/25 hover:scale-105 ${
-              isMysteryActive ? 'ring-2 ring-white/30' : ''
-            }`}
-          >
-            Mystery Vacation
-          </Link>
-
-          {categories.map((cat) => (
-            <DesktopDropdown key={cat.label} category={cat} pathname={pathname} />
+          {navCategories.map((cat) => (
+            <DesktopDropdown
+              key={cat.label}
+              category={cat}
+              pathname={pathname}
+              isOpen={openDropdown === cat.label}
+              onOpen={() => setOpenDropdown(cat.label)}
+              onClose={() => setOpenDropdown(null)}
+            />
           ))}
 
           {/* Auth section */}
@@ -229,7 +251,7 @@ export default function Navigation() {
                       className="w-6 h-6 rounded-full"
                     />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-skyblue flex items-center justify-center text-navy text-xs font-bold">
+                    <div className="w-6 h-6 rounded-full bg-sky-400 flex items-center justify-center text-navy text-xs font-bold">
                       {(session.user.name || session.user.email || '?')[0].toUpperCase()}
                     </div>
                   )}
@@ -245,19 +267,19 @@ export default function Navigation() {
                       className="fixed inset-0 z-40"
                       onClick={() => setUserMenuOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-white/10">
-                        <p className="text-sm text-white font-medium truncate">
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm text-gray-900 font-medium truncate">
                           {session.user.name || 'Traveler'}
                         </p>
-                        <p className="text-xs text-white/40 truncate">
+                        <p className="text-xs text-gray-400 truncate">
                           {session.user.email}
                         </p>
                       </div>
                       <Link
                         href="/dashboard"
                         onClick={() => setUserMenuOpen(false)}
-                        className="block px-4 py-2.5 text-sm text-white/80 hover:bg-white/[0.06] transition"
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-sky-600 transition"
                       >
                         Dashboard
                       </Link>
@@ -266,7 +288,7 @@ export default function Navigation() {
                           setUserMenuOpen(false)
                           signOut({ callbackUrl: '/' })
                         }}
-                        className="block w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-white/[0.06] transition"
+                        className="block w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-gray-50 transition"
                       >
                         Sign Out
                       </button>
@@ -284,7 +306,7 @@ export default function Navigation() {
                 </Link>
                 <Link
                   href="/signup"
-                  className="bg-skyblue hover:bg-skyblue/90 text-navy font-semibold px-4 py-1.5 rounded-full text-sm transition"
+                  className="bg-sky-400 hover:bg-sky-300 text-navy font-semibold px-4 py-1.5 rounded-full text-sm transition"
                 >
                   Sign Up
                 </Link>
@@ -295,11 +317,10 @@ export default function Navigation() {
 
         {/* Mobile Menu Button */}
         <div className="lg:hidden flex items-center gap-3">
-          {/* Mobile auth quick access */}
           {status !== 'loading' && !session?.user && (
             <Link
               href="/login"
-              className="text-skyblue text-sm font-medium"
+              className="text-sky-400 text-sm font-medium"
             >
               Log In
             </Link>
@@ -309,7 +330,7 @@ export default function Navigation() {
               {session.user.image ? (
                 <img src={session.user.image} alt="" className="w-7 h-7 rounded-full" />
               ) : (
-                <div className="w-7 h-7 rounded-full bg-skyblue flex items-center justify-center text-navy text-xs font-bold">
+                <div className="w-7 h-7 rounded-full bg-sky-400 flex items-center justify-center text-navy text-xs font-bold">
                   {(session.user.name || session.user.email || '?')[0].toUpperCase()}
                 </div>
               )}
@@ -332,20 +353,9 @@ export default function Navigation() {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden mt-4 pb-4 border-t border-skyblue/20 pt-4">
+        <div className="lg:hidden mt-4 pb-4 border-t border-white/10 pt-4">
           <div className="flex flex-col space-y-1">
-            {/* Mystery Vacation — standalone prominent link on mobile */}
-            <Link
-              href="/mystery"
-              onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center gap-2.5 mx-2 px-4 py-3 rounded-xl text-sm font-semibold transition bg-gradient-to-r from-purple-500 to-pink-500 text-white ${
-                isMysteryActive ? 'ring-2 ring-white/30' : ''
-              }`}
-            >
-              <span>Mystery Vacation</span>
-            </Link>
-
-            {categories.map((cat) => (
+            {navCategories.map((cat) => (
               <MobileCategory
                 key={cat.label}
                 category={cat}
@@ -355,13 +365,13 @@ export default function Navigation() {
             ))}
 
             {/* Mobile auth links */}
-            <div className="border-t border-skyblue/20 pt-3 mt-2">
+            <div className="border-t border-white/10 pt-3 mt-2">
               {session?.user ? (
                 <>
                   <Link
                     href="/dashboard"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-2 text-white hover:bg-navy-light rounded-lg transition"
+                    className="block px-4 py-2 text-white hover:bg-white/[0.04] rounded-lg transition"
                   >
                     Dashboard
                   </Link>
@@ -370,7 +380,7 @@ export default function Navigation() {
                       setMobileMenuOpen(false)
                       signOut({ callbackUrl: '/' })
                     }}
-                    className="block w-full text-left px-4 py-2 text-red-400 hover:bg-navy-light rounded-lg transition"
+                    className="block w-full text-left px-4 py-2 text-red-400 hover:bg-white/[0.04] rounded-lg transition"
                   >
                     Sign Out
                   </button>
@@ -380,14 +390,14 @@ export default function Navigation() {
                   <Link
                     href="/login"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-2 text-white hover:bg-navy-light rounded-lg transition"
+                    className="block px-4 py-2 text-white hover:bg-white/[0.04] rounded-lg transition"
                   >
                     Log In
                   </Link>
                   <Link
                     href="/signup"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-2 text-skyblue font-semibold hover:bg-navy-light rounded-lg transition"
+                    className="block px-4 py-2 text-sky-400 font-semibold hover:bg-white/[0.04] rounded-lg transition"
                   >
                     Sign Up Free
                   </Link>

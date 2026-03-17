@@ -19,6 +19,12 @@ const config: Config = {
           light: '#B0E0F6',
           dark: '#5FB3D9',
         },
+        warm: {
+          orange: '#F59E0B',
+          coral: '#FB7185',
+          gold: '#FBBF24',
+          peach: '#FDBA74',
+        },
       },
       keyframes: {
         'slide-up': {

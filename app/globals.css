@@ -12,9 +12,22 @@
 }
 
 body {
-  color: var(--navy);
-  background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
+  color: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(180deg, #0a0a0f 0%, #0f1020 50%, #0a0a0f 100%);
   min-height: 100vh;
+}
+
+/* Brighter default text */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Smoother link hover transitions */
+a {
+  transition: color 0.2s ease, opacity 0.2s ease;
 }
 
 /* Subtle pulse for mystery popup ready pill */
@@ -24,6 +37,16 @@ body {
 }
 .animate-pulse-subtle {
   animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Warm glow effect for cards and sections */
+.warm-glow {
+  box-shadow: 0 0 80px rgba(56, 189, 248, 0.05);
+}
+
+/* Brighter card backgrounds */
+.card-bright {
+  background: rgba(255, 255, 255, 0.07);
 }
 
 /* MysteryPopup: ensure MysteryReveal renders well inside the popup */

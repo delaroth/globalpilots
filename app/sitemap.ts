@@ -63,9 +63,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
 
-    // Discover
+    // AI Trip Planner
     {
       url: `${baseUrl}/mystery`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/plan-my-trip`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.9,

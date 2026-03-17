@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import InstallPrompt from '@/components/InstallPrompt'
@@ -127,11 +128,19 @@ function TrendingSection({ currency }: { currency: ReturnType<typeof useCurrency
 export default function Home() {
   const currency = useCurrency()
   const mystery = useMystery()
+  const router = useRouter()
 
-  // Hero mini-form state
+  // Hero mode toggle
+  const [heroMode, setHeroMode] = useState<'surprise' | 'plan'>('surprise')
+
+  // Shared form state
   const [budget, setBudget] = useState('')
   const [origin, setOrigin] = useState('')
   const [selectedVibes, setSelectedVibes] = useState<string[]>([])
+
+  // Plan mode extra state
+  const [planDestination, setPlanDestination] = useState('')
+  const [planTripDuration, setPlanTripDuration] = useState(5)
 
   const toggleVibe = (value: string) => {
     setSelectedVibes((prev) =>
@@ -159,132 +168,294 @@ export default function Home() {
     })
   }
 
-  const canSubmit = budget && parseFloat(budget) > 0 && origin
+  const handlePlanTrip = () => {
+    if (!budget || !origin || !planDestination) return
+    // Navigate to plan-my-trip page with pre-filled params
+    const params = new URLSearchParams({
+      destination: planDestination,
+      origin,
+      budget,
+      days: String(planTripDuration),
+      vibes: selectedVibes.join(','),
+    })
+    router.push(`/plan-my-trip?${params.toString()}`)
+  }
+
+  const canSubmitMystery = budget && parseFloat(budget) > 0 && origin
+  const canSubmitPlan = budget && parseFloat(budget) > 0 && origin && planDestination
+
+  // Dynamic headline/subtitle based on mode
+  const headline = heroMode === 'surprise' ? 'Where Will You End Up?' : 'Plan Your Perfect Trip'
+  const subtitle = heroMode === 'surprise'
+    ? "Set your budget. Pick your vibe. We'll find your perfect mystery destination."
+    : 'Choose where you want to go. AI plans everything else.'
 
   return (
     <main className="min-h-screen flex flex-col bg-[#0a0a0f]">
       <Navigation />
 
-      {/* ── Section 1: Hero — Mystery Vacation inline form ── */}
+      {/* ── Section 1: Hero with toggle ── */}
       <section className="relative overflow-hidden">
         {/* Background gradient pattern */}
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-950/40 via-[#0a0a0f] to-[#0a0a0f]" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-r from-purple-600/10 to-pink-600/10 rounded-full blur-3xl" />
+        <div className={`absolute inset-0 transition-colors duration-700 ${
+          heroMode === 'surprise'
+            ? 'bg-gradient-to-b from-purple-950/40 via-[#0a0a0f] to-[#0a0a0f]'
+            : 'bg-gradient-to-b from-sky-950/30 via-[#0a0a0f] to-[#0a0a0f]'
+        }`} />
+        <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full blur-3xl transition-colors duration-700 ${
+          heroMode === 'surprise'
+            ? 'bg-gradient-to-r from-purple-600/10 to-pink-600/10'
+            : 'bg-gradient-to-r from-sky-600/10 to-cyan-600/10'
+        }`} />
 
         <div className="relative max-w-4xl mx-auto px-6 pt-16 pb-20 text-center">
           {/* Headline */}
           <h1 className="text-5xl md:text-7xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Where Will You End Up?
+            <span className={`bg-clip-text text-transparent transition-all duration-500 ${
+              heroMode === 'surprise'
+                ? 'bg-gradient-to-r from-purple-400 to-pink-400'
+                : 'bg-gradient-to-r from-sky-400 to-cyan-300'
+            }`}>
+              {headline}
             </span>
           </h1>
-          <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-10">
-            Set your budget. Pick your vibe. We&apos;ll find your perfect mystery destination.
+          <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-8">
+            {subtitle}
           </p>
 
-          {/* Inline mini-form */}
-          <div className="max-w-3xl mx-auto bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-6 md:p-8 text-left">
-            {/* Row 1: Budget + Currency + Vibes */}
-            <div className="space-y-5">
-              <div className="flex flex-col md:flex-row gap-4">
-                {/* Budget input + currency */}
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-white/60 mb-2">
-                    Total Budget
-                  </label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">
-                        {currency.symbol}
-                      </span>
-                      <input
-                        type="number"
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
-                        placeholder="800"
-                        min="100"
-                        className="w-full pl-8 pr-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition text-sm"
+          {/* Mode Toggle */}
+          <div className="flex items-center justify-center gap-1 mb-8">
+            <button
+              onClick={() => setHeroMode('surprise')}
+              className={`px-5 py-2.5 rounded-l-xl text-sm font-semibold transition-all duration-300 border ${
+                heroMode === 'surprise'
+                  ? 'bg-purple-500/20 border-purple-400/50 text-purple-300'
+                  : 'bg-white/[0.03] border-white/10 text-white/50 hover:text-white/70 hover:bg-white/[0.06]'
+              }`}
+            >
+              Surprise Me
+            </button>
+            <button
+              onClick={() => setHeroMode('plan')}
+              className={`px-5 py-2.5 rounded-r-xl text-sm font-semibold transition-all duration-300 border ${
+                heroMode === 'plan'
+                  ? 'bg-sky-500/20 border-sky-400/50 text-sky-300'
+                  : 'bg-white/[0.03] border-white/10 text-white/50 hover:text-white/70 hover:bg-white/[0.06]'
+              }`}
+            >
+              I Know Where I&apos;m Going
+            </button>
+          </div>
+
+          {/* ── SURPRISE ME FORM ── */}
+          {heroMode === 'surprise' && (
+            <div className="max-w-3xl mx-auto bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-6 md:p-8 text-left">
+              <div className="space-y-5">
+                <div className="flex flex-col md:flex-row gap-4">
+                  {/* Budget input + currency */}
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-white/60 mb-2">
+                      Total Budget
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">
+                          {currency.symbol}
+                        </span>
+                        <input
+                          type="number"
+                          value={budget}
+                          onChange={(e) => setBudget(e.target.value)}
+                          placeholder="800"
+                          min="100"
+                          className="w-full pl-8 pr-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition text-sm"
+                        />
+                      </div>
+                      <CurrencySelector
+                        code={currency.code}
+                        currencies={currency.currencies}
+                        onChange={currency.setCurrency}
                       />
                     </div>
-                    <CurrencySelector
-                      code={currency.code}
-                      currencies={currency.currencies}
-                      onChange={currency.setCurrency}
-                    />
+                  </div>
+
+                  {/* Vibe quick-picks */}
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-white/60 mb-2">
+                      Vibe
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {vibeOptions.map((vibe) => {
+                        const isSelected = selectedVibes.includes(vibe.value)
+                        return (
+                          <button
+                            key={vibe.value}
+                            type="button"
+                            onClick={() => toggleVibe(vibe.value)}
+                            className={`px-3 py-2 rounded-xl text-sm font-medium transition border ${
+                              isSelected
+                                ? 'bg-purple-500/20 border-purple-400/50 text-purple-300'
+                                : 'bg-white/[0.04] border-white/10 text-white/60 hover:bg-white/[0.08] hover:text-white/80'
+                            }`}
+                          >
+                            <span className="mr-1">{vibe.emoji}</span>
+                            {vibe.label}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
 
-                {/* Vibe quick-picks */}
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-white/60 mb-2">
-                    Vibe
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {vibeOptions.map((vibe) => {
-                      const isSelected = selectedVibes.includes(vibe.value)
-                      return (
-                        <button
-                          key={vibe.value}
-                          type="button"
-                          onClick={() => toggleVibe(vibe.value)}
-                          className={`px-3 py-2 rounded-xl text-sm font-medium transition border ${
-                            isSelected
-                              ? 'bg-purple-500/20 border-purple-400/50 text-purple-300'
-                              : 'bg-white/[0.04] border-white/10 text-white/60 hover:bg-white/[0.08] hover:text-white/80'
-                          }`}
-                        >
-                          <span className="mr-1">{vibe.emoji}</span>
-                          {vibe.label}
-                        </button>
-                      )
-                    })}
+                {/* Row 2: Origin + Surprise Me button */}
+                <div className="flex flex-col md:flex-row gap-4 items-end">
+                  <div className="flex-1 w-full">
+                    <label className="block text-sm font-medium text-white/60 mb-2">
+                      Flying from
+                    </label>
+                    <div className="airport-dark-theme">
+                      <AirportAutocomplete
+                        id="hero-origin"
+                        label=""
+                        value={origin}
+                        onChange={setOrigin}
+                        placeholder="City or airport code..."
+                        persistKey="origin"
+                      />
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleSurpriseMe}
+                    disabled={!canSubmitMystery}
+                    className={`w-full md:w-auto px-8 py-3 rounded-xl font-bold text-base transition whitespace-nowrap ${
+                      canSubmitMystery
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/25 hover:scale-105 cursor-pointer'
+                        : 'bg-white/10 text-white/30 cursor-not-allowed'
+                    }`}
+                  >
+                    Surprise Me
+                  </button>
                 </div>
               </div>
 
-              {/* Row 2: Origin + Surprise Me button */}
-              <div className="flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1 w-full">
-                  <label className="block text-sm font-medium text-white/60 mb-2">
-                    Flying from
-                  </label>
-                  {/* Dark-themed wrapper for AirportAutocomplete */}
-                  <div className="airport-dark-theme">
-                    <AirportAutocomplete
-                      id="hero-origin"
-                      label=""
-                      value={origin}
-                      onChange={setOrigin}
-                      placeholder="City or airport code..."
-                      persistKey="origin"
-                    />
+              <div className="mt-4 text-center">
+                <Link
+                  href="/mystery"
+                  className="text-sm text-white/40 hover:text-purple-400 transition"
+                >
+                  Or customize your search (dates, accommodation, trip length) &rarr;
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* ── PLAN MY TRIP FORM ── */}
+          {heroMode === 'plan' && (
+            <div className="max-w-3xl mx-auto bg-white/[0.04] backdrop-blur-sm border border-white/10 rounded-2xl p-6 md:p-8 text-left">
+              <div className="space-y-5">
+                {/* Row 1: Destination + Origin */}
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-white/60 mb-2">
+                      Where to?
+                    </label>
+                    <div className="airport-dark-theme">
+                      <AirportAutocomplete
+                        id="hero-plan-dest"
+                        label=""
+                        value={planDestination}
+                        onChange={setPlanDestination}
+                        placeholder="Bangkok, Lisbon, Tokyo..."
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-white/60 mb-2">
+                      Flying from
+                    </label>
+                    <div className="airport-dark-theme">
+                      <AirportAutocomplete
+                        id="hero-plan-origin"
+                        label=""
+                        value={origin}
+                        onChange={setOrigin}
+                        placeholder="City or airport code..."
+                        persistKey="origin"
+                      />
+                    </div>
                   </div>
                 </div>
+
+                {/* Row 2: Budget + Trip Length */}
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-white/60 mb-2">
+                      Total Budget
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">
+                          {currency.symbol}
+                        </span>
+                        <input
+                          type="number"
+                          value={budget}
+                          onChange={(e) => setBudget(e.target.value)}
+                          placeholder="1000"
+                          min="100"
+                          className="w-full pl-8 pr-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-sky-500/50 transition text-sm"
+                        />
+                      </div>
+                      <CurrencySelector
+                        code={currency.code}
+                        currencies={currency.currencies}
+                        onChange={currency.setCurrency}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-white/60 mb-2">
+                      Trip Length: {planTripDuration} {planTripDuration === 1 ? 'day' : 'days'}
+                    </label>
+                    <div className="flex items-center gap-3 h-[46px]">
+                      <input
+                        type="range"
+                        min={1}
+                        max={30}
+                        value={planTripDuration}
+                        onChange={(e) => setPlanTripDuration(parseInt(e.target.value))}
+                        className="flex-1 accent-sky-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit */}
                 <button
                   type="button"
-                  onClick={handleSurpriseMe}
-                  disabled={!canSubmit}
-                  className={`w-full md:w-auto px-8 py-3 rounded-xl font-bold text-base transition whitespace-nowrap ${
-                    canSubmit
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/25 hover:scale-105 cursor-pointer'
+                  onClick={handlePlanTrip}
+                  disabled={!canSubmitPlan}
+                  className={`w-full py-3 rounded-xl font-bold text-base transition ${
+                    canSubmitPlan
+                      ? 'bg-gradient-to-r from-sky-500 to-cyan-400 text-white hover:shadow-lg hover:shadow-sky-500/25 hover:scale-[1.02] cursor-pointer'
                       : 'bg-white/10 text-white/30 cursor-not-allowed'
                   }`}
                 >
-                  Surprise Me
+                  Plan My Trip
                 </button>
               </div>
-            </div>
 
-            {/* Customize link */}
-            <div className="mt-4 text-center">
-              <Link
-                href="/mystery"
-                className="text-sm text-white/40 hover:text-purple-400 transition"
-              >
-                Or customize your search (dates, accommodation, trip length) &rarr;
-              </Link>
+              <div className="mt-4 text-center">
+                <Link
+                  href="/plan-my-trip"
+                  className="text-sm text-white/40 hover:text-sky-400 transition"
+                >
+                  Want more options? Use the full trip planner &rarr;
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
