@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { searchHotels } from '@/lib/flight-providers/serpapi-hotels'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,17 +57,15 @@ export async function POST(request: NextRequest) {
     let flightPrice: number | null = null
     let flightSource = 'estimate'
 
+    // Get dates for flight + hotel searches
+    const departDate = new Date()
+    departDate.setDate(departDate.getDate() + 21)
+    const departStr = departDate.toISOString().split('T')[0]
+    const returnDate = new Date(departDate)
+    returnDate.setDate(returnDate.getDate() + tripDuration)
+    const returnStr = returnDate.toISOString().split('T')[0]
+
     try {
-      // Get a date ~3 weeks from now for pricing
-      const departDate = new Date()
-      departDate.setDate(departDate.getDate() + 21)
-      const departStr = departDate.toISOString().split('T')[0]
-
-      const returnDate = new Date(departDate)
-      returnDate.setDate(returnDate.getDate() + tripDuration)
-      const returnStr = returnDate.toISOString().split('T')[0]
-
-      // Use internal flight search
       const flightUrl = new URL('/api/search/flights', request.url)
       flightUrl.searchParams.set('origin', origin)
       flightUrl.searchParams.set('destination', destinationCode)
@@ -93,24 +92,57 @@ export async function POST(request: NextRequest) {
       'budget': 40, 'mid-range': 100, 'comfort': 180,
     }
     const maxPerNight = accomMaxPerNight[accommodationLevel] || 100
-    const estimatedHotelTotal = maxPerNight * tripDuration
     const estimatedFlight = flightPrice || Math.round(budget * 0.35)
-    const remainingBudget = budget - estimatedFlight - estimatedHotelTotal
-    const dailyActivities = Math.max(20, Math.floor(remainingBudget / tripDuration * 0.6))
+    const remainingBudget = budget - estimatedFlight
+    const hotelBudgetPerNight = Math.min(maxPerNight, Math.floor(remainingBudget * 0.5 / tripDuration))
+    const dailyActivities = Math.max(20, Math.floor(remainingBudget * 0.3 / tripDuration))
 
-    // Step 3: Generate AI trip plan
+    // Step 3: Real hotel search via SerpApi (parallel with AI)
+    const hotelsPromise = searchHotels({
+      destination: `${destination}, ${country}`,
+      checkIn: departStr,
+      checkOut: returnStr,
+      adults: 1,
+      maxPrice: hotelBudgetPerNight,
+      currency: 'USD',
+    }).then(result => {
+      if (result.hotels.length > 0) {
+        console.log(`[Plan Trip] SerpApi: ${result.hotels.length} real hotels, cheapest $${result.cheapestPrice}/night`)
+        return result.hotels.slice(0, 3).map(h => ({
+          name: h.name,
+          estimated_price_per_night: h.price,
+          neighborhood: h.neighborhood || '',
+          why_recommended: [
+            h.rating > 0 ? `${h.rating}/5 rating` : '',
+            h.reviews > 0 ? `(${h.reviews.toLocaleString()} reviews)` : '',
+            h.type !== 'Hotel' ? h.type : '',
+            h.amenities.slice(0, 3).join(', '),
+          ].filter(Boolean).join(' · ') || 'Good value option',
+          link: h.link || '',
+          rating: h.rating,
+          reviews: h.reviews,
+          is_real_data: true,
+        }))
+      }
+      return null
+    }).catch(err => {
+      console.warn('[Plan Trip] SerpApi Hotels failed:', err instanceof Error ? err.message : err)
+      return null
+    })
+
+    // Step 4: Generate AI trip plan (parallel with hotel search)
     const vibeText = vibes.length > 0 ? vibes.join(', ') : 'general exploration'
 
     const systemPrompt = `Expert travel planner for ${destination}, ${country}. Respond with valid JSON only.`
 
-    const userPrompt = `Create a complete trip plan for ${destination}, ${country} (${destinationCode}).
+    const userPrompt = `Create a trip plan for ${destination}, ${country} (${destinationCode}).
 
 Budget: $${budget} USD total for ${tripDuration} days
 Origin: ${origin}
 Travel style: ${accommodationLevel}
 Vibes/interests: ${vibeText}
 ${flightPrice ? `Known flight price: ~$${flightPrice}` : `Estimated flight: ~$${estimatedFlight}`}
-Max hotel: $${maxPerNight}/night
+Max hotel: $${hotelBudgetPerNight}/night
 Daily activity budget: ~$${dailyActivities}
 
 Return JSON:
@@ -121,21 +153,17 @@ Return JSON:
   "best_local_food": ["Dish1", "Dish2", "Dish3", "Dish4"],
   "budgetBreakdown": {
     "flights": ${flightPrice || estimatedFlight},
-    "hotel": ${estimatedHotelTotal},
+    "hotel": ${hotelBudgetPerNight * tripDuration},
     "activities": N,
     "food": N,
-    "total": N
+    "total": ${budget}
   },
-  "hotel_recommendations": [
-    {"name": "...", "estimated_price_per_night": N, "neighborhood": "...", "why_recommended": "..."},
-    {"name": "...", "estimated_price_per_night": N, "neighborhood": "...", "why_recommended": "..."}
-  ],
   "daily_itinerary": [
     {"day": 1, "activities": [{"time": "9:00 AM", "activity": "...", "estimated_cost": N}, ...], "total_day_cost": N},
     ... for each of ${tripDuration} days
   ],
   "local_transportation": {
-    "airport_to_city": "How to get from airport to city center + cost",
+    "airport_to_city": "How to get from airport to city center + estimated cost",
     "daily_transport": "Best way to get around",
     "estimated_daily_cost": N
   }
@@ -143,14 +171,32 @@ Return JSON:
 
 RULES:
 - Keep total costs within $${budget} budget
-- Be specific with restaurant names, landmarks, neighborhoods
+- For activities, use well-known landmarks, markets, temples, museums — NOT obscure or invented places
+- For food suggestions in the itinerary, describe the TYPE of food and area (e.g. "street food near X market") rather than specific restaurant names
+- All activity costs are ESTIMATES
 - Include free activities and paid activities
 - Activities should match the ${vibeText} interests`
 
-    console.log(`[Plan Trip] Generating AI plan for ${destination} (${destinationCode})`)
+    console.log(`[Plan Trip] Generating AI plan + real hotels for ${destination} (${destinationCode})`)
 
-    const aiResponse = await callAI(systemPrompt, userPrompt, 0.9, 3000)
+    const [aiResponse, realHotels] = await Promise.all([
+      callAI(systemPrompt, userPrompt, 0.9, 3000),
+      hotelsPromise,
+    ])
+
     const result = parseAIJSON<any>(aiResponse.content)
+
+    // Use real hotels if available, otherwise keep AI-generated ones (with warning)
+    if (realHotels) {
+      result.hotel_recommendations = realHotels
+    } else if (result.hotel_recommendations) {
+      // Mark AI hotels as estimates
+      result.hotel_recommendations = result.hotel_recommendations.map((h: any) => ({
+        ...h,
+        is_real_data: false,
+        why_recommended: (h.why_recommended || '') + ' (AI suggestion — verify availability)',
+      }))
+    }
 
     // Ensure backward compat
     if (!result.insider_tip) result.insider_tip = result.localTip
@@ -163,7 +209,8 @@ RULES:
       result.day3 = result.daily_itinerary[2]?.activities?.map((a: any) => `${a.time} — ${a.activity}`) || []
     }
 
-    console.log(`[Plan Trip] AI plan generated for ${destination}`)
+    const hotelSource = realHotels ? 'serpapi-real' : 'ai-estimate'
+    console.log(`[Plan Trip] Plan generated for ${destination} (hotels: ${hotelSource})`)
 
     return NextResponse.json({
       destination,
@@ -172,7 +219,9 @@ RULES:
       city_code_IATA: destinationCode,
       estimated_flight_cost: flightPrice || estimatedFlight,
       indicativeFlightPrice: flightPrice || estimatedFlight,
-      estimated_hotel_per_night: maxPerNight,
+      estimated_hotel_per_night: realHotels
+        ? Math.round(realHotels.reduce((s, h) => s + h.estimated_price_per_night, 0) / realHotels.length)
+        : maxPerNight,
       flightSource,
       priceIsLive: flightSource !== 'estimate',
       ...result,

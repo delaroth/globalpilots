@@ -22,6 +22,7 @@ interface BlogContent {
     local_food_guide: string
     money_saving_tips: string
     safety_tips: string
+    disclaimer?: string
   }
 }
 
@@ -89,6 +90,8 @@ Include these sections:
 
 7. safety_tips (100-150 words): 5-7 important safety considerations specific to this destination.
 
+8. disclaimer (50-80 words): A brief note stating that prices, visa requirements, and availability are estimates that may change. Recommend readers verify current information before booking. Mention that visa requirements vary by nationality.
+
 Also generate:
 - SEO title (60 chars max): Use format "${destinationName} Travel Guide 2026: Budget Tips & Best Things to Do"
 - Meta description (160 chars max): Focus on budget travel, best time to visit, and top attractions.
@@ -104,7 +107,8 @@ Return this EXACT JSON structure:
     "top_attractions": "markdown formatted text",
     "local_food_guide": "markdown formatted text",
     "money_saving_tips": "markdown formatted text",
-    "safety_tips": "markdown formatted text"
+    "safety_tips": "markdown formatted text",
+    "disclaimer": "Brief note that prices/visa/availability are estimates and may change — verify before booking"
   }
 }`
 
@@ -112,6 +116,11 @@ Return this EXACT JSON structure:
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.7, 3000)
     const blogContent = parseAIJSON<BlogContent>(aiResponse.content)
+
+    // Ensure disclaimer exists
+    if (!blogContent.sections.disclaimer) {
+      blogContent.sections.disclaimer = `*Prices, visa requirements, and availability mentioned in this guide are estimates based on data available at the time of writing and may have changed. Visa requirements vary by nationality. Always verify current information with official sources before booking your trip.*`
+    }
 
     console.log('[Blog Generate] AI generation complete, saving to database...')
 

@@ -108,12 +108,13 @@ Display currency: ${currency}
 ${costContext}
 
 IMPORTANT RULES:
-- Include morning, afternoon, and evening activities with specific times, costs in USD, and how to get between locations
-- Include where to eat (breakfast, lunch, dinner) with restaurant type/name and price range
+- Include morning, afternoon, and evening activities with specific times, estimated costs in USD, and how to get between locations
+- For activities, use well-known landmarks, markets, temples, museums, parks — NOT obscure or invented place names
+- For meals, describe the TYPE of food and the AREA to find it (e.g. "Street food pad thai near Khao San Road", "Seafood restaurants along the waterfront") — do NOT invent specific restaurant names
+- All costs are ESTIMATES — use realistic local prices
 - Include practical tips (best transport, areas to avoid, tipping customs, safety notes)
 - Do NOT include flights or accommodation — this is a local day trip/exploration guide
 - Keep total daily spending within the $${budget} budget
-- Be specific: use real place names, real restaurants/food stalls, real transport options
 - Times should be realistic with travel time between locations
 
 Return JSON with this exact structure:
@@ -131,9 +132,9 @@ Return JSON with this exact structure:
         { "time": "6:00 PM", "activity": "Description", "cost": 15, "transport": "How to get there" }
       ],
       "meals": [
-        { "meal": "Breakfast", "suggestion": "Place name — what to order", "priceRange": "$3-5", "cost": 4 },
-        { "meal": "Lunch", "suggestion": "Place name — what to order", "priceRange": "$5-10", "cost": 7 },
-        { "meal": "Dinner", "suggestion": "Place name — what to order", "priceRange": "$8-15", "cost": 12 }
+        { "meal": "Breakfast", "suggestion": "Type of food + area (e.g. 'Street food stalls near X market — try local porridge')", "priceRange": "~$3-5", "cost": 4 },
+        { "meal": "Lunch", "suggestion": "Type of food + area (e.g. 'Seafood restaurants near the pier — grilled fish')", "priceRange": "~$5-10", "cost": 7 },
+        { "meal": "Dinner", "suggestion": "Type of food + area (e.g. 'Night market food stalls — local specialties')", "priceRange": "~$8-15", "cost": 12 }
       ],
       "dailyTotal": 53
     }

@@ -8,6 +8,8 @@ interface CompareRevealsProps {
   trips: SavedTrip[] // 2-3 trips
   onClose: () => void
   onBook: (trip: SavedTrip) => void
+  /** Currency formatter: takes USD amount, returns formatted string */
+  currencyFormat?: (amountUSD: number) => string
 }
 
 // ---------------------------------------------------------------------------
@@ -55,7 +57,10 @@ export default function CompareReveals({
   trips,
   onClose,
   onBook,
+  currencyFormat,
 }: CompareRevealsProps) {
+  const fmt = currencyFormat || ((usd: number) => `$${usd.toLocaleString()}`)
+
   // Compute comparison highlights
   const highlights = useMemo(() => {
     if (trips.length < 2) return {}
@@ -204,7 +209,7 @@ export default function CompareReveals({
                 {/* Flight price */}
                 <CompareRow label="Flight">
                   <span className="text-emerald-400 font-bold">
-                    ${trip.flightPrice.toLocaleString()}
+                    {fmt(trip.flightPrice)}
                   </span>
                 </CompareRow>
 
@@ -217,7 +222,7 @@ export default function CompareReveals({
                         : 'text-white'
                     }`}
                   >
-                    ${trip.totalCost.toLocaleString()}
+                    {fmt(trip.totalCost)}
                   </span>
                 </CompareRow>
 

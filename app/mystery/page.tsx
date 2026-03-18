@@ -1215,6 +1215,7 @@ function MysteryPageContent() {
           trips={compareTrips}
           onClose={() => setCompareTrips(null)}
           onBook={() => setCompareTrips(null)}
+          currencyFormat={currency.format}
         />
       )}
 

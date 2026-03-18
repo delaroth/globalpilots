@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { checkVisaRequirement } from '@/lib/enrichment/visa'
+import { countryNameToCode } from '@/lib/enrichment/country-data'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,6 +81,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(cached)
     }
 
+    // Look up real visa data for common passport holders
+    const passport = searchParams.get('passport') || 'US'
+    // Try to resolve city name to country for visa lookup
+    const countryCode = countryNameToCode(city) || ''
+    let realVisaInfo = ''
+    let canLeaveAirport = ''
+    if (countryCode) {
+      const visa = checkVisaRequirement(passport, city)
+      const statusLabels: Record<string, string> = {
+        'visa-free': 'Visa-free entry',
+        'visa-on-arrival': 'Visa on arrival available',
+        'e-visa': 'E-visa required (apply online before travel)',
+        'visa-required': 'Visa required — apply at embassy before travel',
+      }
+      realVisaInfo = `${statusLabels[visa.status] || visa.status}${visa.maxStay ? ` for up to ${visa.maxStay} days` : ''}. ${visa.note || ''} NOTE: Visa requirements vary by nationality — always verify with your country\\'s embassy before travel.`
+      canLeaveAirport = visa.status === 'visa-free' || visa.status === 'visa-on-arrival'
+        ? `Yes — ${visa.status.replace(/-/g, ' ')} entry available${visa.maxStay ? ` (up to ${visa.maxStay} days)` : ''}. Verify requirements for your specific nationality.`
+        : `Depends on nationality — ${passport} passport holders need ${visa.status.replace(/-/g, ' ')}. Check transit visa requirements for your passport.`
+    }
+
     const systemPrompt = `You are a seasoned travel expert who specializes in airport layovers and short city visits. You give practical, honest, concise advice that helps travelers make the most of limited time. You MUST respond with valid JSON only — no markdown, no extra text.`
 
     const userPrompt = `Generate a concise layover guide for someone with ${hours} hours in ${city}${hub_code ? ` (airport code: ${hub_code})` : ''}.
@@ -88,24 +110,24 @@ Return this EXACT JSON structure:
   "city": "${city}",
   "hub_code": "${hub_code}",
   "hours": ${hours},
-  "can_leave_airport": "Yes/No with brief explanation — e.g. 'Yes, most nationalities can enter visa-free for up to 96 hours' or 'Depends on nationality — check transit visa requirements'",
-  "visa_info": "Concise visa/transit info — who needs a visa, who doesn't, any transit-without-visa programs",
+  "can_leave_airport": "${canLeaveAirport || 'Depends on nationality — check transit visa requirements before leaving the airport'}",
+  "visa_info": "${realVisaInfo || 'Visa requirements vary by nationality — always check with your embassy before travel'}",
   "airport_to_city": "How to get from the airport to the city center — best transport option, time, cost in USD",
   "best_area": "The best neighborhood or area to visit near the airport or in the city center for a short layover",
   "top_activities": [
     {
-      "name": "Activity name",
+      "name": "Activity or landmark name (use well-known places)",
       "description": "One-sentence description",
       "time_needed": "e.g. '2 hours'",
-      "estimated_cost": "e.g. '$15' or 'Free'"
+      "estimated_cost": "e.g. '~$15' or 'Free' (approximate)"
     }
   ],
   "food_picks": [
     {
-      "name": "Restaurant or food type",
+      "name": "Type of food or cuisine (e.g. 'Street food pad thai stalls' not specific restaurant names)",
       "type": "e.g. 'Street food', 'Casual dining', 'Fine dining'",
-      "price_range": "e.g. '$5-10'",
-      "must_try": "Signature dish to order"
+      "price_range": "e.g. '~$5-10'",
+      "must_try": "Dish to try"
     }
   ],
   "practical_tips": [
@@ -118,10 +140,23 @@ Return this EXACT JSON structure:
   "language_tip": "Key phrases or whether English is widely spoken"
 }
 
-Include exactly 3-5 top_activities and 3 food_picks. Make the guide practical and specific — include real place names, realistic prices in USD, and honest assessments. Focus on what's actually doable in ${hours} hours including airport transit time.`
+IMPORTANT RULES:
+- For activities, use well-known landmarks and areas (temples, markets, museums) — NOT invented or obscure names
+- For food, describe the TYPE of food/cuisine and where to find it (e.g. "street food stalls near X market") rather than specific restaurant names that may not exist
+- All costs are ESTIMATES — prefix with "~" to indicate approximate
+- Focus on what's actually doable in ${hours} hours including airport transit time
+- Include exactly 3-5 top_activities and 3 food_picks`
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.6, 2000)
     const result = parseAIJSON<CityGuideData>(aiResponse.content)
+
+    // Override visa fields with real data (AI may have ignored our pre-filled values)
+    if (realVisaInfo) {
+      result.visa_info = realVisaInfo
+    }
+    if (canLeaveAirport) {
+      result.can_leave_airport = canLeaveAirport
+    }
 
     // Cache for 7 days
     setCache(cacheKey, result, CACHE_TTL)

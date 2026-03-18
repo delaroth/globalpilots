@@ -88,7 +88,8 @@ export default function DestinationCard({
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-gray-50 rounded-lg p-3 text-center">
             <p className="text-xs text-gray-600">From ~</p>
-            <p className="text-2xl font-bold text-green-600">${price}</p>
+            <p className="text-2xl font-bold text-green-600">${price.toLocaleString()}</p>
+            <p className="text-[10px] text-gray-400">USD est.</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-3 text-center">
             <p className="text-xs text-gray-600">Departs in</p>

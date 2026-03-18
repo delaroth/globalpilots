@@ -516,6 +516,9 @@ export default function DayTripPage() {
                 <p className="text-white/50 text-sm mt-1">
                   Estimated total: {currencyFormat(result.totalEstimatedCost)}
                 </p>
+                <p className="text-white/30 text-xs mt-1">
+                  AI-suggested activities with estimated costs — verify availability locally
+                </p>
               </div>
 
               {/* Day cards */}

@@ -988,9 +988,10 @@ export default function MysteryReveal({
                   destination.daily_itinerary.length > 0 ? (
                     <FadeIn visible={true}>
                       <div>
-                        <h3 className="text-xl font-bold text-white mb-4">
+                        <h3 className="text-xl font-bold text-white mb-1">
                           Your Daily Itinerary
                         </h3>
+                        <p className="text-xs text-white/40 mb-4">AI-suggested activities with estimated costs — verify availability locally</p>
                         <div className="space-y-4">
                           {destination.daily_itinerary.map((day) => (
                             <div

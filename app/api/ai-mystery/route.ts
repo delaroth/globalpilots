@@ -464,10 +464,10 @@ export async function POST(request: NextRequest) {
     // Only request optional sections the user selected
     const optionalSections: string[] = []
     if (components.includeHotel) {
-      optionalSections.push(`"hotel_recommendations": [{"name":"...","estimated_price_per_night":N,"neighborhood":"...","why_recommended":"..."},...]`)
+      optionalSections.push(`"hotel_recommendations": [{"name":"Budget/mid-range hotel type + neighborhood","estimated_price_per_night":N,"neighborhood":"Area name","why_recommended":"Short reason"},...]`)
     }
     if (components.includeItinerary) {
-      optionalSections.push(`"daily_itinerary": [{"day":N,"activities":[{"time":"HH:MM AM","activity":"...","estimated_cost":N}],"total_day_cost":N},...]`)
+      optionalSections.push(`"daily_itinerary": [{"day":N,"activities":[{"time":"HH:MM AM","activity":"Well-known landmark or activity type","estimated_cost":N}],"total_day_cost":N},...]`)
     }
     if (components.includeTransportation) {
       optionalSections.push(`"local_transportation": {"airport_to_city":"...","daily_transport":"...","estimated_daily_cost":N}`)
@@ -485,6 +485,7 @@ Package: ${[components.includeFlight && 'Flight', components.includeHotel && 'Ho
 Destinations: ${JSON.stringify(priceInfo)}
 ${notes.length > 0 ? notes.join('\n') : ''}
 RULES: flight<=$${allocation.flight}, hotel/night<=$${allocation.hotel_per_night}, daily activities<=$${Math.floor(allocation.activities / tripDuration)}, total<=$${budget}
+For activities use well-known landmarks/markets/temples — NOT invented places. For food use dish names not restaurant names. All costs are estimates.
 
 Pick ONE destination matching vibes. Explain WHY it matches (not just "affordable"). Return JSON:
 {

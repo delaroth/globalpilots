@@ -16,6 +16,7 @@ interface BlogContent {
   local_food_guide: string
   money_saving_tips: string
   safety_tips: string
+  disclaimer?: string
 }
 
 interface DestinationPost {
@@ -240,6 +241,21 @@ function DestinationPostView({ post }: { post: DestinationPost }) {
               {post.content.safety_tips}
             </p>
           </section>
+
+          {/* Disclaimer */}
+          {post.content.disclaimer ? (
+            <section className="mb-8 bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <p className="text-gray-500 text-sm italic leading-relaxed">
+                {post.content.disclaimer}
+              </p>
+            </section>
+          ) : (
+            <section className="mb-8 bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <p className="text-gray-500 text-sm italic leading-relaxed">
+                Prices, visa requirements, and availability mentioned in this guide are estimates and may have changed since publication. Visa requirements vary by nationality. Always verify current information with official sources before booking your trip.
+              </p>
+            </section>
+          )}
 
           {/* BOOK THIS TRIP */}
           <div className="mt-12 pt-8 border-t border-gray-200">
