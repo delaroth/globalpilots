@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { serpapiProvider, getGoogleFlightsPrice, getSerpApiUsage } from '@/lib/flight-providers/serpapi'
+import { searchFlight } from '@/lib/flight-engine'
+import { getSerpApiUsage } from '@/lib/flight-providers/serpapi'
 import { trackFeatureUse } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
@@ -82,107 +83,52 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Priority 1: SerpApi Google Flights (live data)
-    const serpApiAvailable = await serpapiProvider.isAvailable()
+    // Unified tiered search — user explicitly searching = 'price-check'
+    const result = await searchFlight({
+      origin,
+      destination,
+      departDate,
+      returnDate,
+      routeType: 'price-check',
+      maxTier: 3,
+    })
 
-    if (serpApiAvailable) {
-      console.log(`[Flight Search API] Trying SerpApi for ${origin} → ${destination} on ${departDate}`)
-      try {
-        const result = await getGoogleFlightsPrice(origin, destination, departDate, returnDate)
-
-        if (result) {
-          const usage = getSerpApiUsage()
-          console.log(`[Flight Search API] SerpApi success: $${result.price} (${usage.remaining} searches remaining)`)
-
-          trackFeatureUse('flight_search', {
-            origin,
-            destination,
-            source: 'google-flights',
-            isLive: true,
-          })
-
-          return NextResponse.json({
-            success: true,
-            source: 'google-flights',
-            isLive: true,
-            flight: {
-              price: result.price,
-              airlines: result.airlines,
-              stops: result.stops,
-              duration: result.duration,
-              priceLevel: result.priceLevel || null,
-              typicalRange: result.typicalRange || null,
-            },
-            usage: {
-              remaining: usage.remaining,
-              limit: usage.limit,
-            },
-          })
-        }
-
-        console.log('[Flight Search API] SerpApi returned no results, falling back to TravelPayouts')
-      } catch (serpErr) {
-        console.warn('[Flight Search API] SerpApi error, falling back:', serpErr instanceof Error ? serpErr.message : serpErr)
-      }
-    } else {
-      const usage = getSerpApiUsage()
-      console.log(`[Flight Search API] SerpApi unavailable (${usage.remaining} remaining), falling back to TravelPayouts`)
-    }
-
-    // Priority 2: TravelPayouts cached price (fallback)
-    console.log(`[Flight Search API] Falling back to TravelPayouts calendar for ${origin} → ${destination}`)
-    const monthStr = departDate.slice(0, 7)
-    const tpToken = process.env.TRAVELPAYOUTS_TOKEN
-    if (!tpToken) {
-      return NextResponse.json(
-        { error: 'Flight search service temporarily unavailable' },
-        { status: 503 }
-      )
-    }
-
-    const tpUrl = `https://api.travelpayouts.com/v2/prices/month-matrix?origin=${origin}&destination=${destination}&month=${monthStr}&currency=usd&token=${tpToken}`
-    const tpRes = await fetch(tpUrl, { signal: AbortSignal.timeout(8000) })
-
-    if (!tpRes.ok) {
-      throw new Error(`TravelPayouts HTTP ${tpRes.status}`)
-    }
-
-    const tpData = await tpRes.json()
-    if (!tpData.success || !tpData.data) {
-      throw new Error('TravelPayouts returned no data')
-    }
-
-    // Find the specific date in the month matrix
-    const dayEntry = tpData.data.find((d: any) => d.depart_date === departDate)
-
-    if (!dayEntry) {
-      return NextResponse.json({
-        success: true,
-        source: 'travelpayouts',
-        isLive: false,
-        flight: null,
-        message: 'No price data available for this date',
-      })
-    }
+    const usage = getSerpApiUsage()
 
     trackFeatureUse('flight_search', {
       origin,
       destination,
-      source: 'travelpayouts',
-      isLive: false,
+      source: result.source,
+      isLive: result.confidence === 'live',
+      engine: 'flight-engine',
     })
+
+    if (result.price === null) {
+      return NextResponse.json({
+        success: true,
+        source: result.source,
+        isLive: false,
+        flight: null,
+        message: 'No price data available for this route',
+      })
+    }
 
     return NextResponse.json({
       success: true,
-      source: 'travelpayouts',
-      isLive: false,
+      source: result.source === 'serpapi' ? 'google-flights' : result.source,
+      isLive: result.confidence === 'live',
       flight: {
-        price: dayEntry.value,
-        airlines: [],
-        stops: dayEntry.number_of_changes ?? null,
-        duration: null,
+        price: result.price,
+        airlines: result.airlines,
+        stops: result.stops,
+        duration: result.duration,
         priceLevel: null,
         typicalRange: null,
+      },
+      allPrices: result.allPrices,
+      usage: {
+        remaining: usage.remaining,
+        limit: usage.limit,
       },
     })
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exploreDestinations, dateToMonth, type ExploreDestination } from '@/lib/flight-providers/serpapi-explore'
-import { serpapiProvider, getGoogleFlightsPrice, getSerpApiUsage } from '@/lib/flight-providers/serpapi'
+import { searchFlight } from '@/lib/flight-engine'
+import { getSerpApiUsage } from '@/lib/flight-providers/serpapi'
 import { trackFeatureUse } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
@@ -126,8 +127,20 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'departDate required for exact departure' }, { status: 400 })
       }
 
-      // Get departure price via Google Flights (one-way)
-      const departResult = await getGoogleFlightsPrice(origin, destination, departDate)
+      // Get departure price via tiered engine (one-way)
+      const departSearchResult = await searchFlight({
+        origin,
+        destination,
+        departDate,
+        routeType: 'price-check',
+        maxTier: 2,
+      })
+      const departResult = departSearchResult.price !== null ? {
+        price: departSearchResult.price,
+        airlines: departSearchResult.airlines,
+        stops: departSearchResult.stops ?? 0,
+        duration: departSearchResult.duration,
+      } : null
 
       // Get return options via Explore (cheapest dates for return direction)
       const returnMonthNum = returnType === 'month' && returnMonth
@@ -302,88 +315,44 @@ async function searchExactDates(
   departDate: string,
   returnDate: string | undefined,
 ) {
-  // Try Google Flights first
-  const result = await getGoogleFlightsPrice(origin, destination, departDate, returnDate)
+  // Use the tiered flight engine — handles TP + SerpApi + FlightAPI automatically
+  const result = await searchFlight({
+    origin,
+    destination,
+    departDate,
+    returnDate,
+    routeType: 'price-check',
+    maxTier: 3,
+  })
 
-  if (result) {
+  if (result.price !== null) {
     const usage = getSerpApiUsage()
     return NextResponse.json({
       success: true,
       searchType: 'exact',
-      source: 'google-flights',
-      isLive: true,
+      source: result.source === 'serpapi' ? 'google-flights' : result.source,
+      isLive: result.confidence === 'live',
       price: result.price,
       airlines: result.airlines,
       stops: result.stops,
       duration: result.duration,
-      priceLevel: result.priceLevel || null,
-      typicalRange: result.typicalRange || null,
-      departDate,
-      returnDate: returnDate || null,
-      usage: { remaining: usage.remaining, limit: usage.limit },
-    })
-  }
-
-  // Fallback to TravelPayouts cached price
-  const tpToken = process.env.TRAVELPAYOUTS_TOKEN
-  if (!tpToken) {
-    return NextResponse.json({
-      success: true,
-      searchType: 'exact',
-      source: null,
-      isLive: false,
-      price: null,
-      message: 'No price data available',
-    })
-  }
-
-  const monthStr = departDate.slice(0, 7)
-  const tpUrl = `https://api.travelpayouts.com/v2/prices/month-matrix?origin=${origin}&destination=${destination}&month=${monthStr}&currency=usd&token=${tpToken}`
-
-  try {
-    const tpRes = await fetch(tpUrl, { signal: AbortSignal.timeout(8000) })
-    if (!tpRes.ok) throw new Error(`TravelPayouts HTTP ${tpRes.status}`)
-
-    const tpData = await tpRes.json()
-    if (!tpData.success || !tpData.data) throw new Error('No data')
-
-    const dayEntry = tpData.data.find((d: any) => d.depart_date === departDate)
-
-    if (!dayEntry) {
-      return NextResponse.json({
-        success: true,
-        searchType: 'exact',
-        source: 'travelpayouts',
-        isLive: false,
-        price: null,
-        message: 'No price data available for this date',
-      })
-    }
-
-    return NextResponse.json({
-      success: true,
-      searchType: 'exact',
-      source: 'travelpayouts',
-      isLive: false,
-      price: dayEntry.value,
-      airlines: [],
-      stops: dayEntry.number_of_changes ?? null,
-      duration: null,
       priceLevel: null,
       typicalRange: null,
       departDate,
       returnDate: returnDate || null,
-    })
-  } catch {
-    return NextResponse.json({
-      success: true,
-      searchType: 'exact',
-      source: null,
-      isLive: false,
-      price: null,
-      message: 'Price lookup failed',
+      allPrices: result.allPrices,
+      usage: { remaining: usage.remaining, limit: usage.limit },
     })
   }
+
+  return NextResponse.json({
+    success: true,
+    searchType: 'exact',
+    source: null,
+    isLive: false,
+    price: null,
+    message: 'No price data available',
+  })
 }
 
 // ── Helper: TravelPayouts fallback for month searches ──

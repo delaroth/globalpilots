@@ -35,6 +35,15 @@ function MysteryPill() {
         </span>
       </>
     )
+  } else if (state.status === 'generic-ready') {
+    content = (
+      <>
+        <span className="text-lg leading-none">&#x2708;&#xFE0F;</span>
+        <span className="text-white/90 text-sm font-medium">
+          {state.destination?.destination || 'Destination'} — finalizing itinerary...
+        </span>
+      </>
+    )
   } else if (state.status === 'ready') {
     content = (
       <>
@@ -148,6 +157,9 @@ function MysteryPanel() {
             {state.status === 'quick-ready' && (
               <div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
             )}
+            {state.status === 'generic-ready' && (
+              <div className="w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+            )}
             {state.status === 'ready' && (
               <span className="text-emerald-400">&#x2713;</span>
             )}
@@ -157,6 +169,7 @@ function MysteryPanel() {
             <h3 className="text-white font-semibold text-sm">
               {state.status === 'searching' && 'Finding your mystery destination...'}
               {state.status === 'quick-ready' && `${state.destination?.destination || 'Destination'} - Loading details...`}
+              {state.status === 'generic-ready' && `${state.destination?.destination || 'Destination'} - Finalizing itinerary...`}
               {state.status === 'ready' && `${state.destination?.destination || 'Mystery Trip'} - Ready!`}
               {state.status === 'error' && 'Search Failed'}
             </h3>
@@ -245,6 +258,24 @@ function MysteryPanel() {
               <p className="text-center text-white/40 text-sm mt-8">
                 Generating trip details with AI... You can minimize this and browse.
               </p>
+            </div>
+          )}
+
+          {/* Generic-ready state: show MysteryReveal with generic data, personalized still loading */}
+          {state.status === 'generic-ready' && state.destination && state.destination.destination && state.destination.city_code_IATA && (
+            <div className="mystery-popup-reveal">
+              <MysteryReveal
+                destination={state.destination}
+                origin={origin}
+                departDate={departDate}
+                tripDuration={tripDuration}
+                onShowAnother={handleShowAnother}
+                onReroll={handleReroll}
+                rerollCount={rerollCount}
+                maxRerolls={maxRerolls}
+                detailsLoading={true}
+                currencyFormat={currency.format}
+              />
             </div>
           )}
 

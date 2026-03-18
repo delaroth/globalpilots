@@ -23,17 +23,9 @@ interface DetailsRequest {
   hotelEstimate?: number
 }
 
+// Personalized response — only itinerary + hotels + transport
 interface DetailsResponse {
-  whyThisPlace: string
-  why_its_perfect: string
   itinerary: { day: number; activities: string[] }[]
-  bestTimeToGo: string
-  localTip: string
-  insider_tip: string
-  best_local_food: string[]
-  day1: string[]
-  day2: string[]
-  day3: string[]
   budgetBreakdown: {
     flights: number
     hotel: number
@@ -53,6 +45,9 @@ interface DetailsResponse {
   hotel_recommendations?: { name: string; estimated_price_per_night: number; neighborhood: string; why_recommended: string }[]
   daily_itinerary?: { day: number; activities: { time: string; activity: string; estimated_cost: number }[]; total_day_cost: number }[]
   local_transportation?: { airport_to_city: string; daily_transport: string; estimated_daily_cost: number }
+  day1: string[]
+  day2: string[]
+  day3: string[]
 }
 
 /** Fuzzy cache key — matches the main route format */
@@ -117,90 +112,112 @@ export async function POST(request: NextRequest) {
       budgetPriority,
       customSplit: body.customSplit,
     })
-    const budgetTier = getBudgetTier(budget, tripDuration)
 
-    const allocationText = formatAllocationForAI(allocation, tripDuration)
+    const actualHotelPerNight = hotelEstimate || allocation.hotel_per_night
 
     const accomMaxPerNight: Record<string, number> = {
       'hostel': 30, 'budget': 60, 'mid-range': 120, 'upscale': 250, 'luxury': 500
     }
+    const hotelBudget = accomMaxPerNight[accommodationLevel] || 120
 
-    const priorityHint: Record<string, string> = {
-      'flights': 'Fly FURTHER to distant destinations.',
-      'hotels': 'Closer is fine if hotel is great.',
-      'activities': 'Pick destinations known for food/culture/tours.',
-      'balanced': 'Balance distance, accommodation, experiences.',
-    }
+    const dailyActivityBudget = Math.floor(allocation.activities / tripDuration)
 
-    // Only request optional sections the user selected
-    const optionalSections: string[] = []
-    if (components.includeHotel) {
-      optionalSections.push(`"hotel_recommendations": [{"name":"...","estimated_price_per_night":N,"neighborhood":"...","why_recommended":"..."},...]`)
-    }
-    if (components.includeItinerary) {
-      optionalSections.push(`"daily_itinerary": [{"day":N,"activities":[{"time":"HH:MM AM","activity":"...","estimated_cost":N}],"total_day_cost":N},...]`)
-    }
-    if (components.includeTransportation) {
-      optionalSections.push(`"local_transportation": {"airport_to_city":"...","daily_transport":"...","estimated_daily_cost":N}`)
-    }
+    console.log(`[Details] Generating personalized AI content for ${destination} (${iata}) — 2 parallel calls`)
 
-    // Build a focused prompt — destination is already known, no discovery needed
-    const systemPrompt = `Travel expert for ${destination}, ${country}. Respond with valid JSON only.`
+    // ── Call A: Itinerary (~800 tokens max) ──
+    const itineraryPromise = (components.includeItinerary !== false)
+      ? callAI(
+          `Travel planner for ${destination}, ${country}. JSON only.`,
+          `Generate a ${tripDuration}-day itinerary for ${destination}.
+Budget: $${dailyActivityBudget}/day for activities. Style: ${vibes.join(', ')}.
+Return JSON: {"daily_itinerary":[{"day":1,"activities":[{"time":"09:00 AM","activity":"...","estimated_cost":0}],"total_day_cost":0}],"itinerary":[{"day":1,"activities":["Activity 1","Activity 2","Activity 3"]}]}
+Keep activity descriptions under 10 words each. ${tripDuration} days total. Daily costs must not exceed $${dailyActivityBudget}.`,
+          0.9,
+          800,
+        ).then(res => {
+          const parsed = parseAIJSON<{ daily_itinerary?: DetailsResponse['daily_itinerary']; itinerary?: DetailsResponse['itinerary'] }>(res.content)
+          return parsed
+        }).catch(err => {
+          console.warn('[Details] Itinerary call failed:', err.message)
+          return null
+        })
+      : Promise.resolve(null)
 
-    const actualHotelPerNight = hotelEstimate || allocation.hotel_per_night
+    // ── Call B: Hotels + Transport (~400 tokens max) ──
+    const hotelsPromise = (components.includeHotel || components.includeTransportation)
+      ? callAI(
+          `Hotel advisor for ${destination}, ${country}. JSON only.`,
+          `Recommend 3 ${accommodationLevel} hotels in ${destination} under $${hotelBudget}/night.
+Also suggest airport-to-city transport.
+Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per_night":0,"neighborhood":"Area","why_recommended":"Short reason"}],"local_transportation":{"airport_to_city":"How to get there","daily_transport":"Best way around","estimated_daily_cost":0}}`,
+          0.9,
+          400,
+        ).then(res => {
+          const parsed = parseAIJSON<{
+            hotel_recommendations?: DetailsResponse['hotel_recommendations']
+            local_transportation?: DetailsResponse['local_transportation']
+          }>(res.content)
+          return parsed
+        }).catch(err => {
+          console.warn('[Details] Hotels call failed:', err.message)
+          return null
+        })
+      : Promise.resolve(null)
 
-    const userPrompt = `Generate a detailed travel plan for ${destination}, ${country} (${iata}).
+    // ── Run both in parallel ──
+    const [itineraryResult, hotelsResult] = await Promise.allSettled([itineraryPromise, hotelsPromise])
 
-Budget: $${budget} USD, ${tripDuration} days, tier: ${budgetTier}
-Allocation: ${allocationText}
-Origin: ${origin} | Dates: ${dates}
-Vibes: ${vibes.join(', ')} | Priority: ${budgetPriority} — ${priorityHint[budgetPriority] || priorityHint['balanced']}
-Accommodation: ${accommodationLevel} (max $${accomMaxPerNight[accommodationLevel] || 120}/night)
-Package: ${[components.includeFlight && 'Flight', components.includeHotel && 'Hotel', components.includeItinerary && 'Itinerary', components.includeTransportation && 'Transport'].filter(Boolean).join('+')}
-Known: Flight ~$${flightPrice}, Hotel ~$${actualHotelPerNight}/night
+    const itineraryData = itineraryResult.status === 'fulfilled' ? itineraryResult.value : null
+    const hotelsData = hotelsResult.status === 'fulfilled' ? hotelsResult.value : null
 
-RULES: daily activities<=$${Math.floor(allocation.activities / tripDuration)}, total<=$${budget}
+    // Build the combined result
+    const result: Partial<DetailsResponse> = {}
 
-Explain WHY ${destination} matches the "${vibes.join(', ')}" vibe. Return JSON:
-{
-  "whyThisPlace":"2-3 sentences why this destination is perfect for these vibes",
-  "why_its_perfect":"same as whyThisPlace",
-  "budgetBreakdown":{"flights":${flightPrice},"hotel":${actualHotelPerNight * tripDuration},"activities":N,"food":N,"total":N},
-  "itinerary":[{"day":1,"activities":["...","...","..."]},...for each of ${tripDuration} days],
-  "bestTimeToGo":"Month range","localTip":"One insider tip",
-  "best_local_food":["Dish1","Dish2","Dish3"],"insider_tip":"same as localTip",
-  ${optionalSections.length > 0 ? optionalSections.join(',\n  ') + ',' : ''}
-  "budget_breakdown":{"flight":${flightPrice},"hotel_total":${actualHotelPerNight * tripDuration},"hotel_per_night":${actualHotelPerNight},"activities":${allocation.activities},"local_transport":${allocation.local_transport},"food_estimate":${allocation.food_estimate},"buffer":${allocation.buffer}}
-}`
+    // Itinerary data
+    if (itineraryData) {
+      result.daily_itinerary = itineraryData.daily_itinerary
+      result.itinerary = itineraryData.itinerary
 
-    console.log(`[Details] Generating AI content for ${destination} (${iata})`)
-
-    const aiResponse = await callAI(systemPrompt, userPrompt, 0.9, 2500)
-    const result = parseAIJSON<DetailsResponse>(aiResponse.content)
-
-    // Ensure backward compat fields
-    if (!result.why_its_perfect) result.why_its_perfect = result.whyThisPlace
-    if (!result.whyThisPlace) result.whyThisPlace = result.why_its_perfect
-    if (!result.insider_tip) result.insider_tip = result.localTip
-    if (!result.localTip) result.localTip = result.insider_tip
-
-    // Derive day1/day2/day3 from itinerary
-    if (result.itinerary && result.itinerary.length > 0) {
-      if (!result.day1 || result.day1.length === 0) {
+      // Derive day1/day2/day3 from itinerary for backward compat
+      if (result.itinerary && result.itinerary.length > 0) {
         result.day1 = result.itinerary[0]?.activities || []
-      }
-      if (!result.day2 || result.day2.length === 0) {
         result.day2 = result.itinerary[1]?.activities || []
-      }
-      if (!result.day3 || result.day3.length === 0) {
         result.day3 = result.itinerary[2]?.activities || []
       }
+    }
+
+    // Hotels + transport data
+    if (hotelsData) {
+      if (components.includeHotel) {
+        result.hotel_recommendations = hotelsData.hotel_recommendations
+      }
+      if (components.includeTransportation) {
+        result.local_transportation = hotelsData.local_transportation
+      }
+    }
+
+    // Budget breakdown — calculated in code, not AI-generated
+    result.budgetBreakdown = {
+      flights: flightPrice,
+      hotel: actualHotelPerNight * tripDuration,
+      activities: allocation.activities,
+      food: allocation.food_estimate,
+      total: flightPrice + (actualHotelPerNight * tripDuration) + allocation.activities + allocation.food_estimate,
+    }
+
+    result.budget_breakdown = {
+      flight: flightPrice,
+      hotel_total: actualHotelPerNight * tripDuration,
+      hotel_per_night: actualHotelPerNight,
+      activities: allocation.activities,
+      local_transport: allocation.local_transport,
+      food_estimate: allocation.food_estimate,
+      buffer: allocation.buffer,
     }
 
     // Cache the full result (merge with quick data will happen client-side,
     // but we also cache under the fuzzy key for future full-cache hits)
     const cacheKey = buildFuzzyCacheKey(origin, budget, vibes, dates, tripDuration, components, accommodationLevel, budgetPriority)
-    // Build a complete response that matches the main /api/ai-mystery format
     const fullResult = {
       destination,
       country,
@@ -214,7 +231,7 @@ Explain WHY ${destination} matches the "${vibes.join(', ')}" vibe. Return JSON:
     }
     setCache(cacheKey, fullResult, 60 * 60 * 1000)
 
-    console.log(`[Details] AI content generated for ${destination}`)
+    console.log(`[Details] Personalized AI content generated for ${destination} (itinerary: ${itineraryData ? 'ok' : 'failed'}, hotels: ${hotelsData ? 'ok' : 'failed'})`)
 
     return NextResponse.json(result)
   } catch (error) {

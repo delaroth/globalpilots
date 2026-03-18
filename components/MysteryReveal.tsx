@@ -254,11 +254,21 @@ export default function MysteryReveal({
 
   const iata = destination.city_code_IATA || destination.iata || ''
 
-  // AI details availability — true when the AI-generated content has been populated
-  const hasAIDetails = !!(
+  // Generic data availability — true when cached/generic AI content has been populated
+  const hasGenericData = !!(
     (destination.whyThisPlace || destination.why_its_perfect) &&
     destination.best_local_food && destination.best_local_food.length > 0
   )
+
+  // Personalized data availability — true when itinerary + hotels have been populated
+  const hasPersonalizedData = !!(
+    (destination.daily_itinerary && destination.daily_itinerary.length > 0) ||
+    (destination.itinerary && destination.itinerary.length > 0) ||
+    (destination.day1 && destination.day1.length > 0)
+  )
+
+  // Backward compat alias
+  const hasAIDetails = hasGenericData
   const flightPrice =
     destination.indicativeFlightPrice || destination.estimated_flight_cost
   const isEstimate = destination.priceIsEstimate

@@ -9,9 +9,10 @@ import { trackConversion } from '@/lib/track-client'
 // ---------------------------------------------------------------------------
 
 interface MysteryState {
-  status: 'idle' | 'searching' | 'quick-ready' | 'ready' | 'error'
+  status: 'idle' | 'searching' | 'quick-ready' | 'generic-ready' | 'ready' | 'error'
   destination: any | null
   detailsLoading: boolean
+  genericLoading: boolean
   error: string | null
 }
 
@@ -73,6 +74,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
     status: 'idle',
     destination: null,
     detailsLoading: false,
+    genericLoading: false,
     error: null,
   })
 
@@ -87,7 +89,63 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
   const isVisible = state.status !== 'idle'
 
   // -------------------------------------------------------------------
-  // Core search logic (two-phase: quick pick + AI details)
+  // Fetch generic cached data for a destination
+  // -------------------------------------------------------------------
+  const fetchGenericData = useCallback((
+    dest: { destination: string; country: string; iata: string },
+    abortSignal: AbortSignal,
+  ) => {
+    return fetch('/api/ai-mystery/generic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: abortSignal,
+      body: JSON.stringify({
+        destination: dest.destination,
+        country: dest.country,
+        iata: dest.iata,
+      }),
+    }).then(async (res) => {
+      if (!res.ok) throw new Error('Failed to fetch generic data')
+      return res.json()
+    })
+  }, [])
+
+  // -------------------------------------------------------------------
+  // Fetch personalized details (itinerary + hotels)
+  // -------------------------------------------------------------------
+  const fetchPersonalizedDetails = useCallback((
+    quickData: any,
+    params: SearchParams,
+    abortSignal: AbortSignal,
+  ) => {
+    return fetch('/api/ai-mystery/details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: abortSignal,
+      body: JSON.stringify({
+        destination: quickData.destination,
+        country: quickData.country,
+        iata: quickData.iata,
+        origin: params.origin,
+        budget: params.budget,
+        vibes: params.vibes,
+        dates: params.dates,
+        tripDuration: params.tripDuration,
+        flightPrice: quickData.estimated_flight_cost || 0,
+        accommodationLevel: params.accommodationLevel,
+        budgetPriority: params.budgetPriority,
+        customSplit: params.customSplit,
+        packageComponents: params.packageComponents,
+        hotelEstimate: quickData.estimated_hotel_per_night,
+      }),
+    }).then(async (res) => {
+      if (!res.ok) throw new Error('Failed to generate trip details')
+      return res.json()
+    })
+  }, [])
+
+  // -------------------------------------------------------------------
+  // Core search logic (three-phase: quick pick + generic cache + AI details)
   // -------------------------------------------------------------------
   const executeSearch = useCallback((params: SearchParams) => {
     // Abort any previous request
@@ -99,7 +157,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
 
     setSearchParams(params)
     setIsMinimized(false)
-    setState({ status: 'searching', destination: null, detailsLoading: false, error: null })
+    setState({ status: 'searching', destination: null, detailsLoading: false, genericLoading: false, error: null })
 
     const requestBody = {
       ...params,
@@ -108,7 +166,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
 
     // If destination is pre-selected, skip quick pick and go straight to details
     if (params.destination) {
-      console.log('[MysteryContext] Pre-selected destination:', params.destination, '— skipping quick pick')
+      console.log('[MysteryContext] Pre-selected destination:', params.destination, '-- skipping quick pick')
       const iata = params.destination
       const airport = (globalThis as any).__majorAirports?.find?.((a: any) => a.code === iata)
 
@@ -133,47 +191,76 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
         budgetBreakdown: { flights: 0, hotel: 0, activities: 0, food: 0, total: 0 },
       }
 
-      setState({ status: 'quick-ready', destination: partialDest, detailsLoading: true, error: null })
+      setState({ status: 'quick-ready', destination: partialDest, detailsLoading: true, genericLoading: true, error: null })
 
-      // Go straight to Phase 2: AI details
-      fetch('/api/ai-mystery/details', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: abortController.signal,
-        body: JSON.stringify({
-          destination: airport?.city || iata,
-          country: airport?.country || '',
-          iata,
-          origin: params.origin,
-          budget: params.budget,
-          vibes: params.vibes,
-          dates: params.dates,
-          tripDuration: params.tripDuration,
-          flightPrice: 0,
-          accommodationLevel: params.accommodationLevel,
-          budgetPriority: params.budgetPriority,
-          customSplit: params.customSplit,
-          packageComponents: params.packageComponents,
-        }),
-      })
-        .then(async (res) => {
-          if (!res.ok) throw new Error('Failed to generate trip details')
-          const details = await res.json()
-          setState({
-            status: 'ready',
-            destination: { ...partialDest, ...details, destination: partialDest.destination, country: partialDest.country, iata, city_code_IATA: iata },
-            detailsLoading: false,
-            error: null,
+      // Phase 2a: Generic data (cached) + Phase 2b: Personalized details — in parallel
+      const genericPromise = fetchGenericData(
+        { destination: partialDest.destination, country: partialDest.country, iata },
+        abortController.signal,
+      )
+
+      const detailsPromise = fetchPersonalizedDetails(partialDest, params, abortController.signal)
+
+      // Handle generic data as it arrives
+      genericPromise
+        .then((genericData) => {
+          console.log('[MysteryContext] Generic data received for pre-selected dest')
+          setState(prev => {
+            if (!prev.destination) return prev
+            return {
+              ...prev,
+              status: prev.detailsLoading && prev.status !== 'ready' ? 'generic-ready' : prev.status,
+              genericLoading: false,
+              destination: {
+                ...prev.destination,
+                ...genericData,
+                // Keep core identity fields
+                destination: prev.destination.destination,
+                country: prev.destination.country,
+                iata: prev.destination.iata,
+                city_code_IATA: prev.destination.city_code_IATA,
+              },
+            }
           })
         })
         .catch((err) => {
           if (err.name === 'AbortError') return
-          setState({ status: 'error', destination: null, detailsLoading: false, error: err.message })
+          console.warn('[MysteryContext] Generic data failed (non-fatal):', err.message)
+          setState(prev => ({ ...prev, genericLoading: false }))
         })
+
+      // Handle personalized details as they arrive
+      detailsPromise
+        .then((detailsData) => {
+          console.log('[MysteryContext] Personalized details received for pre-selected dest')
+          setState(prev => {
+            if (!prev.destination) return prev
+            return {
+              ...prev,
+              status: 'ready',
+              detailsLoading: false,
+              destination: {
+                ...prev.destination,
+                ...detailsData,
+                // Keep core identity fields
+                destination: prev.destination.destination,
+                country: prev.destination.country,
+                iata: prev.destination.iata,
+                city_code_IATA: prev.destination.city_code_IATA,
+              },
+            }
+          })
+        })
+        .catch((err) => {
+          if (err.name === 'AbortError') return
+          console.warn('[MysteryContext] Personalized details failed for pre-selected dest')
+          setState(prev => ({ ...prev, status: prev.status === 'error' ? 'error' : 'ready', detailsLoading: false }))
+        })
+
       return
     }
 
-    // Phase 1: Quick pick (mystery mode — AI picks destination)
+    // Phase 1: Quick pick (mystery mode -- AI picks destination)
     console.log('[MysteryContext] Phase 1: Quick pick API call...')
     fetch('/api/ai-mystery/quick', {
       method: 'POST',
@@ -196,7 +283,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
         // Full cache hit -- skip phase 2
         if (quickData._cacheHit) {
           console.log('[MysteryContext] Full cache hit -- skipping Phase 2')
-          setState({ status: 'ready', destination: quickData, detailsLoading: false, error: null })
+          setState({ status: 'ready', destination: quickData, detailsLoading: false, genericLoading: false, error: null })
           trackConversion('mystery_revealed', {
             destination: quickData.destination,
             country: quickData.country,
@@ -222,7 +309,8 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
           googleFlightsStops: quickData.googleFlightsStops,
           suggestedDepartureDate: quickData.suggestedDepartureDate,
           suggestedReturnDate: quickData.suggestedReturnDate,
-          // Placeholder fields -- filled by Phase 2
+          cachedBasicInfo: quickData.cachedBasicInfo,
+          // Placeholder fields -- filled by Phase 2a (generic) and Phase 2b (personalized)
           whyThisPlace: '',
           why_its_perfect: '',
           itinerary: [],
@@ -242,7 +330,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
           },
         }
 
-        setState({ status: 'quick-ready', destination: partialDestination, detailsLoading: true, error: null })
+        setState({ status: 'quick-ready', destination: partialDestination, detailsLoading: true, genericLoading: true, error: null })
 
         // Fire-and-forget conversion tracking
         trackConversion('mystery_revealed', {
@@ -251,38 +339,60 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
           iata: quickData.city_code_IATA,
         })
 
-        // Phase 2: AI details
-        console.log('[MysteryContext] Phase 2: Fetching AI details for', quickData.destination)
-        fetch('/api/ai-mystery/details', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: abortController.signal,
-          body: JSON.stringify({
-            destination: quickData.destination,
-            country: quickData.country,
-            iata: quickData.iata,
-            origin: params.origin,
-            budget: params.budget,
-            vibes: params.vibes,
-            dates: params.dates,
-            tripDuration: params.tripDuration,
-            flightPrice: quickData.estimated_flight_cost,
-            accommodationLevel: params.accommodationLevel,
-            budgetPriority: params.budgetPriority,
-            customSplit: params.customSplit,
-            packageComponents: params.packageComponents,
-            hotelEstimate: quickData.estimated_hotel_per_night,
-          }),
-        })
-          .then(async (detailsResponse) => {
-            if (!detailsResponse.ok) {
-              console.warn('[MysteryContext] Phase 2 failed, continuing with partial data')
-              setState(prev => ({ ...prev, status: 'ready', detailsLoading: false }))
-              return
-            }
-            const detailsData = await detailsResponse.json()
-            console.log('[MysteryContext] Phase 2 success: AI details received')
+        // Phase 2a: Generic cached data + Phase 2b: Personalized details — in parallel
+        console.log('[MysteryContext] Phase 2a+2b: Fetching generic + personalized data in parallel for', quickData.destination)
 
+        const genericPromise = fetchGenericData(
+          { destination: quickData.destination, country: quickData.country, iata: quickData.iata },
+          abortController.signal,
+        )
+
+        const detailsPromise = fetchPersonalizedDetails(quickData, params, abortController.signal)
+
+        // Handle generic data as it arrives (likely faster — cached)
+        genericPromise
+          .then((genericData) => {
+            console.log('[MysteryContext] Phase 2a success: Generic data received')
+            setState(prev => {
+              if (!prev.destination) return prev
+              return {
+                ...prev,
+                // Transition to generic-ready only if we're still waiting for details
+                status: prev.detailsLoading && prev.status !== 'ready' ? 'generic-ready' : prev.status,
+                genericLoading: false,
+                destination: {
+                  ...prev.destination,
+                  ...genericData,
+                  // Keep quick-pick values (more accurate)
+                  destination: prev.destination.destination,
+                  country: prev.destination.country,
+                  iata: prev.destination.iata,
+                  city_code_IATA: prev.destination.city_code_IATA,
+                  estimated_flight_cost: prev.destination.estimated_flight_cost,
+                  indicativeFlightPrice: prev.destination.indicativeFlightPrice,
+                  estimated_hotel_per_night: prev.destination.estimated_hotel_per_night,
+                  priceIsLive: prev.destination.priceIsLive,
+                  priceIsEstimate: prev.destination.priceIsEstimate,
+                  googleFlightsPrice: prev.destination.googleFlightsPrice,
+                  googleFlightsAirlines: prev.destination.googleFlightsAirlines,
+                  googleFlightsStops: prev.destination.googleFlightsStops,
+                  suggestedDepartureDate: prev.destination.suggestedDepartureDate,
+                  suggestedReturnDate: prev.destination.suggestedReturnDate,
+                  cachedBasicInfo: prev.destination.cachedBasicInfo,
+                },
+              }
+            })
+          })
+          .catch((err) => {
+            if ((err as Error).name === 'AbortError') return
+            console.warn('[MysteryContext] Phase 2a failed (non-fatal):', err.message)
+            setState(prev => ({ ...prev, genericLoading: false }))
+          })
+
+        // Handle personalized details as they arrive
+        detailsPromise
+          .then((detailsData) => {
+            console.log('[MysteryContext] Phase 2b success: Personalized details received')
             setState(prev => {
               if (!prev.destination) return prev
               return {
@@ -307,13 +417,15 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
                   googleFlightsStops: prev.destination.googleFlightsStops,
                   suggestedDepartureDate: prev.destination.suggestedDepartureDate,
                   suggestedReturnDate: prev.destination.suggestedReturnDate,
+                  cachedBasicInfo: prev.destination.cachedBasicInfo,
                 },
               }
             })
           })
           .catch((err) => {
             if ((err as Error).name === 'AbortError') return
-            console.warn('[MysteryContext] Phase 2 error (non-fatal):', err)
+            console.warn('[MysteryContext] Phase 2b error (non-fatal):', err)
+            // Still show what we have (generic data if available)
             setState(prev => ({ ...prev, status: 'ready', detailsLoading: false }))
           })
       })
@@ -339,16 +451,16 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
             if (data.error) throw new Error(data.error)
             if (!data.destination || !data.city_code_IATA) throw new Error('Invalid response from server.')
 
-            setState({ status: 'ready', destination: data, detailsLoading: false, error: null })
+            setState({ status: 'ready', destination: data, detailsLoading: false, genericLoading: false, error: null })
           })
           .catch((fallbackErr) => {
             if ((fallbackErr as Error).name === 'AbortError') return
             const errorMsg = fallbackErr instanceof Error ? fallbackErr.message : 'Something went wrong. Please try again.'
             console.error('[MysteryContext] Both APIs failed:', fallbackErr)
-            setState({ status: 'error', destination: null, detailsLoading: false, error: errorMsg })
+            setState({ status: 'error', destination: null, detailsLoading: false, genericLoading: false, error: errorMsg })
           })
       })
-  }, [])
+  }, [fetchGenericData, fetchPersonalizedDetails])
 
   // -------------------------------------------------------------------
   // Public API
@@ -369,7 +481,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
-    setState({ status: 'idle', destination: null, detailsLoading: false, error: null })
+    setState({ status: 'idle', destination: null, detailsLoading: false, genericLoading: false, error: null })
     setSearchParams(null)
     setExcludeList([])
     excludeListRef.current = []

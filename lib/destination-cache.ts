@@ -124,6 +124,64 @@ export async function incrementRevealCount(iata: string): Promise<void> {
   }
 }
 
+/** Exported type for generic AI data (used by the generic API route). */
+export interface CachedGenericData {
+  whyVisit: string
+  topAttractions: { name: string; description: string }[]
+  localFood: string[]
+  insiderTips: string[]
+  culturalNotes: string
+  neighborhoods: string[]
+}
+
+/**
+ * Check if a destination has cached generic AI data. If cached and fresh
+ * (< 30 days), returns the data. If not cached, returns null (caller should
+ * generate via the /api/ai-mystery/generic endpoint).
+ *
+ * This function does NOT block on generation — it only reads.
+ */
+export async function ensureGenericCached(
+  iata: string,
+  city: string,
+  country: string,
+): Promise<CachedGenericData | null> {
+  try {
+    const supabase = getSupabase()
+    const { data, error } = await (supabase.from('destination_cache') as any)
+      .select('ai_content, updated_at')
+      .eq('iata', iata.toUpperCase())
+      .single()
+
+    if (error || !data) return null
+
+    // Check 30-day freshness
+    if (data.updated_at) {
+      const updatedAt = new Date(data.updated_at).getTime()
+      const now = Date.now()
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000
+      if (now - updatedAt > THIRTY_DAYS) {
+        // Stale — treat as cache miss
+        return null
+      }
+    }
+
+    const aiContent = data.ai_content
+    if (!aiContent || !aiContent.whyVisit) return null
+
+    return {
+      whyVisit: aiContent.whyVisit || '',
+      topAttractions: aiContent.topAttractions || [],
+      localFood: aiContent.localFood || [],
+      insiderTips: aiContent.localTips || aiContent.insiderTips || [],
+      culturalNotes: aiContent.culturalNotes || '',
+      neighborhoods: aiContent.neighborhoods || [],
+    }
+  } catch {
+    return null
+  }
+}
+
 /** Get top N most revealed destinations. */
 export async function getTopDestinations(limit: number): Promise<CachedDestination[]> {
   try {

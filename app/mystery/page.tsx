@@ -1127,6 +1127,9 @@ function MysteryPageContent() {
               {mystery.state.status === 'quick-ready' && (
                 <span>&#x2708;&#xFE0F;</span>
               )}
+              {mystery.state.status === 'generic-ready' && (
+                <div className="w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+              )}
               {mystery.state.status === 'ready' && (
                 <span>&#x2705;</span>
               )}
@@ -1136,6 +1139,7 @@ function MysteryPageContent() {
               <span className="text-sm font-medium">
                 {mystery.state.status === 'searching' && 'Finding your destination...'}
                 {mystery.state.status === 'quick-ready' && `${mystery.state.destination?.destination || 'Destination'} found! Loading details...`}
+                {mystery.state.status === 'generic-ready' && `${mystery.state.destination?.destination || 'Destination'} — finalizing itinerary...`}
                 {mystery.state.status === 'ready' && 'Your mystery trip is ready! Click to view'}
                 {mystery.state.status === 'error' && 'Search failed. Click to see details'}
               </span>

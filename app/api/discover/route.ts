@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { majorAirports } from '@/lib/geolocation'
 import { searchCheapestDestinations, isKiwiAvailable } from '@/lib/kiwi'
 import { findCheapestDestinations, dateToMonth } from '@/lib/flight-providers/serpapi-explore'
+import { discoverCheapDestinations } from '@/lib/flight-engine'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,51 +29,57 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // ── Priority 1: SerpApi Explore (1 call → 20-50 destinations with prices) ──
+    // ── Priority 1: discoverCheapDestinations (TravelPayouts free, SerpApi Explore fallback) ──
     try {
       const month = dateToMonth(departDate || undefined)
-      console.log(`[Discover API] Trying SerpApi Explore from ${origin}, month=${month}`)
+      console.log(`[Discover API] Trying discoverCheapDestinations from ${origin}, month=${month}`)
 
-      const exploreDests = await findCheapestDestinations({
+      const discovered = await discoverCheapDestinations({
         origin,
         month,
+        limit: Math.max(limit, 20),
       })
 
-      if (exploreDests.length > 0) {
-        // Deduplicate by airport code (keep cheapest per city, already sorted by price)
+      if (discovered.destinations.length > 0) {
+        // Deduplicate by destination code (keep cheapest per city, already sorted by price)
         const seen = new Set<string>()
-        const unique: typeof exploreDests = []
-        for (const d of exploreDests) {
-          if (!seen.has(d.airportCode) && d.airportCode !== origin && d.airportCode) {
-            seen.add(d.airportCode)
+        const unique: typeof discovered.destinations = []
+        for (const d of discovered.destinations) {
+          if (!seen.has(d.destination) && d.destination !== origin && d.destination) {
+            seen.add(d.destination)
             unique.push(d)
           }
           if (unique.length >= limit) break
         }
 
         const results = unique.map(d => ({
-          destination: d.airportCode,
-          city: d.name || getCityName(d.airportCode),
-          price: d.flightPrice,
+          destination: d.destination,
+          city: d.city || getCityName(d.destination),
+          price: d.price,
           departDate: d.startDate || (departDate && departDate.length === 10 ? departDate : `${departDate || new Date().toISOString().slice(0, 7)}-15`),
           returnDate: d.endDate || null,
           airline: d.airline || null,
         }))
 
-        console.log(`[Discover API] SerpApi Explore returned ${results.length} destinations from ${origin}`)
+        const priceSource = discovered.source === 'serpapi-explore' ? 'serpapi-explore' : 'travelpayouts-cached'
+        const priceNote = discovered.source === 'serpapi-explore'
+          ? 'Live prices from Google — click to check and book.'
+          : 'Prices are cached estimates. Click to check current prices on Aviasales.'
+
+        console.log(`[Discover API] ${discovered.source} returned ${results.length} destinations from ${origin}`)
 
         return NextResponse.json({
           origin,
           results,
           count: results.length,
-          priceSource: 'serpapi-explore',
-          priceNote: 'Live prices from Google — click to check and book.',
+          priceSource,
+          priceNote,
         })
       }
 
-      console.log('[Discover API] SerpApi Explore returned 0 results, trying Kiwi')
+      console.log('[Discover API] discoverCheapDestinations returned 0 results, trying Kiwi')
     } catch (exploreErr) {
-      console.warn('[Discover API] SerpApi Explore failed, trying Kiwi:', exploreErr instanceof Error ? exploreErr.message : exploreErr)
+      console.warn('[Discover API] discoverCheapDestinations failed, trying Kiwi:', exploreErr instanceof Error ? exploreErr.message : exploreErr)
     }
 
     // ── Priority 2: Kiwi "fly_to=anywhere" (real-time, includes LCCs) ──

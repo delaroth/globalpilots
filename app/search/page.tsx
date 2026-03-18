@@ -1826,16 +1826,37 @@ function SearchPageContent() {
                             </div>
                           </div>
 
-                          {/* Action */}
-                          <div className="border-t border-white/[0.06] p-4 flex gap-3">
-                            <a
-                              href={stop.googleFlightsUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 text-center bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-medium py-2.5 rounded-lg transition-all text-sm"
-                            >
-                              Book on Google Flights &rarr;
-                            </a>
+                          {/* Action — two separate booking links per leg */}
+                          <div className="border-t border-white/[0.06] p-4 space-y-2">
+                            <div className="flex gap-2">
+                              <a
+                                href={(() => {
+                                  const d = stop.stopoverDepartDate?.split('-')
+                                  const dd = d?.[2] || '', mm = d?.[1] || ''
+                                  return `https://www.aviasales.com/search/${stopoverResult.origin}${dd}${mm}${stop.hub}1`
+                                })()}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 text-center bg-sky-600 hover:bg-sky-500 text-white font-medium py-2.5 rounded-lg transition-all text-sm"
+                              >
+                                Leg 1: {stopoverResult.origin} → {stop.hub} (${stop.leg1Price})
+                              </a>
+                              <a
+                                href={(() => {
+                                  const d = stop.stopoverReturnDate?.split('-')
+                                  const dd = d?.[2] || '', mm = d?.[1] || ''
+                                  return `https://www.aviasales.com/search/${stop.hub}${dd}${mm}${stopoverResult.destination}1`
+                                })()}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 text-center bg-sky-600 hover:bg-sky-500 text-white font-medium py-2.5 rounded-lg transition-all text-sm"
+                              >
+                                Leg 2: {stop.hub} → {stopoverResult.destination} (${stop.leg2Price})
+                              </a>
+                            </div>
+                            <p className="text-[10px] text-white/30 text-center">
+                              Book each leg separately on Aviasales for the best stopover price
+                            </p>
                           </div>
                         </motion.div>
                       )

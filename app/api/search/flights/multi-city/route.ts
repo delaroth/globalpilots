@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchGoogleFlights, getSerpApiUsage } from '@/lib/flight-providers/serpapi'
+import { searchFlight } from '@/lib/flight-engine'
 
 export const dynamic = 'force-dynamic'
 
@@ -102,20 +103,20 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Search each leg independently as one-way flights in parallel
+    // Search each leg via the tiered flight engine (TravelPayouts + SerpApi, no FlightAPI)
     const legPromises = legs.map(async (leg) => {
       const bookingUrl = `https://www.google.com/travel/flights?q=flights+from+${leg.from}+to+${leg.to}+on+${leg.date}`
 
       try {
-        const result = await searchGoogleFlights({
+        const result = await searchFlight({
           origin: leg.from,
           destination: leg.to,
-          outboundDate: leg.date,
-          // No returnDate — one-way search (type will be '2')
+          departDate: leg.date,
+          routeType: 'price-check',
+          maxTier: 2, // free + SerpApi — no FlightAPI credits for multi-city search
         })
 
-        const allFlights = [...result.bestFlights, ...result.otherFlights]
-        if (allFlights.length === 0) {
+        if (result.price === null) {
           return {
             from: leg.from,
             to: leg.to,
@@ -125,22 +126,21 @@ export async function POST(request: NextRequest) {
             stops: null,
             duration: null,
             isLive: false,
+            source: result.source,
             bookingUrl,
           }
         }
-
-        const cheapest = allFlights[0]
-        const airlines = [...new Set(cheapest.flights.map((f: any) => f.airline))]
 
         return {
           from: leg.from,
           to: leg.to,
           date: leg.date,
-          price: cheapest.price,
-          airlines,
-          stops: cheapest.layovers?.length || 0,
-          duration: formatDuration(cheapest.total_duration),
-          isLive: true,
+          price: result.price,
+          airlines: result.airlines,
+          stops: result.stops,
+          duration: result.duration,
+          isLive: result.confidence === 'live',
+          source: result.source,
           bookingUrl,
         }
       } catch (err) {
@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
           stops: null,
           duration: null,
           isLive: false,
+          source: 'error',
           bookingUrl,
         }
       }

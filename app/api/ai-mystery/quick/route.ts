@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findCheapestDestinations, vibeToInterest, daysToTravelDuration, dateToMonth } from '@/lib/flight-providers/serpapi-explore'
+import { searchFlight, discoverCheapDestinations } from '@/lib/flight-engine'
 import { getDestinationCost } from '@/lib/destination-costs'
 import { calculateBudgetAllocation, PackageComponents, getBudgetTier } from '@/lib/budget-allocation'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
@@ -9,6 +10,7 @@ import { AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { trackFeatureUse } from '@/lib/analytics'
 import { getCachedDestination, cacheDestination, incrementRevealCount, buildBasicInfo } from '@/lib/destination-cache'
 import { checkVisaRequirement } from '@/lib/enrichment/visa'
+import { callAI } from '@/lib/ai'
 
 export const dynamic = 'force-dynamic'
 
@@ -208,9 +210,9 @@ export async function POST(request: NextRequest) {
     let priceIsEstimate = false
     let priceIsLive = false
 
-    // PRIMARY: SerpApi Explore
+    // PRIMARY: discoverCheapDestinations (TravelPayouts free first, SerpApi Explore fallback)
     try {
-      const exploreDestinations = await findCheapestDestinations({
+      const discovered = await discoverCheapDestinations({
         origin,
         maxPrice: maxFlightPrice,
         month: exploreMonth,
@@ -218,14 +220,14 @@ export async function POST(request: NextRequest) {
         interest: exploreInterest,
       })
 
-      if (exploreDestinations.length > 0) {
-        console.log(`[Quick] SerpApi Explore returned ${exploreDestinations.length} destinations`)
-        priceIsLive = true
-        priceInfo = exploreDestinations.map(d => ({
-          destination: d.airportCode,
-          city: d.name,
+      if (discovered.destinations.length > 0) {
+        console.log(`[Quick] ${discovered.source} returned ${discovered.destinations.length} destinations`)
+        priceIsLive = discovered.source === 'serpapi-explore'
+        priceInfo = discovered.destinations.map(d => ({
+          destination: d.destination,
+          city: d.city,
           country: d.country,
-          price: d.flightPrice,
+          price: d.price,
           startDate: d.startDate,
           endDate: d.endDate,
           airline: d.airline,
@@ -234,7 +236,7 @@ export async function POST(request: NextRequest) {
         }))
       }
     } catch (err) {
-      console.error('[Quick] SerpApi Explore failed:', err instanceof Error ? err.message : err)
+      console.error('[Quick] discoverCheapDestinations failed:', err instanceof Error ? err.message : err)
     }
 
     // FALLBACK: Kiwi + TravelPayouts
@@ -353,7 +355,34 @@ export async function POST(request: NextRequest) {
     // If we have vibe-matched ones (score > 0), prefer them; otherwise random from top 5
     const vibeMatched = candidates.filter(c => c.score > 0)
     const pool = vibeMatched.length > 0 ? vibeMatched : candidates
-    const picked = pool[Math.floor(Math.random() * pool.length)]
+    let picked = pool[Math.floor(Math.random() * pool.length)]
+
+    // If we have 3+ candidates and AI is available, let DeepSeek pick the best one
+    if (priceInfo.length >= 3) {
+      try {
+        const aiPrompt = `Pick the single best travel destination from this list for a traveler with:
+- Budget: $${budget} total for ${tripDuration} days
+- Vibes: ${vibes.join(', ') || 'any'}
+- Flying from: ${origin}
+- Style: ${accommodationLevel}
+
+Destinations (with flight prices):
+${priceInfo.slice(0, 10).map(d => `${d.city || d.destination} (${d.destination}): $${d.price} flight`).join('\n')}
+
+Consider: value for money, season fit, vibe match quality, total trip affordability (flight + daily costs).
+Respond with ONLY the IATA code of the best destination. Nothing else.`
+
+        const aiResponse = await callAI('Travel advisor. Respond with only an IATA code.', aiPrompt, 0.3, 10)
+        const pickedIata = aiResponse.content.trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3)
+        const aiPick = priceInfo.find(d => d.destination === pickedIata)
+        if (aiPick) {
+          picked = { ...aiPick, score: 100 }
+          console.log(`[Quick] AI picked: ${pickedIata} (${aiPick.city})`)
+        }
+      } catch {
+        // AI failed, fall through to random pick
+      }
+    }
 
     // Build runner-up alternatives (next 2-3 candidates excluding the picked one)
     const alternativeCandidates = scored
@@ -365,6 +394,35 @@ export async function POST(request: NextRequest) {
         country: d.country || '',
         price: d.price,
       }))
+
+    // ── Price validation via unified flight engine ──
+    // If the initial price came from Explore/TP (cached), validate with
+    // the tiered engine using only free + SerpApi (tier 2 max) to avoid
+    // burning FlightAPI credits on discovery flows.
+    const computedDepartDate = picked.startDate || (isFlexible ? flexibleRange?.dateFrom : dates.split(' ')[0]) || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+    let validatedPrice = picked.price
+    let validatedAirlines: string[] = picked.airline ? [picked.airline] : []
+    let validatedStops: number | undefined = picked.stops
+    let validatedPriceIsLive = priceIsLive
+
+    try {
+      const validated = await searchFlight({
+        origin,
+        destination: picked.destination,
+        departDate: computedDepartDate,
+        routeType: 'price-check',
+        maxTier: 2, // free + SerpApi only — no FlightAPI credits for mystery picks
+      })
+      if (validated.price !== null) {
+        validatedPrice = validated.price
+        if (validated.airlines.length > 0) validatedAirlines = validated.airlines
+        if (validated.stops !== null) validatedStops = validated.stops
+        validatedPriceIsLive = validated.confidence === 'live'
+        console.log(`[Quick] Price validated: $${picked.price} -> $${validatedPrice} (${validated.source})`)
+      }
+    } catch (err) {
+      console.warn('[Quick] Price validation failed, using original:', err instanceof Error ? err.message : err)
+    }
 
     // Estimate hotel price
     const costData = getDestinationCost(picked.destination)
@@ -386,7 +444,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Compute suggested dates
-    const effectiveDepartDate = picked.startDate || (isFlexible ? flexibleRange?.dateFrom : dates.split(' ')[0]) || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+    const effectiveDepartDate = computedDepartDate
     const effectiveReturnDate = picked.endDate || (() => {
       const d = new Date(effectiveDepartDate + 'T00:00:00')
       d.setDate(d.getDate() + tripDuration)
@@ -398,21 +456,21 @@ export async function POST(request: NextRequest) {
       country: picked.country || '',
       iata: picked.destination,
       city_code_IATA: picked.destination,
-      estimated_flight_cost: picked.price,
-      indicativeFlightPrice: picked.price,
+      estimated_flight_cost: validatedPrice,
+      indicativeFlightPrice: validatedPrice,
       estimated_hotel_per_night: hotelEstimate,
-      flightPrice: picked.price,
-      airline: picked.airline || undefined,
-      stops: picked.stops ?? undefined,
+      flightPrice: validatedPrice,
+      airline: validatedAirlines[0] || picked.airline || undefined,
+      stops: validatedStops ?? undefined,
       startDate: effectiveDepartDate,
       endDate: effectiveReturnDate,
       suggestedDepartureDate: effectiveDepartDate,
       suggestedReturnDate: effectiveReturnDate,
-      priceIsLive,
+      priceIsLive: validatedPriceIsLive,
       priceIsEstimate,
-      googleFlightsPrice: priceIsLive ? picked.price : undefined,
-      googleFlightsAirlines: picked.airline ? [picked.airline] : undefined,
-      googleFlightsStops: picked.stops ?? undefined,
+      googleFlightsPrice: validatedPriceIsLive ? validatedPrice : undefined,
+      googleFlightsAirlines: validatedAirlines.length > 0 ? validatedAirlines : (picked.airline ? [picked.airline] : undefined),
+      googleFlightsStops: validatedStops ?? undefined,
       hotelEstimate,
       budgetTier: getBudgetTier(budget, tripDuration),
     }

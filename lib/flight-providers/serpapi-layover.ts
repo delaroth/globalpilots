@@ -11,6 +11,46 @@
  */
 
 import { getSerpApiUsage } from './serpapi'
+import { searchFlightApi, isFlightApiAvailable } from '@/lib/flightapi'
+import { trackEvent } from '@/lib/analytics'
+
+const TP_TOKEN = process.env.TRAVELPAYOUTS_TOKEN || ''
+
+/**
+ * Check TravelPayouts for a cheaper price on a route (free, unlimited).
+ * Returns null if unavailable. Used as fallback/comparison for SerpApi prices.
+ */
+/**
+ * Check FlightAPI.io for price (2 credits per call, 700+ airlines incl budget carriers).
+ * Returns null if unavailable or out of credits.
+ */
+async function getFlightApiPrice(origin: string, destination: string, date: string): Promise<number | null> {
+  if (!isFlightApiAvailable()) return null
+  try {
+    const results = await searchFlightApi({ origin, destination, departDate: date, adults: 1, currency: 'USD' })
+    if (results.length === 0) return null
+    // Return cheapest
+    return Math.min(...results.map((r: any) => r.price))
+  } catch {
+    return null
+  }
+}
+
+async function getTravelPayoutsPrice(origin: string, destination: string): Promise<number | null> {
+  if (!TP_TOKEN) return null
+  try {
+    const res = await fetch(
+      `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&limit=1&token=${TP_TOKEN}`,
+      { signal: AbortSignal.timeout(5000) }
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    const cheapest = data?.data?.[0]
+    return cheapest?.value ?? null
+  } catch {
+    return null
+  }
+}
 import { checkVisaRequirement, checkBestVisaStatus } from '@/lib/enrichment/visa'
 import { getDestinationCost, type BudgetTier } from '@/lib/destination-costs'
 import { calculateSideQuestValue } from '@/lib/flight-intelligence/side-quest'
@@ -210,22 +250,49 @@ export async function discoverStopovers(params: {
   let directStops = 0
 
   try {
-    const directData = await serpApiSearch({
-      departure_id: origin,
-      arrival_id: destination,
-      outbound_date: departDate,
-      type: '2', // one-way
-      sort_by: '2', // sort by price
-    })
-    callsUsed++
+    // Check SerpApi + TravelPayouts + FlightAPI in parallel, use cheapest
+    const [serpResult, tpPrice, faPrice] = await Promise.allSettled([
+      serpApiSearch({
+        departure_id: origin,
+        arrival_id: destination,
+        outbound_date: departDate,
+        type: '2',
+        sort_by: '2',
+      }).then(data => { callsUsed++; return data }),
+      getTravelPayoutsPrice(origin, destination),
+      getFlightApiPrice(origin, destination, departDate),
+    ])
 
-    const cheapest = (directData.best_flights || directData.other_flights || [])[0]
+    const serpData = serpResult.status === 'fulfilled' ? serpResult.value : null
+    const cheapest = serpData ? (serpData.best_flights || serpData.other_flights || [])[0] : null
+    const serpPrice = cheapest?.price ?? null
+    const tpPriceVal = tpPrice.status === 'fulfilled' ? tpPrice.value : null
+    const faPriceVal = faPrice.status === 'fulfilled' ? faPrice.value : null
+
+    // Use the cheapest from all sources
+    const allPrices = [serpPrice, tpPriceVal, faPriceVal].filter((p): p is number => p !== null && p > 0)
+    directPrice = allPrices.length > 0 ? Math.min(...allPrices) : null
+
+    console.log(`[Layover] Direct prices: SerpApi=$${serpPrice ?? 'N/A'}, TravelPayouts=$${tpPriceVal ?? 'N/A'}, FlightAPI=$${faPriceVal ?? 'N/A'} → using $${directPrice ?? 'N/A'}`)
+
+    // Track which source won — this data helps decide if FlightAPI.io is worth $49/mo
+    trackEvent('price_comparison', {
+      route: `${origin}-${destination}`,
+      type: 'direct',
+      serpapi: serpPrice,
+      travelpayouts: tpPriceVal,
+      flightapi: faPriceVal,
+      winner: directPrice === faPriceVal ? 'flightapi' : directPrice === tpPriceVal ? 'travelpayouts' : directPrice === serpPrice ? 'serpapi' : 'unknown',
+      bestPrice: directPrice,
+    })
+
     if (cheapest) {
-      directPrice = cheapest.price
       directAirlines = [...new Set<string>(cheapest.flights.map((f: any) => f.airline))]
       directDuration = formatDuration(cheapest.total_duration)
       directStops = cheapest.layovers?.length || 0
-      console.log(`[Layover] Direct: $${directPrice} (${directAirlines.join(', ')}, ${directDuration})`)
+    }
+    if (directPrice) {
+      console.log(`[Layover] Direct: $${directPrice} (${directAirlines.join(', ') || 'unknown'}, ${directDuration || 'N/A'})`)
     }
   } catch (err) {
     console.warn('[Layover] Direct price fetch failed:', err instanceof Error ? err.message : err)
@@ -344,41 +411,73 @@ export async function discoverStopovers(params: {
     ).toISOString().split('T')[0]
 
     try {
-      // Search leg 1: origin → hub
       console.log(`[Layover] Step 4: Pricing ${origin} → ${candidate.code} → ${destination}`)
-      const leg1Data = await serpApiSearch({
-        departure_id: origin,
-        arrival_id: candidate.code,
-        outbound_date: departDate,
-        type: '2', // one-way
-        sort_by: '2',
-      })
-      callsUsed++
 
-      const leg1Cheapest = (leg1Data.best_flights || leg1Data.other_flights || [])[0]
-      if (!leg1Cheapest) {
-        console.log(`[Layover] No flights found for ${origin} → ${candidate.code}`)
+      // Search both legs via SerpApi + TravelPayouts + FlightAPI in parallel
+      const [leg1Serp, leg2Serp, leg1Tp, leg2Tp, leg1Fa, leg2Fa] = await Promise.allSettled([
+        serpApiSearch({
+          departure_id: origin,
+          arrival_id: candidate.code,
+          outbound_date: departDate,
+          type: '2',
+          sort_by: '2',
+        }).then(data => { callsUsed++; return data }),
+        serpApiSearch({
+          departure_id: candidate.code,
+          arrival_id: destination,
+          outbound_date: stopoverEnd,
+          type: '2',
+          sort_by: '2',
+        }).then(data => { callsUsed++; return data }),
+        getTravelPayoutsPrice(origin, candidate.code),
+        getTravelPayoutsPrice(candidate.code, destination),
+        getFlightApiPrice(origin, candidate.code, departDate),
+        getFlightApiPrice(candidate.code, destination, stopoverEnd),
+      ])
+
+      const leg1Data = leg1Serp.status === 'fulfilled' ? leg1Serp.value : null
+      const leg2Data = leg2Serp.status === 'fulfilled' ? leg2Serp.value : null
+      const leg1TpPrice = leg1Tp.status === 'fulfilled' ? leg1Tp.value : null
+      const leg2TpPrice = leg2Tp.status === 'fulfilled' ? leg2Tp.value : null
+      const leg1FaPrice = leg1Fa.status === 'fulfilled' ? leg1Fa.value : null
+      const leg2FaPrice = leg2Fa.status === 'fulfilled' ? leg2Fa.value : null
+
+      const leg1Cheapest = leg1Data ? (leg1Data.best_flights || leg1Data.other_flights || [])[0] : null
+      const leg2Cheapest = leg2Data ? (leg2Data.best_flights || leg2Data.other_flights || [])[0] : null
+
+      const leg1SerpPrice = leg1Cheapest?.price ?? null
+      const leg2SerpPrice = leg2Cheapest?.price ?? null
+
+      // Use cheapest from all three sources
+      const leg1Prices = [leg1SerpPrice, leg1TpPrice, leg1FaPrice].filter((p): p is number => p !== null && p > 0)
+      const leg2Prices = [leg2SerpPrice, leg2TpPrice, leg2FaPrice].filter((p): p is number => p !== null && p > 0)
+
+      const leg1Price = leg1Prices.length > 0 ? Math.min(...leg1Prices) : null
+      const leg2Price = leg2Prices.length > 0 ? Math.min(...leg2Prices) : null
+
+      if (leg1Price === null || leg2Price === null) {
+        console.log(`[Layover] No flights found for ${origin} → ${candidate.code} → ${destination}`)
         continue
       }
 
-      // Search leg 2: hub → destination
-      const leg2Data = await serpApiSearch({
-        departure_id: candidate.code,
-        arrival_id: destination,
-        outbound_date: stopoverEnd,
-        type: '2', // one-way
-        sort_by: '2',
+      console.log(`[Layover] ${candidate.code} leg1: SerpApi=$${leg1SerpPrice ?? 'N/A'} TP=$${leg1TpPrice ?? 'N/A'} FA=$${leg1FaPrice ?? 'N/A'} → $${leg1Price}`)
+      console.log(`[Layover] ${candidate.code} leg2: SerpApi=$${leg2SerpPrice ?? 'N/A'} TP=$${leg2TpPrice ?? 'N/A'} FA=$${leg2FaPrice ?? 'N/A'} → $${leg2Price}`)
+
+      // Track per-leg price comparison
+      trackEvent('price_comparison', {
+        route: `${origin}-${candidate.code}`,
+        type: 'stopover_leg1',
+        serpapi: leg1SerpPrice, travelpayouts: leg1TpPrice, flightapi: leg1FaPrice,
+        winner: leg1Price === leg1FaPrice ? 'flightapi' : leg1Price === leg1TpPrice ? 'travelpayouts' : 'serpapi',
+        bestPrice: leg1Price,
       })
-      callsUsed++
-
-      const leg2Cheapest = (leg2Data.best_flights || leg2Data.other_flights || [])[0]
-      if (!leg2Cheapest) {
-        console.log(`[Layover] No flights found for ${candidate.code} → ${destination}`)
-        continue
-      }
-
-      const leg1Price = leg1Cheapest.price
-      const leg2Price = leg2Cheapest.price
+      trackEvent('price_comparison', {
+        route: `${candidate.code}-${destination}`,
+        type: 'stopover_leg2',
+        serpapi: leg2SerpPrice, travelpayouts: leg2TpPrice, flightapi: leg2FaPrice,
+        winner: leg2Price === leg2FaPrice ? 'flightapi' : leg2Price === leg2TpPrice ? 'travelpayouts' : 'serpapi',
+        bestPrice: leg2Price,
+      })
       const totalFlightCost = leg1Price + leg2Price
       const savings = directPrice ? directPrice - totalFlightCost : 0
       const savingsPercent = directPrice ? Math.round((savings / directPrice) * 100) : 0

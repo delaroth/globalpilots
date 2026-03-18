@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { searchFlight } from '@/lib/flight-engine'
+import { callAI } from '@/lib/ai'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,20 +58,24 @@ function permutations<T>(arr: T[]): T[][] {
 }
 
 /**
- * Fetch a TravelPayouts latest price for a route (free, no SerpApi).
+ * Get price for a route leg using the tiered flight engine (free tier only).
+ * Uses searchFlight with maxTier: 1 to avoid burning SerpApi/FlightAPI credits
+ * since we're checking many permutations.
  */
-async function getTravelPayoutsPrice(
+async function getLegPrice(
   from: string,
-  to: string,
-  token: string
+  to: string
 ): Promise<number | null> {
   try {
-    const url = `https://api.travelpayouts.com/v2/prices/latest?origin=${from}&destination=${to}&currency=usd&token=${token}&limit=1`
-    const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
-    if (!res.ok) return null
-    const data = await res.json()
-    if (!data.success || !data.data || data.data.length === 0) return null
-    return data.data[0].value
+    const departDate = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+    const result = await searchFlight({
+      origin: from,
+      destination: to,
+      departDate,
+      routeType: 'stopover-leg',
+      maxTier: 1, // free only — checking many permutations
+    })
+    return result.price
   } catch {
     return null
   }
@@ -118,11 +124,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'tripDays must be positive' }, { status: 400 })
   }
 
-  const token = process.env.TRAVELPAYOUTS_TOKEN
-  if (!token) {
-    return NextResponse.json({ error: 'Service unavailable' }, { status: 503 })
-  }
-
   try {
     // Build a price cache for all possible legs
     // For N destinations, we need prices for:
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
     const allCodes = [origin, ...destinations]
     const priceCache = new Map<string, number | null>()
 
-    // Fetch all possible leg prices in parallel
+    // Fetch all possible leg prices in parallel using the tiered engine (free tier only)
     const priceFetches: Promise<void>[] = []
     for (const from of allCodes) {
       for (const to of allCodes) {
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
         const key = `${from}-${to}`
         if (!priceCache.has(key)) {
           priceFetches.push(
-            getTravelPayoutsPrice(from, to, token).then(price => {
+            getLegPrice(from, to).then(price => {
               priceCache.set(key, price)
             })
           )
@@ -149,7 +150,31 @@ export async function POST(request: NextRequest) {
     await Promise.all(priceFetches)
 
     // Evaluate each permutation of destinations
-    const perms = permutations(destinations)
+    const allPermutations = permutations(destinations)
+    let perms = allPermutations
+
+    // For 4+ cities, use AI to narrow permutations instead of brute-forcing all N!
+    if (destinations.length >= 4) {
+      try {
+        const aiPrompt = `Given these cities to visit on a trip starting and ending at ${origin}:
+${destinations.join(', ')}
+
+Suggest the 3 most logical route orders considering geography and typical flight paths.
+Respond with JSON array of 3 arrays, e.g.: [["BKK","HAN","SGN"],["SGN","HAN","BKK"],["HAN","BKK","SGN"]]
+Only the JSON, nothing else.`
+
+        const aiResponse = await callAI('Route optimizer. Respond with JSON only.', aiPrompt, 0.3, 200)
+        const suggestedRoutes = JSON.parse(aiResponse.content.trim())
+        if (Array.isArray(suggestedRoutes) && suggestedRoutes.length > 0) {
+          // Only check AI-suggested permutations instead of all N!
+          perms = suggestedRoutes
+          console.log(`[Multi-city] AI narrowed ${allPermutations.length} permutations to ${perms.length}`)
+        }
+      } catch {
+        // AI failed, use all permutations
+      }
+    }
+
     let bestRoute: string[] | null = null
     let bestCost = Infinity
     let bestLegs: LegPrice[] = []
@@ -212,6 +237,7 @@ export async function POST(request: NextRequest) {
       withinBudget: bestCost <= totalBudget,
       cityDays,
       permutationsChecked: perms.length,
+      totalPermutations: allPermutations.length,
     })
   } catch (error) {
     console.error('[Budget Optimizer] Error:', error)

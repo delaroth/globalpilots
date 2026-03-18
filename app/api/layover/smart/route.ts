@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { searchStopoverRoutes } from '@/lib/flight-engine'
 import { discoverStopovers } from '@/lib/flight-providers/serpapi-layover'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import type { BudgetTier } from '@/lib/destination-costs'
@@ -20,7 +21,6 @@ export async function GET(request: NextRequest) {
   const passportCountries = passportRaw.split(',').map(s => s.trim()).filter(Boolean)
   const passportCountry = passportCountries[0] || 'US'
   const budgetTier = (sp.get('budget') || 'mid') as BudgetTier
-  const maxStopoverDays = sp.get('stopover_days') ? parseInt(sp.get('stopover_days')!, 10) : undefined
 
   if (!origin || !destination) {
     return NextResponse.json(
@@ -47,7 +47,8 @@ export async function GET(request: NextRequest) {
   const searchDate = departDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
 
   try {
-    const result = await discoverStopovers({
+    // Primary: new unified flight engine with tiered API strategy
+    const result = await searchStopoverRoutes({
       origin,
       destination,
       departDate: searchDate,
@@ -55,7 +56,6 @@ export async function GET(request: NextRequest) {
       passportCountry,
       passportCountries,
       budgetTier,
-      maxStopoverDays,
     })
 
     // Fire-and-forget tracking
@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
       origin,
       destination,
       stopovers_found: result.stopovers?.length ?? 0,
+      engine: 'flight-engine',
     })
 
     return NextResponse.json(result, {
@@ -71,10 +72,38 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[Smart Layover] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to search stopovers. Please try again.' },
-      { status: 502 }
-    )
+    console.error('[Smart Layover] Flight engine failed, falling back to legacy:', error)
+
+    // Fallback: legacy serpapi-layover engine
+    try {
+      const legacyResult = await discoverStopovers({
+        origin,
+        destination,
+        departDate: searchDate,
+        maxTravelDays,
+        passportCountry,
+        passportCountries,
+        budgetTier,
+      })
+
+      trackFeatureUse('stopover_search', {
+        origin,
+        destination,
+        stopovers_found: legacyResult.stopovers?.length ?? 0,
+        engine: 'legacy-fallback',
+      })
+
+      return NextResponse.json(legacyResult, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=3600',
+        },
+      })
+    } catch (legacyError) {
+      console.error('[Smart Layover] Legacy fallback also failed:', legacyError)
+      return NextResponse.json(
+        { error: 'Failed to search stopovers. Please try again.' },
+        { status: 502 }
+      )
+    }
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findCheapestDestinations } from '@/lib/flight-providers/serpapi-explore'
+import { discoverCheapDestinations } from '@/lib/flight-engine'
 import { getDestinationCost, getAllDestinations } from '@/lib/destination-costs'
 import { majorAirports } from '@/lib/geolocation'
 import { getCached, setCache } from '@/lib/cache'
@@ -59,34 +60,34 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // SerpApi Explore with month filter
-    const destinations = await findCheapestDestinations({
+    // TravelPayouts (free) first, SerpApi Explore fallback
+    const discovered = await discoverCheapDestinations({
       origin,
       month: month || undefined,
     })
 
-    if (destinations.length > 0) {
-      const enriched = destinations
-        .filter(d => d.airportCode && d.airportCode !== origin && d.flightPrice > 0)
+    if (discovered.destinations.length > 0) {
+      const enriched = discovered.destinations
+        .filter(d => d.destination && d.destination !== origin && d.price > 0)
         .slice(0, 24)
         .map(d => {
-          const costData = getDestinationCost(d.airportCode)
+          const costData = getDestinationCost(d.destination)
           const midCosts = costData?.dailyCosts.mid
           const dailyTotal = midCosts
             ? midCosts.hotel + midCosts.food + midCosts.transport + midCosts.activities
             : null
 
           return {
-            airportCode: d.airportCode,
-            name: d.name || getCityName(d.airportCode),
-            country: d.country || getCountryName(d.airportCode),
-            flightPrice: d.flightPrice,
-            hotelPrice: d.hotelPrice,
-            startDate: d.startDate,
-            endDate: d.endDate,
-            airline: d.airline,
-            stops: d.stops,
-            thumbnail: d.thumbnail,
+            airportCode: d.destination,
+            name: d.city || getCityName(d.destination),
+            country: d.country || getCountryName(d.destination),
+            flightPrice: d.price,
+            hotelPrice: d.hotelPrice ?? null,
+            startDate: d.startDate || null,
+            endDate: d.endDate || null,
+            airline: d.airline || null,
+            stops: d.stops ?? null,
+            thumbnail: d.thumbnail ?? null,
             dailyCost: dailyTotal,
             bestMonths: costData?.bestMonths || [],
             isBestMonth: month ? (costData?.bestMonths?.includes(month) ?? false) : false,
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
         monthName: month ? MONTH_NAMES[month] : 'Anytime',
         deals: enriched,
         count: enriched.length,
-        source: 'live',
+        source: discovered.source === 'serpapi-explore' ? 'live' : 'cached',
       }
 
       // Cache for 2 hours

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findCheapestDestinations, INTERESTS } from '@/lib/flight-providers/serpapi-explore'
+import { discoverCheapDestinations } from '@/lib/flight-engine'
 import { getAllDestinations, getDestinationCost } from '@/lib/destination-costs'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import type { ExploreDestination } from '@/lib/flight-providers/serpapi-explore'
@@ -76,32 +77,32 @@ export async function GET(request: NextRequest) {
   const interestKgmid = interest ? INTEREST_MAP[interest] : undefined
 
   try {
-    // Try SerpApi first
-    const destinations = await findCheapestDestinations({
+    // TravelPayouts (free) first, SerpApi Explore fallback
+    const discovered = await discoverCheapDestinations({
       origin,
       maxPrice: maxPrice || undefined,
       interest: interestKgmid,
     })
 
-    if (destinations.length > 0) {
+    if (discovered.destinations.length > 0) {
       // Enrich with daily cost data from our database
-      const enriched = destinations.slice(0, 30).map((d) => {
-        const costData = getDestinationCost(d.airportCode)
+      const enriched = discovered.destinations.slice(0, 30).map((d) => {
+        const costData = getDestinationCost(d.destination)
         const midCosts = costData?.dailyCosts.mid
         const dailyTotal = midCosts
           ? midCosts.hotel + midCosts.food + midCosts.transport + midCosts.activities
           : null
 
         return {
-          name: d.name,
-          country: d.country,
-          airportCode: d.airportCode,
-          flightPrice: d.flightPrice,
-          hotelPrice: d.hotelPrice,
-          startDate: d.startDate,
-          endDate: d.endDate,
-          airline: d.airline,
-          thumbnail: d.thumbnail,
+          name: d.city || d.destination,
+          country: d.country || '',
+          airportCode: d.destination,
+          flightPrice: d.price,
+          hotelPrice: d.hotelPrice ?? null,
+          startDate: d.startDate || null,
+          endDate: d.endDate || null,
+          airline: d.airline || null,
+          thumbnail: d.thumbnail ?? null,
           dailyCost: dailyTotal,
           budgetTier: dailyTotal
             ? dailyTotal < 50
@@ -110,12 +111,12 @@ export async function GET(request: NextRequest) {
                 ? 'mid-range'
                 : 'comfort'
             : null,
-          flag: COUNTRY_FLAGS[d.country] || null,
+          flag: COUNTRY_FLAGS[d.country || ''] || null,
         }
       })
 
       return NextResponse.json(
-        { destinations: enriched, origin, source: 'live' },
+        { destinations: enriched, origin, source: discovered.source === 'serpapi-explore' ? 'live' : 'cached' },
         {
           headers: {
             'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=1800',

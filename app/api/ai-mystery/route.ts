@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { searchKiwiInspiration } from '@/lib/kiwi'
 import { findCheapestDestinations, vibeToInterest, daysToTravelDuration, dateToMonth } from '@/lib/flight-providers/serpapi-explore'
+import { discoverCheapDestinations } from '@/lib/flight-engine'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -312,8 +313,9 @@ export async function POST(request: NextRequest) {
     const exploreDuration = daysToTravelDuration(tripDuration)
     const exploreInterest = vibeToInterest(vibes)
 
+    // PRIMARY: discoverCheapDestinations (TravelPayouts free first, SerpApi Explore fallback)
     try {
-      const exploreDestinations = await findCheapestDestinations({
+      const discovered = await discoverCheapDestinations({
         origin,
         maxPrice: maxFlightPrice,
         month: exploreMonth,
@@ -321,14 +323,15 @@ export async function POST(request: NextRequest) {
         interest: exploreInterest,
       })
 
-      if (exploreDestinations.length > 0) {
-        console.log(`[AI-Mystery] Using SerpApi Explore results (${exploreDestinations.length} destinations)`)
-        priceIsLive = true
-        priceInfo = exploreDestinations.map(d => ({
-          destination: d.airportCode,
-          city: d.name,
+      if (discovered.destinations.length > 0) {
+        console.log(`[AI-Mystery] Using ${discovered.source} results (${discovered.destinations.length} destinations)`)
+        // SerpApi Explore returns live data; TravelPayouts is cached
+        priceIsLive = discovered.source === 'serpapi-explore'
+        priceInfo = discovered.destinations.map(d => ({
+          destination: d.destination,
+          city: d.city,
           country: d.country,
-          price: d.flightPrice,
+          price: d.price,
           startDate: d.startDate,
           endDate: d.endDate,
           airline: d.airline,
@@ -336,7 +339,7 @@ export async function POST(request: NextRequest) {
         }))
       }
     } catch (err) {
-      console.error('[AI-Mystery] SerpApi Explore failed:', err instanceof Error ? err.message : err)
+      console.error('[AI-Mystery] discoverCheapDestinations failed:', err instanceof Error ? err.message : err)
     }
 
     // FALLBACK: Kiwi + TravelPayouts if Explore returned nothing
