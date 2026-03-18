@@ -127,18 +127,21 @@ Return this EXACT JSON structure:
     // Create URL-friendly slug
     const slug = destinationName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 
-    // Save to database
+    // Save to database (columns: slug, title, content, excerpt, destination,
+    // destination_code, meta_description, sections, booking_data, published)
     const { data, error } = await (supabase as any)
       .from('blog_posts')
       .insert({
-        destination_code: destinationCode,
-        destination_name: destinationName,
-        country,
+        slug,
         title: blogContent.seo_title,
         meta_description: blogContent.meta_description,
-        content: blogContent.sections,
-        slug,
-        view_count: 0
+        destination: destinationName,
+        destination_code: destinationCode,
+        content: blogContent.sections, // legacy field — same as sections
+        sections: blogContent.sections,
+        excerpt: blogContent.sections.why_visit?.slice(0, 200) || '',
+        booking_data: { country },
+        published: true,
       })
       .select()
       .single()

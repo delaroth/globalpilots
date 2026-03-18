@@ -10,7 +10,7 @@
  * Cost: 1 API call per search (cached queries are free on SerpApi).
  */
 
-import { getSerpApiUsage } from './serpapi'
+// SerpApi enforces its own per-engine quota — no need to track usage here
 
 const SERPAPI_KEY = process.env.SERPAPI_KEY || ''
 const BASE_URL = 'https://serpapi.com/search'
@@ -106,10 +106,10 @@ export async function searchHotels(params: HotelSearchParams): Promise<HotelResu
     return cached
   }
 
-  // Check quota
-  const usage = getSerpApiUsage()
-  if (!SERPAPI_KEY || usage.remaining <= 2) {
-    console.log(`[SerpApi Hotels] Quota low (${usage.remaining} remaining), returning empty`)
+  // Check API key (SerpApi enforces its own per-engine quota limits;
+  // don't use getSerpApiUsage() here — that tracks Google Flights, not Hotels)
+  if (!SERPAPI_KEY) {
+    console.log(`[SerpApi Hotels] No API key, returning empty`)
     return emptyResult()
   }
 

@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { majorAirports } from '@/lib/geolocation'
 import { getAllDestinations, getAllRegions } from '@/lib/destination-costs'
+import { getAllEditorialPosts } from '@/lib/blog-posts'
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
@@ -14,6 +15,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${baseUrl}/mystery-flights/${a.code}`,
     lastModified: new Date(),
     changeFrequency: 'weekly' as const,
+    priority: 0.6,
+  }))
+
+  // Blog posts: editorial + destination guide slugs from destination-costs
+  const editorialSlugs = getAllEditorialPosts().map(p => p.slug)
+  const destinationSlugs = getAllDestinations().map(d => slugify(d.city))
+  const allBlogSlugs = [...new Set([...editorialSlugs, ...destinationSlugs])]
+  const blogPages: MetadataRoute.Sitemap = allBlogSlugs.map(slug => ({
+    url: `${baseUrl}/blog/${slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
     priority: 0.6,
   }))
 
@@ -240,5 +252,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...flightsFromPages,
     ...budgetTravelPages,
     ...bestTimePages,
+    ...blogPages,
   ]
 }

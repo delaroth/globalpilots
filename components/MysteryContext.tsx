@@ -326,7 +326,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
             hotel: quickData.estimated_hotel_per_night * params.tripDuration,
             activities: 0,
             food: 0,
-            total: quickData.estimated_flight_cost + quickData.estimated_hotel_per_night * params.tripDuration,
+            total: params.budget, // User's actual budget in USD, not the sum of costs
           },
         }
 

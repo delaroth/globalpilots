@@ -56,25 +56,19 @@ export async function GET(
       )
     }
 
-    // Increment view count
-    await (supabase as any)
-      .from('blog_posts')
-      .update({ view_count: data.view_count + 1 })
-      .eq('id', data.id)
-
     console.log('[Blog Slug] Found destination guide:', slug)
 
     // Transform to frontend format
     const post = {
       id: data.id,
       destination_code: data.destination_code,
-      destination_name: data.destination_name,
-      country: data.country,
+      destination_name: data.destination || data.destination_name,
+      country: data.booking_data?.country || '',
       title: data.title,
       meta_description: data.meta_description,
-      content: data.content,
+      content: data.sections || data.content,
       slug: data.slug,
-      view_count: data.view_count + 1,
+      view_count: 0,
       created_at: data.created_at,
       type: 'destination'
     }

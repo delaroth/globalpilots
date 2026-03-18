@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
       const { data, error } = await (supabase as any)
         .from('blog_posts')
         .select('*')
-        .order('view_count', { ascending: false })
+        .eq('published', true)
+        .order('created_at', { ascending: false })
 
       if (!error && data) {
         supabasePosts = data
@@ -29,12 +30,12 @@ export async function GET(request: NextRequest) {
     const destinationPosts = supabasePosts.map((post: any) => ({
       id: post.id,
       destination_code: post.destination_code,
-      destination_name: post.destination_name,
-      country: post.country,
+      destination_name: post.destination || post.destination_name,
+      country: post.booking_data?.country || '',
       title: post.title,
       meta_description: post.meta_description,
       slug: post.slug,
-      view_count: post.view_count,
+      view_count: 0,
       created_at: post.created_at,
       type: 'destination' as const
     }))
