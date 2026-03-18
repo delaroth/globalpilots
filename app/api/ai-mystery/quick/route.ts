@@ -81,30 +81,38 @@ function getOriginRegion(origin: string): string {
 function calculateFlexibleDateRange(timeframe: string): { dateFrom: string; dateTo: string } {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  // Flights departing within the next 7 days are often unavailable or extremely expensive
+  const earliest = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7)
   const formatDate = (d: Date) => d.toISOString().split('T')[0]
 
   switch (timeframe) {
     case 'this-month': {
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-      return { dateFrom: formatDate(today), dateTo: formatDate(endOfMonth) }
+      // If less than 10 days left in the month, extend into next month
+      if (endOfMonth.getTime() - earliest.getTime() < 3 * 86400000) {
+        const endOfNext = new Date(today.getFullYear(), today.getMonth() + 2, 0)
+        return { dateFrom: formatDate(earliest), dateTo: formatDate(endOfNext) }
+      }
+      return { dateFrom: formatDate(earliest), dateTo: formatDate(endOfMonth) }
     }
     case 'next-month': {
       const firstOfNext = new Date(today.getFullYear(), today.getMonth() + 1, 1)
       const endOfNext = new Date(today.getFullYear(), today.getMonth() + 2, 0)
-      return { dateFrom: formatDate(firstOfNext), dateTo: formatDate(endOfNext) }
+      const startDate = firstOfNext > earliest ? firstOfNext : earliest
+      return { dateFrom: formatDate(startDate), dateTo: formatDate(endOfNext) }
     }
     case 'next-3-months': {
       const threeMonths = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate())
-      return { dateFrom: formatDate(today), dateTo: formatDate(threeMonths) }
+      return { dateFrom: formatDate(earliest), dateTo: formatDate(threeMonths) }
     }
     case 'next-6-months': {
       const sixMonths = new Date(today.getFullYear(), today.getMonth() + 6, today.getDate())
-      return { dateFrom: formatDate(today), dateTo: formatDate(sixMonths) }
+      return { dateFrom: formatDate(earliest), dateTo: formatDate(sixMonths) }
     }
     case 'anytime':
     default: {
       const oneYear = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate())
-      return { dateFrom: formatDate(today), dateTo: formatDate(oneYear) }
+      return { dateFrom: formatDate(earliest), dateTo: formatDate(oneYear) }
     }
   }
 }

@@ -38,6 +38,11 @@ interface HotelRecommendation {
   estimated_price_per_night: number
   neighborhood: string
   why_recommended: string
+  link?: string
+  rating?: number
+  reviews?: number
+  type?: string
+  is_real_data?: boolean
 }
 
 interface Destination {
@@ -72,6 +77,9 @@ interface Destination {
     local_transport: number
     food_estimate: number
     buffer: number
+    user_budget?: number
+    estimated_total?: number
+    over_budget?: boolean
   }
   hotel_recommendations?: HotelRecommendation[]
   daily_itinerary?: DailyItinerary[]
@@ -123,6 +131,8 @@ interface MysteryRevealProps {
   detailsLoading?: boolean
   /** Currency formatter: takes USD amount, returns formatted string in user's currency */
   currencyFormat?: (amountUSD: number) => string
+  /** User's total budget in USD (for over-budget warnings) */
+  userBudgetUSD?: number
 }
 
 interface EnrichmentData {
@@ -232,6 +242,7 @@ export default function MysteryReveal({
   tripDuration = 3,
   detailsLoading = false,
   currencyFormat,
+  userBudgetUSD,
 }: MysteryRevealProps) {
   // Currency formatting: use provided formatter or default to USD
   // Guard: if price is 0 or falsy, show "Check prices" instead of "$0"
@@ -386,12 +397,11 @@ export default function MysteryReveal({
   ]
 
   const totalCost =
+    destination.budget_breakdown?.user_budget ||
     destination.budgetBreakdown?.total ||
+    userBudgetUSD ||
     (destination.budget_breakdown
-      ? Object.values(destination.budget_breakdown).reduce(
-          (sum, val) => sum + val,
-          0,
-        )
+      ? destination.budget_breakdown.flight + destination.budget_breakdown.hotel_total + destination.budget_breakdown.activities + destination.budget_breakdown.food_estimate
       : destination.estimated_flight_cost +
         destination.estimated_hotel_per_night * 3)
 
@@ -666,60 +676,73 @@ export default function MysteryReveal({
                 {/* ---- Budget Breakdown ---- */}
                 <motion.div {...staggerChild(4)}>
                   {destination.budget_breakdown ? (
-                    <div className="bg-white/[0.06] border border-emerald-500/20 rounded-xl p-6">
+                    <div className={`bg-white/[0.06] border rounded-xl p-6 ${destination.budget_breakdown.over_budget ? 'border-amber-500/30' : 'border-emerald-500/20'}`}>
                       <h3 className="text-xl font-bold text-white mb-4">
-                        Budget Breakdown
+                        Estimated Costs
                       </h3>
+                      {/* Over-budget warning */}
+                      {destination.budget_breakdown.over_budget && destination.budget_breakdown.user_budget && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+                          <p className="text-amber-300 text-sm font-medium">
+                            Estimated cost ({fmt(destination.budget_breakdown.estimated_total || 0)}) exceeds your budget ({fmt(destination.budget_breakdown.user_budget)})
+                          </p>
+                          <p className="text-amber-300/60 text-xs mt-1">
+                            Try increasing your budget, shortening the trip, or choosing a closer destination.
+                          </p>
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div className="text-center">
                           <p className="text-xs text-white/50">Flight</p>
                           <p className="text-lg font-bold text-emerald-400">
-                            {isEstimate ? '~' : ''}$
-                            {destination.budget_breakdown.flight}
+                            {isEstimate ? '~' : ''}{fmt(destination.budget_breakdown.flight)}
                             {isEstimate ? ' est.' : ''}
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-white/50">Hotel (total)</p>
+                          <p className="text-xs text-white/50">Hotel ({tripDuration} nights)</p>
                           <p className="text-lg font-bold text-emerald-400">
-                            ${destination.budget_breakdown.hotel_total}
+                            {fmt(destination.budget_breakdown.hotel_total)}
                           </p>
+                          <p className="text-xs text-white/30">{fmt(destination.budget_breakdown.hotel_per_night)}/night</p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-white/50">Activities</p>
                           <p className="text-lg font-bold text-emerald-400">
-                            ${destination.budget_breakdown.activities}
+                            {fmt(destination.budget_breakdown.activities)}
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-white/50">Total</p>
-                          <p className="text-2xl font-bold text-emerald-400">
-                            ${totalCost}
+                          <p className="text-xs text-white/50">
+                            {destination.budget_breakdown.user_budget ? 'Your Budget' : 'Estimated Total'}
+                          </p>
+                          <p className={`text-2xl font-bold ${destination.budget_breakdown.over_budget ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            {fmt(destination.budget_breakdown.user_budget || totalCost)}
                           </p>
                         </div>
                       </div>
-                      {destination.budget_breakdown.local_transport > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center text-sm">
+                        {destination.budget_breakdown.local_transport > 0 && (
                           <div>
                             <p className="text-xs text-white/50">Transport</p>
                             <p className="font-semibold text-emerald-400/80">
-                              ${destination.budget_breakdown.local_transport}
+                              {fmt(destination.budget_breakdown.local_transport)}
                             </p>
                           </div>
-                          <div>
-                            <p className="text-xs text-white/50">Food</p>
-                            <p className="font-semibold text-emerald-400/80">
-                              ${destination.budget_breakdown.food_estimate}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-white/50">Buffer</p>
-                            <p className="font-semibold text-emerald-400/80">
-                              ${destination.budget_breakdown.buffer}
-                            </p>
-                          </div>
+                        )}
+                        <div>
+                          <p className="text-xs text-white/50">Food</p>
+                          <p className="font-semibold text-emerald-400/80">
+                            {fmt(destination.budget_breakdown.food_estimate)}
+                          </p>
                         </div>
-                      )}
+                        <div>
+                          <p className="text-xs text-white/50">Buffer</p>
+                          <p className="font-semibold text-emerald-400/80">
+                            {fmt(destination.budget_breakdown.buffer)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   ) : destination.budgetBreakdown ? (
                     <div className="bg-white/[0.06] border border-emerald-500/20 rounded-xl p-6">
@@ -897,36 +920,53 @@ export default function MysteryReveal({
                       <FadeIn visible={true}>
                         <h3 className="text-xl font-bold text-white mb-3">
                           Where to Stay
+                          {destination.hotel_recommendations[0]?.is_real_data && (
+                            <span className="ml-2 text-xs font-normal text-emerald-400/70">Live prices</span>
+                          )}
                         </h3>
                         <div className="space-y-3">
-                          {destination.hotel_recommendations.map((hotel, idx) => (
-                            <a
-                              key={idx}
-                              href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.name + ', ' + destination.destination + ', ' + destination.country)}&checkin=${effectiveDepartDate}&checkout=${effectiveReturnDate}&group_adults=1&no_rooms=1&order=price`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition group cursor-pointer"
-                            >
-                              <div className="flex justify-between items-start mb-2">
-                                <h4 className="font-semibold text-white group-hover:text-sky-400 transition">
-                                  {hotel.name}
-                                  <span className="text-xs text-white/30 ml-2 group-hover:text-sky-400/50">↗</span>
-                                </h4>
-                                <p className="text-emerald-400 font-bold whitespace-nowrap ml-4">
-                                  {fmt(hotel.estimated_price_per_night)}/night
+                          {destination.hotel_recommendations.map((hotel, idx) => {
+                            const hotelUrl = hotel.link
+                              ? hotel.link
+                              : `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.name + ', ' + destination.destination + ', ' + destination.country)}&checkin=${effectiveDepartDate}&checkout=${effectiveReturnDate}&group_adults=1&no_rooms=1&order=price`
+                            return (
+                              <a
+                                key={idx}
+                                href={hotelUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition group cursor-pointer"
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                  <h4 className="font-semibold text-white group-hover:text-sky-400 transition">
+                                    {hotel.name}
+                                    <span className="text-xs text-white/30 ml-2 group-hover:text-sky-400/50">{'\u2197'}</span>
+                                  </h4>
+                                  <p className="text-emerald-400 font-bold whitespace-nowrap ml-4">
+                                    {fmt(hotel.estimated_price_per_night)}/night
+                                  </p>
+                                </div>
+                                {hotel.rating && hotel.rating > 0 && (
+                                  <p className="text-xs text-amber-400/80 mb-1">
+                                    {'\u2B50'} {hotel.rating}/5
+                                    {hotel.reviews ? ` (${hotel.reviews.toLocaleString()} reviews)` : ''}
+                                    {hotel.type && hotel.type !== 'Hotel' ? ` · ${hotel.type}` : ''}
+                                  </p>
+                                )}
+                                {hotel.neighborhood && (
+                                  <p className="text-sm text-white/50 mb-1">
+                                    {hotel.neighborhood}
+                                  </p>
+                                )}
+                                <p className="text-sm text-white/70">
+                                  {hotel.why_recommended}
                                 </p>
-                              </div>
-                              <p className="text-sm text-white/50 mb-1">
-                                {hotel.neighborhood}
-                              </p>
-                              <p className="text-sm text-white/70">
-                                {hotel.why_recommended}
-                              </p>
-                              <p className="text-xs text-sky-400/60 mt-2 group-hover:text-sky-400 transition">
-                                View on Booking.com →
-                              </p>
-                            </a>
-                          ))}
+                                <p className="text-xs text-sky-400/60 mt-2 group-hover:text-sky-400 transition">
+                                  {hotel.link ? 'View hotel details' : 'Search on Booking.com'} {'\u2192'}
+                                </p>
+                              </a>
+                            )
+                          })}
                         </div>
                       </FadeIn>
                     </motion.div>

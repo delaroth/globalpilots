@@ -389,9 +389,19 @@ function MysteryPageContent() {
       return
     }
 
+    // Block submission if currency rate hasn't loaded yet for non-USD currencies
+    if (!currency.isUSD && !currency.rate) {
+      setError('Currency rates are still loading. Please wait a moment and try again.')
+      return
+    }
+
     const minBudget = numCities > 1 ? 200 : 100
-    if (parseFloat(budget) < minBudget) {
-      setError(`Please enter a budget of at least $${minBudget}!`)
+    // Validate in USD to ensure minimum is met after conversion
+    const budgetInUSD = currency.toUSD(parseFloat(budget))
+    if (budgetInUSD < minBudget) {
+      setError(currency.isUSD
+        ? `Please enter a budget of at least $${minBudget}!`
+        : `Please enter a budget of at least $${minBudget} USD (your budget converts to ~$${budgetInUSD} USD).`)
       return
     }
 
@@ -449,7 +459,7 @@ function MysteryPageContent() {
           signal: abortController.signal,
           body: JSON.stringify({
             origin: resolvedOrigin,
-            totalBudget: parseFloat(budget),
+            totalBudget: currency.toUSD(parseFloat(budget)),
             totalDays: effectiveDuration,
             numCities,
             region: region !== 'Any' ? region : undefined,
@@ -608,10 +618,20 @@ function MysteryPageContent() {
                       compact
                     />
                   </div>
-                  {!currency.isUSD && budget && Number(budget) > 0 && currency.rate && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      &asymp; ${currency.toUSD(Number(budget))} USD
-                    </p>
+                  {!currency.isUSD && budget && Number(budget) > 0 && (
+                    currency.rate ? (
+                      <p className="text-xs text-gray-400 mt-1">
+                        &asymp; ${currency.toUSD(Number(budget))} USD
+                      </p>
+                    ) : currency.loading ? (
+                      <p className="text-xs text-gray-400 mt-1 animate-pulse">
+                        Converting to USD...
+                      </p>
+                    ) : (
+                      <p className="text-xs text-amber-500 mt-1">
+                        Could not load exchange rates. Budget will be treated as USD.
+                      </p>
+                    )
                   )}
                   {/* Budget context text */}
                   {budgetUSD > 0 && (

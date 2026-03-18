@@ -275,6 +275,7 @@ function MysteryPanel() {
                 maxRerolls={maxRerolls}
                 detailsLoading={true}
                 currencyFormat={currency.format}
+                userBudgetUSD={searchParams?.budget}
               />
             </div>
           )}
@@ -293,6 +294,7 @@ function MysteryPanel() {
                 maxRerolls={maxRerolls}
                 detailsLoading={state.detailsLoading}
                 currencyFormat={currency.format}
+                userBudgetUSD={searchParams?.budget}
               />
             </div>
           )}

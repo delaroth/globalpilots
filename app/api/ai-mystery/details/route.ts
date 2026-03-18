@@ -3,6 +3,7 @@ import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
 import { calculateBudgetAllocation, PackageComponents, formatAllocationForAI, getBudgetTier } from '@/lib/budget-allocation'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { searchHotels } from '@/lib/flight-providers/serpapi-hotels'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,13 +42,28 @@ interface DetailsResponse {
     local_transport: number
     food_estimate: number
     buffer: number
+    user_budget: number
+    estimated_total: number
+    over_budget: boolean
   }
-  hotel_recommendations?: { name: string; estimated_price_per_night: number; neighborhood: string; why_recommended: string }[]
+  hotel_recommendations?: HotelRec[]
   daily_itinerary?: { day: number; activities: { time: string; activity: string; estimated_cost: number }[]; total_day_cost: number }[]
   local_transportation?: { airport_to_city: string; daily_transport: string; estimated_daily_cost: number }
   day1: string[]
   day2: string[]
   day3: string[]
+}
+
+interface HotelRec {
+  name: string
+  estimated_price_per_night: number
+  neighborhood: string
+  why_recommended: string
+  link?: string
+  rating?: number
+  reviews?: number
+  type?: string
+  is_real_data?: boolean
 }
 
 /** Fuzzy cache key — matches the main route format */
@@ -57,6 +73,21 @@ function buildFuzzyCacheKey(origin: string, budget: number, vibes: string[], dat
   const sortedVibes = vibes.map(v => v.toLowerCase().trim()).sort().join(',')
   // Note: exclude is empty for details since the destination is already picked
   return `mystery:${origin}:${budgetBucket}:${sortedVibes}:${dates}:${tripDuration}:${JSON.stringify(components)}::${accommodationLevel}:${budgetPriority}`
+}
+
+/** Extract departure date from the dates string, or default to 14 days from now */
+function extractDepartDate(dates: string): string {
+  if (dates.startsWith('flexible:')) {
+    // Flexible mode: use 14 days from now as the check-in
+    const d = new Date(Date.now() + 14 * 86400000)
+    return d.toISOString().split('T')[0]
+  }
+  // Specific date: extract YYYY-MM-DD from start of string
+  const match = dates.match(/^\d{4}-\d{2}-\d{2}/)
+  if (match) return match[0]
+  // Fallback
+  const d = new Date(Date.now() + 14 * 86400000)
+  return d.toISOString().split('T')[0]
 }
 
 export async function POST(request: NextRequest) {
@@ -113,16 +144,21 @@ export async function POST(request: NextRequest) {
       customSplit: body.customSplit,
     })
 
-    const actualHotelPerNight = hotelEstimate || allocation.hotel_per_night
-
     const accomMaxPerNight: Record<string, number> = {
       'hostel': 30, 'budget': 60, 'mid-range': 120, 'upscale': 250, 'luxury': 500
     }
-    const hotelBudget = accomMaxPerNight[accommodationLevel] || 120
+    const maxHotelBudget = accomMaxPerNight[accommodationLevel] || 120
+    // Use the lower of accommodation tier max and budget allocation
+    const hotelBudgetPerNight = Math.min(maxHotelBudget, allocation.hotel_per_night || maxHotelBudget)
 
     const dailyActivityBudget = Math.floor(allocation.activities / tripDuration)
 
-    console.log(`[Details] Generating personalized AI content for ${destination} (${iata}) — 2 parallel calls`)
+    // Extract dates for hotel search
+    const checkIn = extractDepartDate(dates)
+    const checkOutDate = new Date(new Date(checkIn).getTime() + tripDuration * 86400000)
+    const checkOut = checkOutDate.toISOString().split('T')[0]
+
+    console.log(`[Details] Generating content for ${destination} (${iata}) — itinerary AI + real hotel search + transport AI`)
 
     // ── Call A: Itinerary (~800 tokens max) ──
     const itineraryPromise = (components.includeItinerary !== false)
@@ -143,35 +179,93 @@ Keep activity descriptions under 10 words each. ${tripDuration} days total. Dail
         })
       : Promise.resolve(null)
 
-    // ── Call B: Hotels + Transport (~400 tokens max) ──
-    const hotelsPromise = (components.includeHotel || components.includeTransportation)
-      ? callAI(
-          `Hotel advisor for ${destination}, ${country}. JSON only.`,
-          `Recommend 3 ${accommodationLevel} hotels in ${destination} under $${hotelBudget}/night.
-Also suggest airport-to-city transport.
-Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per_night":0,"neighborhood":"Area","why_recommended":"Short reason"}],"local_transportation":{"airport_to_city":"How to get there","daily_transport":"Best way around","estimated_daily_cost":0}}`,
-          0.9,
-          400,
-        ).then(res => {
-          const parsed = parseAIJSON<{
-            hotel_recommendations?: DetailsResponse['hotel_recommendations']
-            local_transportation?: DetailsResponse['local_transportation']
-          }>(res.content)
-          return parsed
+    // ── Call B: REAL hotel search via SerpApi (replaces AI hallucinations) ──
+    const hotelsPromise = components.includeHotel
+      ? searchHotels({
+          destination: `${destination}, ${country}`,
+          checkIn,
+          checkOut,
+          adults: 1,
+          maxPrice: hotelBudgetPerNight,
+          currency: 'USD',
+        }).then(result => {
+          if (result.hotels.length > 0) {
+            console.log(`[Details] SerpApi Hotels: ${result.hotels.length} real hotels found, cheapest $${result.cheapestPrice}/night`)
+            // Take top 3 by price (already sorted by lowest price)
+            return result.hotels.slice(0, 3).map(h => ({
+              name: h.name,
+              estimated_price_per_night: h.price,
+              neighborhood: h.neighborhood || '',
+              why_recommended: [
+                h.rating > 0 ? `${h.rating}/5 rating` : '',
+                h.reviews > 0 ? `(${h.reviews.toLocaleString()} reviews)` : '',
+                h.type !== 'Hotel' ? h.type : '',
+                h.amenities.slice(0, 3).join(', '),
+              ].filter(Boolean).join(' · ') || 'Good value option',
+              link: h.link || '',
+              rating: h.rating,
+              reviews: h.reviews,
+              type: h.type,
+              is_real_data: true,
+            }))
+          }
+          console.log('[Details] SerpApi Hotels: no results, falling back to AI')
+          return null
         }).catch(err => {
-          console.warn('[Details] Hotels call failed:', err.message)
+          console.warn('[Details] SerpApi Hotels failed, falling back to AI:', err.message)
           return null
         })
       : Promise.resolve(null)
 
-    // ── Run both in parallel ──
-    const [itineraryResult, hotelsResult] = await Promise.allSettled([itineraryPromise, hotelsPromise])
+    // ── Call C: Transport only (~200 tokens max) ──
+    const transportPromise = components.includeTransportation
+      ? callAI(
+          `Transport advisor for ${destination}, ${country}. JSON only.`,
+          `Suggest airport-to-city transport for ${destination}.
+Return JSON: {"local_transportation":{"airport_to_city":"How to get there","daily_transport":"Best way around","estimated_daily_cost":0}}`,
+          0.9,
+          200,
+        ).then(res => {
+          const parsed = parseAIJSON<{ local_transportation?: DetailsResponse['local_transportation'] }>(res.content)
+          return parsed?.local_transportation || null
+        }).catch(err => {
+          console.warn('[Details] Transport call failed:', err.message)
+          return null
+        })
+      : Promise.resolve(null)
+
+    // ── Run all in parallel ──
+    const [itineraryResult, hotelsResult, transportResult] = await Promise.allSettled([
+      itineraryPromise,
+      hotelsPromise,
+      transportPromise,
+    ])
 
     const itineraryData = itineraryResult.status === 'fulfilled' ? itineraryResult.value : null
-    const hotelsData = hotelsResult.status === 'fulfilled' ? hotelsResult.value : null
+    const realHotels = hotelsResult.status === 'fulfilled' ? hotelsResult.value : null
+    const transportData = transportResult.status === 'fulfilled' ? transportResult.value : null
+
+    // If SerpApi returned no hotels, fall back to AI hotel recommendations
+    let hotelRecommendations: HotelRec[] | null = realHotels
+    if (!hotelRecommendations && components.includeHotel) {
+      console.log('[Details] Falling back to AI hotels')
+      try {
+        const aiHotels = await callAI(
+          `Hotel advisor for ${destination}, ${country}. JSON only.`,
+          `Recommend 3 ${accommodationLevel} hotels in ${destination} under $${hotelBudgetPerNight}/night.
+Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per_night":0,"neighborhood":"Area","why_recommended":"Short reason"}]}`,
+          0.9,
+          300,
+        )
+        const parsed = parseAIJSON<{ hotel_recommendations?: DetailsResponse['hotel_recommendations'] }>(aiHotels.content)
+        hotelRecommendations = parsed?.hotel_recommendations?.map(h => ({ ...h, is_real_data: false })) || null
+      } catch (err) {
+        console.warn('[Details] AI hotels fallback also failed:', err instanceof Error ? err.message : err)
+      }
+    }
 
     // Build the combined result
-    const result: Partial<DetailsResponse> = {}
+    const result: Partial<DetailsResponse> & Record<string, unknown> = {}
 
     // Itinerary data
     if (itineraryData) {
@@ -186,23 +280,33 @@ Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per
       }
     }
 
-    // Hotels + transport data
-    if (hotelsData) {
-      if (components.includeHotel) {
-        result.hotel_recommendations = hotelsData.hotel_recommendations
-      }
-      if (components.includeTransportation) {
-        result.local_transportation = hotelsData.local_transportation
-      }
+    // Hotels
+    if (hotelRecommendations) {
+      result.hotel_recommendations = hotelRecommendations
     }
 
-    // Budget breakdown — calculated in code, not AI-generated
+    // Transport
+    if (transportData) {
+      result.local_transportation = transportData
+    }
+
+    // Use real hotel prices if we got them, otherwise fall back to allocation
+    const realAvgHotelPerNight = realHotels && realHotels.length > 0
+      ? Math.round(realHotels.reduce((sum, h) => sum + h.estimated_price_per_night, 0) / realHotels.length)
+      : null
+    const actualHotelPerNight = realAvgHotelPerNight || hotelEstimate || allocation.hotel_per_night
+
+    // Calculate estimated real cost vs user's budget
+    const estimatedTotal = flightPrice + (actualHotelPerNight * tripDuration) + allocation.activities + allocation.food_estimate + allocation.local_transport + allocation.buffer
+    const overBudget = estimatedTotal > budget
+
+    // Budget breakdown — shows user's budget AND estimated real costs
     result.budgetBreakdown = {
       flights: flightPrice,
       hotel: actualHotelPerNight * tripDuration,
       activities: allocation.activities,
       food: allocation.food_estimate,
-      total: flightPrice + (actualHotelPerNight * tripDuration) + allocation.activities + allocation.food_estimate,
+      total: budget, // User's actual budget, not the sum of costs
     }
 
     result.budget_breakdown = {
@@ -213,6 +317,9 @@ Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per
       local_transport: allocation.local_transport,
       food_estimate: allocation.food_estimate,
       buffer: allocation.buffer,
+      user_budget: budget,
+      estimated_total: estimatedTotal,
+      over_budget: overBudget,
     }
 
     // Cache the full result (merge with quick data will happen client-side,
@@ -231,7 +338,8 @@ Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per
     }
     setCache(cacheKey, fullResult, 60 * 60 * 1000)
 
-    console.log(`[Details] Personalized AI content generated for ${destination} (itinerary: ${itineraryData ? 'ok' : 'failed'}, hotels: ${hotelsData ? 'ok' : 'failed'})`)
+    const hotelSource = realHotels ? 'serpapi-real' : 'ai-fallback'
+    console.log(`[Details] Content generated for ${destination} (itinerary: ${itineraryData ? 'ok' : 'failed'}, hotels: ${hotelSource}, transport: ${transportData ? 'ok' : 'skipped'})${overBudget ? ` [OVER BUDGET: $${estimatedTotal} vs $${budget}]` : ''}`)
 
     return NextResponse.json(result)
   } catch (error) {
