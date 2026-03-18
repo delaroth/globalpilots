@@ -8,10 +8,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request)
-  const limited = rateLimit(`stopover:${ip}`, 30, 60000) // 30 req/min — namespaced to avoid collision with other API rate limits
-  if (limited) {
-    return NextResponse.json({ error: 'Rate limit exceeded. Try again in a minute.' }, { status: 429 })
-  }
+  // Rate limit removed — SerpApi has its own quota protection
 
   const sp = request.nextUrl.searchParams
   const origin = sp.get('origin')?.toUpperCase()
