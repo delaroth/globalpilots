@@ -293,13 +293,20 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
+        // Cap hotel estimate at what the budget can actually afford
+        const flightCost = quickData.estimated_flight_cost || 0
+        const remainingAfterFlight = Math.max(0, params.budget - flightCost)
+        const maxHotelTotal = Math.floor(remainingAfterFlight * 0.5) // max 50% of remaining for hotel
+        const rawHotelTotal = (quickData.estimated_hotel_per_night || 0) * params.tripDuration
+        const cappedHotelTotal = Math.min(rawHotelTotal, maxHotelTotal)
+
         // Build partial destination
         const partialDestination = {
           destination: quickData.destination,
           country: quickData.country,
           iata: quickData.iata,
           city_code_IATA: quickData.city_code_IATA,
-          estimated_flight_cost: quickData.estimated_flight_cost,
+          estimated_flight_cost: flightCost,
           indicativeFlightPrice: quickData.indicativeFlightPrice,
           estimated_hotel_per_night: quickData.estimated_hotel_per_night,
           priceIsLive: quickData.priceIsLive,
@@ -322,11 +329,11 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
           day2: [],
           day3: [],
           budgetBreakdown: {
-            flights: quickData.estimated_flight_cost,
-            hotel: quickData.estimated_hotel_per_night * params.tripDuration,
+            flights: flightCost,
+            hotel: cappedHotelTotal,
             activities: 0,
             food: 0,
-            total: params.budget, // User's actual budget in USD, not the sum of costs
+            total: params.budget,
           },
         }
 
@@ -418,6 +425,13 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
                   suggestedDepartureDate: prev.destination.suggestedDepartureDate,
                   suggestedReturnDate: prev.destination.suggestedReturnDate,
                   cachedBasicInfo: prev.destination.cachedBasicInfo,
+                  // Keep generic data if details didn't provide these fields
+                  whyThisPlace: detailsData.whyThisPlace || prev.destination.whyThisPlace || '',
+                  why_its_perfect: detailsData.why_its_perfect || prev.destination.why_its_perfect || '',
+                  best_local_food: detailsData.best_local_food?.length > 0 ? detailsData.best_local_food : prev.destination.best_local_food || [],
+                  insider_tip: detailsData.insider_tip || prev.destination.insider_tip || '',
+                  localTip: detailsData.localTip || prev.destination.localTip || '',
+                  genericData: prev.destination.genericData || detailsData.genericData,
                 },
               }
             })

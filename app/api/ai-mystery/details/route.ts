@@ -43,7 +43,7 @@ interface DetailsResponse {
     food_estimate: number
     buffer: number
     user_budget: number
-    estimated_total: number
+    estimated_total?: number
     over_budget: boolean
   }
   hotel_recommendations?: HotelRec[]
@@ -148,8 +148,9 @@ export async function POST(request: NextRequest) {
       'hostel': 30, 'budget': 60, 'mid-range': 120, 'upscale': 250, 'luxury': 500
     }
     const maxHotelBudget = accomMaxPerNight[accommodationLevel] || 120
-    // Use the lower of accommodation tier max and budget allocation
-    const hotelBudgetPerNight = Math.min(maxHotelBudget, allocation.hotel_per_night || maxHotelBudget)
+    // For hotel SEARCH, use a reasonable minimum so we find results
+    // even on tight budgets ($10 dorm beds exist in SE Asia)
+    const hotelSearchMaxPrice = Math.max(10, Math.min(maxHotelBudget, allocation.hotel_per_night * 2 || maxHotelBudget))
 
     const dailyActivityBudget = Math.floor(allocation.activities / tripDuration)
 
@@ -186,7 +187,7 @@ Keep activity descriptions under 10 words each. ${tripDuration} days total. Dail
           checkIn,
           checkOut,
           adults: 1,
-          maxPrice: hotelBudgetPerNight,
+          maxPrice: hotelSearchMaxPrice,
           currency: 'USD',
         }).then(result => {
           if (result.hotels.length > 0) {
@@ -252,7 +253,7 @@ Return JSON: {"local_transportation":{"airport_to_city":"How to get there","dail
       try {
         const aiHotels = await callAI(
           `Hotel advisor for ${destination}, ${country}. JSON only.`,
-          `Recommend 3 ${accommodationLevel} hotels in ${destination} under $${hotelBudgetPerNight}/night.
+          `Recommend 3 ${accommodationLevel} hotels in ${destination} under $${hotelSearchMaxPrice}/night.
 Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per_night":0,"neighborhood":"Area","why_recommended":"Short reason"}]}`,
           0.9,
           300,
@@ -290,35 +291,39 @@ Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per
       result.local_transportation = transportData
     }
 
-    // Use real hotel prices if we got them, otherwise fall back to allocation
+    // Real hotel price (from SerpApi or quick route estimate) — for display in recommendations
     const realAvgHotelPerNight = realHotels && realHotels.length > 0
       ? Math.round(realHotels.reduce((sum, h) => sum + h.estimated_price_per_night, 0) / realHotels.length)
       : null
-    const actualHotelPerNight = realAvgHotelPerNight || hotelEstimate || allocation.hotel_per_night
 
-    // Calculate estimated real cost vs user's budget
-    const estimatedTotal = flightPrice + (actualHotelPerNight * tripDuration) + allocation.activities + allocation.food_estimate + allocation.local_transport + allocation.buffer
+    // For the BUDGET breakdown, use the allocation (what the user can afford)
+    // For estimated REAL cost, use the real/estimated prices
+    const budgetHotelPerNight = allocation.hotel_per_night
+    const realHotelPerNight = realAvgHotelPerNight || hotelEstimate || allocation.hotel_per_night
+
+    // Estimated real cost vs user's budget
+    const estimatedTotal = flightPrice + (realHotelPerNight * tripDuration) + allocation.activities + allocation.food_estimate + allocation.local_transport + allocation.buffer
     const overBudget = estimatedTotal > budget
 
-    // Budget breakdown — shows user's budget AND estimated real costs
+    // Budget breakdown — uses ALLOCATION amounts (what fits in the budget)
     result.budgetBreakdown = {
       flights: flightPrice,
-      hotel: actualHotelPerNight * tripDuration,
+      hotel: budgetHotelPerNight * tripDuration,
       activities: allocation.activities,
       food: allocation.food_estimate,
-      total: budget, // User's actual budget, not the sum of costs
+      total: budget,
     }
 
     result.budget_breakdown = {
       flight: flightPrice,
-      hotel_total: actualHotelPerNight * tripDuration,
-      hotel_per_night: actualHotelPerNight,
+      hotel_total: budgetHotelPerNight * tripDuration,
+      hotel_per_night: budgetHotelPerNight,
       activities: allocation.activities,
       local_transport: allocation.local_transport,
       food_estimate: allocation.food_estimate,
       buffer: allocation.buffer,
       user_budget: budget,
-      estimated_total: estimatedTotal,
+      estimated_total: overBudget ? estimatedTotal : undefined,
       over_budget: overBudget,
     }
 
@@ -332,7 +337,7 @@ Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per
       city_code_IATA: iata,
       indicativeFlightPrice: flightPrice,
       estimated_flight_cost: flightPrice,
-      estimated_hotel_per_night: actualHotelPerNight,
+      estimated_hotel_per_night: budgetHotelPerNight,
       priceIsLive: true,
       ...result,
     }
