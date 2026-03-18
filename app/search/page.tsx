@@ -424,10 +424,17 @@ function SearchPageContent() {
 
       setStopoverLoading(true)
       try {
+        // Resolve departure date based on flex type
+        const stopoverDepartDate = departureDate.type === 'exact'
+          ? (departureDate.exactDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0])
+          : departureDate.type === 'month'
+            ? `${departureDate.month}-15` // mid-month as approximate date
+            : new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0] // anytime = 1 month out
+
         const params = new URLSearchParams({
           origin: origin.toUpperCase(),
           destination: destination.toUpperCase(),
-          depart_date: departureDate.exactDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+          depart_date: stopoverDepartDate,
           max_days: String(stopoverMaxDays),
           passport: stopoverPassports.join(','),
           budget: stopoverBudget,
@@ -923,13 +930,37 @@ function SearchPageContent() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-900 mb-1">Depart</label>
-                    <input
-                      type="date"
-                      value={departureDate.exactDate || ''}
-                      min={today}
-                      onChange={e => setDepartureDate({ type: 'exact', exactDate: e.target.value })}
-                      className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-sm"
-                    />
+                    <select
+                      value={departureDate.type === 'exact' ? 'exact' : departureDate.type === 'month' ? 'month' : 'anytime'}
+                      onChange={e => {
+                        const val = e.target.value
+                        if (val === 'exact') setDepartureDate({ type: 'exact', exactDate: departureDate.exactDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0] })
+                        else if (val === 'month') setDepartureDate({ type: 'month', month: new Date().toISOString().slice(0, 7) })
+                        else setDepartureDate({ type: 'anytime' })
+                      }}
+                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-xs mb-1"
+                    >
+                      <option value="anytime">Anytime</option>
+                      <option value="month">Specific month</option>
+                      <option value="exact">Exact date</option>
+                    </select>
+                    {departureDate.type === 'exact' && (
+                      <input
+                        type="date"
+                        value={departureDate.exactDate || ''}
+                        min={today}
+                        onChange={e => setDepartureDate({ type: 'exact', exactDate: e.target.value })}
+                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-sm"
+                      />
+                    )}
+                    {departureDate.type === 'month' && (
+                      <input
+                        type="month"
+                        value={departureDate.month || new Date().toISOString().slice(0, 7)}
+                        onChange={e => setDepartureDate({ type: 'month', month: e.target.value })}
+                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-sky-400 focus:outline-none transition text-slate-900 text-sm"
+                      />
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-900 mb-1">Max Travel Days</label>

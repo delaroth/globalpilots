@@ -39,6 +39,7 @@ const navCategories: NavCategory[] = [
       { href: '/whats-happening', label: 'Festival Calendar', description: 'Events and festivals worldwide' },
       { href: '/inspire', label: 'Inspire Me', description: 'Explore trending destinations' },
       { href: '/quiz', label: 'Destination Quiz', description: 'Find your perfect match' },
+      { href: '/day-trip', label: 'Day Trip Planner', description: 'AI itinerary for any city' },
     ],
   },
   {

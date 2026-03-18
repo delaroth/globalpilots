@@ -20,6 +20,7 @@ export default function Footer() {
         { href: '/whats-happening', label: 'Festival Calendar' },
         { href: '/inspire', label: 'Inspire Me' },
         { href: '/quiz', label: 'Destination Quiz' },
+        { href: '/day-trip', label: 'Day Trip Planner' },
       ],
     },
     {
