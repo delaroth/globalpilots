@@ -24,8 +24,10 @@ const navCategories: NavCategory[] = [
   {
     label: 'AI Trip Planner',
     gradient: true,
-    directLink: '/mystery',
-    items: [],
+    items: [
+      { href: '/mystery', label: 'Mystery Trip Planner', description: 'AI picks your destination and plans everything' },
+      { href: '/day-trip', label: 'Day Trip Planner', description: 'AI itinerary for any city — no flights needed' },
+    ],
   },
   {
     label: 'Find Flights',
@@ -39,7 +41,6 @@ const navCategories: NavCategory[] = [
       { href: '/whats-happening', label: 'Festival Calendar', description: 'Events and festivals worldwide' },
       { href: '/inspire', label: 'Inspire Me', description: 'Explore trending destinations' },
       { href: '/quiz', label: 'Destination Quiz', description: 'Find your perfect match' },
-      { href: '/day-trip', label: 'Day Trip Planner', description: 'AI itinerary for any city' },
     ],
   },
   {

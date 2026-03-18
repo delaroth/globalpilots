@@ -3,10 +3,9 @@
 import { useState, useCallback } from 'react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import AirportAutocomplete from '@/components/AirportAutocomplete'
 import CurrencySelector from '@/components/CurrencySelector'
 import { useCurrency } from '@/hooks/useCurrency'
-import { lookupAirportByCode } from '@/lib/geolocation'
+import { searchAirports } from '@/lib/geolocation'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -236,8 +235,9 @@ function DayCard({ day, currencyFormat }: { day: DayItinerary; currencyFormat: (
 // ---------------------------------------------------------------------------
 
 export default function DayTripPage() {
-  const [cityCode, setCityCode] = useState('')
   const [cityName, setCityName] = useState('')
+  const [citySuggestions, setCitySuggestions] = useState<{ city: string; country: string }[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [budget, setBudget] = useState('50')
   const [days, setDays] = useState(1)
   const [interests, setInterests] = useState<string[]>(['food', 'culture'])
@@ -254,17 +254,28 @@ export default function DayTripPage() {
     )
   }, [])
 
-  const handleCityChange = useCallback((code: string) => {
-    setCityCode(code)
-    // Look up city name from airport code
-    const airport = lookupAirportByCode(code)
-    if (airport) {
-      setCityName(airport.city)
+  const handleCityInput = useCallback((text: string) => {
+    setCityName(text)
+    if (text.trim().length >= 2) {
+      const matches = searchAirports(text)
+      // Deduplicate by city name
+      const seen = new Set<string>()
+      const unique = matches.filter(a => {
+        const key = `${a.city}-${a.country}`
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      }).slice(0, 6)
+      setCitySuggestions(unique.map(a => ({ city: a.city, country: a.country })))
+      setShowSuggestions(true)
+    } else {
+      setCitySuggestions([])
+      setShowSuggestions(false)
     }
   }, [])
 
   const handleSubmit = useCallback(async () => {
-    const resolvedCity = cityName || cityCode
+    const resolvedCity = cityName.trim()
     if (!resolvedCity) {
       setError('Please select a city.')
       return
@@ -309,7 +320,7 @@ export default function DayTripPage() {
     } finally {
       setLoading(false)
     }
-  }, [cityCode, cityName, budget, days, interests, currency])
+  }, [cityName, budget, days, interests, currency])
 
   const handleShare = useCallback(() => {
     const url = window.location.href
@@ -342,18 +353,39 @@ export default function DayTripPage() {
           {/* Form card */}
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 sm:p-8">
             {/* City */}
-            <div className="mb-5">
-              <AirportAutocomplete
-                value={cityCode}
-                onChange={handleCityChange}
-                label="City"
-                placeholder="Search any city..."
+            <div className="mb-5 relative">
+              <label htmlFor="day-trip-city" className="block text-white text-sm font-medium mb-1.5">
+                City
+              </label>
+              <input
+                type="text"
                 id="day-trip-city"
-                onSearchChange={(text) => {
-                  // If user types a city name that doesn't match an airport, use it directly
-                  if (!cityCode) setCityName(text)
-                }}
+                value={cityName}
+                onChange={(e) => handleCityInput(e.target.value)}
+                onFocus={() => cityName.length >= 2 && setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                placeholder="Bangkok, Paris, Tokyo..."
+                className="w-full px-4 py-3 bg-white/[0.06] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-sky-500/50 transition"
+                autoComplete="off"
               />
+              {showSuggestions && citySuggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white rounded-xl shadow-2xl border border-gray-100 max-h-60 overflow-y-auto">
+                  {citySuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={() => {
+                        setCityName(s.city)
+                        setShowSuggestions(false)
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-sky-50 transition text-sm"
+                    >
+                      <span className="font-medium text-slate-800">{s.city}</span>
+                      <span className="text-slate-400 ml-2">{s.country}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Budget + Currency */}
