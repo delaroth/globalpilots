@@ -258,15 +258,23 @@ export default function DayTripPage() {
     setCityName(text)
     if (text.trim().length >= 2) {
       const matches = searchAirports(text)
-      // Deduplicate by city name
+        // Filter out group entries (codes with commas like "LCA,PFO")
+        .filter(a => !a.code.includes(','))
+      // Extract just city names, deduplicate
       const seen = new Set<string>()
-      const unique = matches.filter(a => {
-        const key = `${a.city}-${a.country}`
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      }).slice(0, 6)
-      setCitySuggestions(unique.map(a => ({ city: a.city, country: a.country })))
+      const cities: { city: string; country: string }[] = []
+      for (const a of matches) {
+        // Strip airport-specific names: "Bangkok Suvarnabhumi" → "Bangkok"
+        // City names from geolocation.ts are just the city (e.g., "Bangkok")
+        // but some have airport suffixes — take just the base city
+        const cityBase = a.city.replace(/ (All airports)$/i, '').trim()
+        const key = `${cityBase}-${a.country}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          cities.push({ city: cityBase, country: a.country })
+        }
+      }
+      setCitySuggestions(cities.slice(0, 8))
       setShowSuggestions(true)
     } else {
       setCitySuggestions([])
