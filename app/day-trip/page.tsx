@@ -5,7 +5,7 @@ import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import CurrencySelector from '@/components/CurrencySelector'
 import { useCurrency } from '@/hooks/useCurrency'
-import { searchAirports } from '@/lib/geolocation'
+import { getAllDestinations } from '@/lib/destination-costs'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -257,24 +257,13 @@ export default function DayTripPage() {
   const handleCityInput = useCallback((text: string) => {
     setCityName(text)
     if (text.trim().length >= 2) {
-      const matches = searchAirports(text)
-        // Filter out group entries (codes with commas like "LCA,PFO")
-        .filter(a => !a.code.includes(','))
-      // Extract just city names, deduplicate
-      const seen = new Set<string>()
-      const cities: { city: string; country: string }[] = []
-      for (const a of matches) {
-        // Strip airport-specific names: "Bangkok Suvarnabhumi" → "Bangkok"
-        // City names from geolocation.ts are just the city (e.g., "Bangkok")
-        // but some have airport suffixes — take just the base city
-        const cityBase = a.city.replace(/ (All airports)$/i, '').trim()
-        const key = `${cityBase}-${a.country}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          cities.push({ city: cityBase, country: a.country })
-        }
-      }
-      setCitySuggestions(cities.slice(0, 8))
+      const query = text.toLowerCase().trim()
+      const allCities = getAllDestinations()
+      const matches = allCities.filter(d =>
+        d.city.toLowerCase().includes(query) ||
+        d.country.toLowerCase().includes(query)
+      ).slice(0, 8)
+      setCitySuggestions(matches.map(d => ({ city: d.city, country: d.country })))
       setShowSuggestions(true)
     } else {
       setCitySuggestions([])
