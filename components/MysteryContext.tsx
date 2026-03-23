@@ -118,6 +118,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
     params: SearchParams,
     abortSignal: AbortSignal,
   ) => {
+    const resolvedIata = quickData.iata || quickData.city_code_IATA
     return fetch('/api/ai-mystery/details', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -125,7 +126,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify({
         destination: quickData.destination,
         country: quickData.country,
-        iata: quickData.iata,
+        iata: resolvedIata,
         origin: params.origin,
         budget: params.budget,
         vibes: params.vibes,
@@ -276,9 +277,16 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
         const quickData = await response.json()
         console.log('[MysteryContext] Phase 1 response:', quickData.destination, quickData.city_code_IATA)
 
-        if (!quickData.destination || !quickData.city_code_IATA) {
-          throw new Error(`Invalid quick pick response: destination=${quickData.destination}, iata=${quickData.city_code_IATA}`)
+        // Resolve IATA code from either field (cache may only have city_code_IATA)
+        const iata = quickData.iata || quickData.city_code_IATA
+
+        if (!quickData.destination || !iata) {
+          throw new Error(`Invalid quick pick response: destination=${quickData.destination}, iata=${iata}`)
         }
+
+        // Ensure both fields are set for downstream consumers
+        quickData.iata = iata
+        quickData.city_code_IATA = iata
 
         // Full cache hit -- skip phase 2
         if (quickData._cacheHit) {
@@ -287,7 +295,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
           trackConversion('mystery_revealed', {
             destination: quickData.destination,
             country: quickData.country,
-            iata: quickData.city_code_IATA,
+            iata,
             cached: true,
           })
           return
@@ -304,8 +312,8 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
         const partialDestination = {
           destination: quickData.destination,
           country: quickData.country,
-          iata: quickData.iata,
-          city_code_IATA: quickData.city_code_IATA,
+          iata,
+          city_code_IATA: iata,
           estimated_flight_cost: flightCost,
           indicativeFlightPrice: quickData.indicativeFlightPrice,
           estimated_hotel_per_night: quickData.estimated_hotel_per_night,
@@ -350,7 +358,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
         console.log('[MysteryContext] Phase 2a+2b: Fetching generic + personalized data in parallel for', quickData.destination)
 
         const genericPromise = fetchGenericData(
-          { destination: quickData.destination, country: quickData.country, iata: quickData.iata },
+          { destination: quickData.destination, country: quickData.country, iata },
           abortController.signal,
         )
 
