@@ -217,52 +217,8 @@ function MysteryPanel() {
             </div>
           )}
 
-          {/* Quick-ready state: show destination name + shimmer placeholders */}
-          {state.status === 'quick-ready' && state.destination && (
-            <div className="p-6">
-              <div className="text-center mb-6">
-                <h2 className="text-3xl font-bold text-white mb-2">
-                  {state.destination.destination}, {state.destination.country}
-                </h2>
-                {state.destination.estimated_flight_cost > 0 && (
-                  <p className="text-sky-300 text-lg">
-                    Flights from {currency.format(state.destination.estimated_flight_cost)}
-                    {state.destination.googleFlightsAirlines?.length > 0 && (
-                      <span className="text-white/50 ml-2">
-                        via {state.destination.googleFlightsAirlines.join(', ')}
-                      </span>
-                    )}
-                  </p>
-                )}
-                {state.destination.estimated_hotel_per_night > 0 && (
-                  <p className="text-white/60 text-sm mt-1">
-                    Hotels from {currency.format(state.destination.estimated_hotel_per_night)}/night
-                  </p>
-                )}
-              </div>
-
-              {/* Shimmer placeholders for AI content */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="h-4 bg-white/10 rounded-full w-3/4 animate-pulse" />
-                  <div className="h-4 bg-white/10 rounded-full w-full animate-pulse" />
-                  <div className="h-4 bg-white/10 rounded-full w-5/6 animate-pulse" />
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-6">
-                  <div className="h-32 bg-white/5 rounded-xl animate-pulse" />
-                  <div className="h-32 bg-white/5 rounded-xl animate-pulse" />
-                </div>
-                <div className="h-24 bg-white/5 rounded-xl animate-pulse" />
-              </div>
-
-              <p className="text-center text-white/40 text-sm mt-8">
-                Generating trip details with AI... You can minimize this and browse.
-              </p>
-            </div>
-          )}
-
-          {/* Generic-ready state: show MysteryReveal with generic data, personalized still loading */}
-          {state.status === 'generic-ready' && state.destination && state.destination.destination && state.destination.city_code_IATA && (
+          {/* Show MysteryReveal as soon as destination is known — content loads progressively */}
+          {(state.status === 'quick-ready' || state.status === 'generic-ready' || state.status === 'ready') && state.destination && state.destination.destination && (state.destination.city_code_IATA || state.destination.iata) && (
             <div className="mystery-popup-reveal">
               <MysteryReveal
                 destination={state.destination}
@@ -273,26 +229,7 @@ function MysteryPanel() {
                 onReroll={handleReroll}
                 rerollCount={rerollCount}
                 maxRerolls={maxRerolls}
-                detailsLoading={true}
-                currencyFormat={currency.format}
-                userBudgetUSD={searchParams?.budget}
-              />
-            </div>
-          )}
-
-          {/* Ready state: full MysteryReveal */}
-          {state.status === 'ready' && state.destination && state.destination.destination && state.destination.city_code_IATA && (
-            <div className="mystery-popup-reveal">
-              <MysteryReveal
-                destination={state.destination}
-                origin={origin}
-                departDate={departDate}
-                tripDuration={tripDuration}
-                onShowAnother={handleShowAnother}
-                onReroll={handleReroll}
-                rerollCount={rerollCount}
-                maxRerolls={maxRerolls}
-                detailsLoading={state.detailsLoading}
+                detailsLoading={state.status !== 'ready' || state.detailsLoading}
                 currencyFormat={currency.format}
                 userBudgetUSD={searchParams?.budget}
               />

@@ -2,13 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion } from 'motion/react'
 import { buildBookingBundle, AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { trackActivity } from '@/lib/activity-feed'
 import type { DestinationCost } from '@/lib/destination-costs'
-import ClueReveal from '@/components/ClueReveal'
-// ScratchReveal removed — flow is now clues → revealed → complete
-import ConfettiCelebration from '@/components/ConfettiCelebration'
 import SaveTripButton from '@/components/SaveTripButton'
 import BookingTracker from '@/components/BookingTracker'
 import AffiliateDisclosure from '@/components/AffiliateDisclosure'
@@ -177,17 +174,11 @@ interface EnrichmentData {
   holidays: { date: string; name: string; localName: string }[]
 }
 
-type RevealPhase = 'clues' | 'revealed'
+// Progressive reveal — no guessing game, content appears as data loads
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const phaseTransition = {
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } },
-  exit: { opacity: 0, y: -16, transition: { duration: 0.3, ease: 'easeIn' as const } },
-}
 
 function staggerChild(index: number) {
   return {
@@ -248,7 +239,6 @@ export default function MysteryReveal({
   // Guard: if price is 0 or falsy, show "Check prices" instead of "$0"
   const rawFmt = currencyFormat || ((usd: number) => `$${usd}`)
   const fmt = (amount: number) => (!amount ? 'Check prices' : rawFmt(amount))
-  const [phase, setPhase] = useState<RevealPhase>('clues')
   const bookingRef = useRef<HTMLDivElement>(null)
   const [shareUrl, setShareUrl] = useState('')
   const [sharing, setSharing] = useState(false)
@@ -365,36 +355,9 @@ export default function MysteryReveal({
     return 'Temperate — pack layers for variable weather'
   }
 
-  // Build clues for ClueReveal — only using fields the quick route returns
-  // (destination, country, iata, estimated_flight_cost, airline, stops)
+  // Flight info for display
   const airlineInfo = destination.googleFlightsAirlines?.[0]
   const stopsInfo = destination.googleFlightsStops
-  const flightClueValue = airlineInfo
-    ? `~${fmt(flightPrice)} with ${airlineInfo}${stopsInfo !== undefined ? (stopsInfo === 0 ? ' (nonstop)' : ` (${stopsInfo} stop${stopsInfo > 1 ? 's' : ''})`) : ''}`
-    : `~${fmt(flightPrice)}`
-
-  const clues = [
-    {
-      icon: '🌍',
-      label: 'Country',
-      value: `Your destination is in ${destination.country}`,
-    },
-    {
-      icon: '✈️',
-      label: 'Flights',
-      value: flightClueValue,
-    },
-    {
-      icon: '🌤️',
-      label: 'Climate',
-      value: getClimateHint(destination.country),
-    },
-    {
-      icon: '❓',
-      label: 'Destination',
-      value: 'Can you guess where you\'re going?',
-    },
-  ]
 
   const totalCost =
     destination.budget_breakdown?.user_budget ||
@@ -405,10 +368,12 @@ export default function MysteryReveal({
       : destination.estimated_flight_cost +
         destination.estimated_hotel_per_night * 3)
 
-  // ---- Handlers ----
+  // ---- Auto-trigger on mount: stamp + tracking ----
+  const hasTracked = useRef(false)
+  useEffect(() => {
+    if (hasTracked.current || !destination.destination) return
+    hasTracked.current = true
 
-  const handleFullReveal = useCallback(() => {
-    setPhase('revealed')
     trackActivity('destination_revealed', {
       destination: destination.destination,
       country: destination.country,
@@ -437,19 +402,10 @@ export default function MysteryReveal({
     }
   }, [destination.destination, destination.country, iata, effectiveDepartDate, totalCost])
 
-  // Scroll to booking buttons after full reveal
+  // Fetch enrichment data immediately (no waiting for "reveal")
   useEffect(() => {
-    if (phase === 'revealed' && bookingRef.current) {
-      setTimeout(() => {
-        bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 800)
-    }
-  }, [phase])
-
-  // Fetch enrichment data when revealed
-  useEffect(() => {
-    if (phase !== 'revealed') return
     if (enrichment || enrichmentLoading) return
+    if (!destination.destination) return
 
     setEnrichmentLoading(true)
     fetch('/api/enrich-destination', {
@@ -470,7 +426,6 @@ export default function MysteryReveal({
       .catch(() => {})
       .finally(() => setEnrichmentLoading(false))
   }, [
-    phase,
     enrichment,
     enrichmentLoading,
     destination.destination,
@@ -580,40 +535,11 @@ export default function MysteryReveal({
 
   return (
     <div className="max-w-4xl mx-auto pb-20 lg:pb-0">
-      <AnimatePresence mode="wait">
-        {/* ================================================================
-            PHASE 1 — CLUE REVEAL
-        ================================================================ */}
-        {phase === 'clues' && (
-          <motion.div key="clues" {...phaseTransition} className="text-center">
-            <ClueReveal
-              clues={clues}
-              destinationName={destination.destination}
-              country={destination.country}
-              onComplete={handleFullReveal}
-            />
-            <button
-              onClick={handleFullReveal}
-              className="mt-4 text-xs text-white/30 hover:text-white/50 transition"
-            >
-              Skip to reveal
-            </button>
-          </motion.div>
-        )}
-
-        {/* ================================================================
-            PHASE 2 — FULL REVEALED CARD
-        ================================================================ */}
-        {phase === 'revealed' && (
-          <motion.div
-            key="revealed"
-            initial={{ opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 200, damping: 20, duration: 0.6 } }}
-            exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.3, ease: 'easeIn' } }}
-          >
-            {/* Confetti fires on reveal */}
-            <ConfettiCelebration active={phase === 'revealed'} duration={4000} intensity="high" />
-
+      {/* Progressive reveal — content appears as data loads */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } }}
+      >
             <div className="bg-white/[0.04] backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden border border-white/10">
               {/* ---- Hero header ---- */}
               <div className="h-64 relative overflow-hidden">
@@ -1995,12 +1921,10 @@ export default function MysteryReveal({
                 </motion.div>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      </motion.div>
 
       {/* Mobile sticky action bar */}
-      {phase === 'revealed' && (
+      {(
         <div className="fixed bottom-0 left-0 right-0 z-30 p-3 bg-slate-950/95 backdrop-blur border-t border-white/10 lg:hidden">
           <div className="flex gap-2 max-w-lg mx-auto">
             {onReroll && rerollCount < maxRerolls && (
