@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { ParseResponseSchema } from '@/lib/ai-schemas'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,7 +93,7 @@ Return this EXACT JSON structure:
 }`
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.3, 300)
-    const result = parseAIJSON<ParseResponse>(aiResponse.content)
+    const result = parseAIJSON(aiResponse.content, ParseResponseSchema)
 
     return NextResponse.json(result)
   } catch (error) {

@@ -636,8 +636,15 @@ export default function MysteryReveal({
                 <motion.div {...staggerChild(4)} className="lg:col-span-2">
                   {destination.budget_breakdown ? (
                     <div className={`bg-white/[0.06] border rounded-xl p-6 ${destination.budget_breakdown.over_budget ? 'border-amber-500/30' : 'border-emerald-500/20'}`}>
-                      <h3 className="text-xl font-bold text-white mb-4">
+                      <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2 flex-wrap">
                         Estimated Costs
+                        {isLivePrice ? (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">Live prices</span>
+                        ) : isEstimate ? (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">Estimated</span>
+                        ) : (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400">Cached prices</span>
+                        )}
                       </h3>
                       {/* Over-budget warning */}
                       {destination.budget_breakdown.over_budget && destination.budget_breakdown.user_budget && (

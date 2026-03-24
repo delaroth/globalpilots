@@ -146,3 +146,160 @@ export const CityGuideSchema = z.object({
 }).passthrough()
 
 export type CityGuideParsed = z.infer<typeof CityGuideSchema>
+
+// ── AI Itinerary (from /api/ai-itinerary) ──────────────────────────────
+
+export const AIItinerarySchema = z.object({
+  destination: str(''),
+  days: z.coerce.number().default(0),
+  vibe: str(''),
+  itinerary: z.array(z.object({
+    day: z.coerce.number(),
+    title: str(''),
+    activities: z.array(z.string()).default([]),
+    meals: z.array(z.string()).default([]),
+  })).default([]),
+  tips: z.array(z.string()).default([]),
+  budget_estimate: z.object({
+    accommodation_per_night: num,
+    food_per_day: num,
+    activities_per_day: num,
+    total: num,
+  }).default({ accommodation_per_night: 0, food_per_day: 0, activities_per_day: 0, total: 0 }),
+}).passthrough()
+
+export type AIItineraryParsed = z.infer<typeof AIItinerarySchema>
+
+// ── Predict (from /api/ai-predict) ──────────────────────────────────────
+
+export const PredictResponseSchema = z.object({
+  action: z.enum(['BUY_NOW', 'WAIT']).default('WAIT'),
+  reason: str(''),
+  confidence: z.enum(['low', 'medium', 'high']).default('medium'),
+})
+
+export type PredictResponseParsed = z.infer<typeof PredictResponseSchema>
+
+// ── Parse (from /api/ai-parse) ──────────────────────────────────────────
+
+export const ParseResponseSchema = z.object({
+  origin: z.string().nullable().default(null),
+  destination: z.string().nullable().default(null),
+  budget: z.number().nullable().default(null),
+  dates: z.string().nullable().default(null),
+  vibe: z.array(z.string()).default([]),
+  confidence: z.enum(['low', 'medium', 'high']).default('medium'),
+})
+
+export type ParseResponseParsed = z.infer<typeof ParseResponseSchema>
+
+// ── Day Trip (from /api/day-trip) ───────────────────────────────────────
+
+const DayTripActivitySchema = z.object({
+  time: str(''),
+  activity: str(''),
+  cost: num,
+  transport: str('').optional(),
+})
+
+const DayTripMealSchema = z.object({
+  meal: str(''),
+  suggestion: str(''),
+  priceRange: str(''),
+  cost: num,
+})
+
+const DayTripDaySchema = z.object({
+  day: z.coerce.number(),
+  morning: z.array(DayTripActivitySchema).default([]),
+  afternoon: z.array(DayTripActivitySchema).default([]),
+  evening: z.array(DayTripActivitySchema).default([]),
+  meals: z.array(DayTripMealSchema).default([]),
+  dailyTotal: num,
+})
+
+export const DayTripResponseSchema = z.object({
+  itinerary: z.array(DayTripDaySchema).default([]),
+  tips: z.array(z.string()).default([]),
+  totalEstimatedCost: num,
+}).passthrough()
+
+export type DayTripResponseParsed = z.infer<typeof DayTripResponseSchema>
+
+// ── Blog Content (from /api/blog/generate) ──────────────────────────────
+
+export const BlogContentSchema = z.object({
+  seo_title: str(''),
+  meta_description: str(''),
+  sections: z.object({
+    why_visit: str(''),
+    best_time_to_visit: str(''),
+    budget_breakdown: str(''),
+    top_attractions: str(''),
+    local_food_guide: str(''),
+    money_saving_tips: str(''),
+    safety_tips: str(''),
+    disclaimer: str('').optional(),
+  }).default({
+    why_visit: '', best_time_to_visit: '', budget_breakdown: '',
+    top_attractions: '', local_food_guide: '', money_saving_tips: '',
+    safety_tips: '',
+  }),
+})
+
+export type BlogContentParsed = z.infer<typeof BlogContentSchema>
+
+// ── Multi-City AI result (from /api/multi-city) ─────────────────────────
+
+const MultiCityCityStopSchema = z.object({
+  code: str(''),
+  name: str(''),
+  country: str(''),
+  days: z.coerce.number().default(0),
+  estimatedFlightCost: num,
+  estimatedDailyCost: num,
+  highlights: z.array(z.string()).default([]),
+  arriveDate: str('').optional(),
+  departDate: str('').optional(),
+})
+
+export const MultiCityAIResultSchema = z.object({
+  cities: z.array(MultiCityCityStopSchema).default([]),
+  totalEstimatedCost: num,
+  returnFlightCost: num.optional(),
+  reasoning: str(''),
+}).passthrough()
+
+export type MultiCityAIResultParsed = z.infer<typeof MultiCityAIResultSchema>
+
+// ── Plan Trip AI result (from /api/plan-trip) ───────────────────────────
+// The AI returns fields like whyThisPlace, bestTimeToGo, daily_itinerary, etc.
+// Server adds destination, country, iata, flight costs, hotel_recommendations afterward.
+
+export const PlanTripAIResultSchema = z.object({
+  whyThisPlace: str(''),
+  bestTimeToGo: str(''),
+  localTip: str(''),
+  best_local_food: z.array(z.string()).default([]),
+  budgetBreakdown: z.object({
+    flights: num,
+    hotel: num,
+    activities: num,
+    food: num,
+    total: num,
+  }).optional(),
+  daily_itinerary: z.array(DailyItineraryDaySchema).default([]),
+  local_transportation: z.object({
+    airport_to_city: str(''),
+    daily_transport: str(''),
+    estimated_daily_cost: num,
+  }).optional(),
+  hotel_recommendations: z.array(z.object({
+    name: z.string(),
+    estimated_price_per_night: num,
+    neighborhood: str(''),
+    why_recommended: str(''),
+  })).optional(),
+}).passthrough() // Server adds destination, iata, flight costs, etc.
+
+export type PlanTripAIResultParsed = z.infer<typeof PlanTripAIResultSchema>

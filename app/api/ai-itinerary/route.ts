@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { AIItinerarySchema } from '@/lib/ai-schemas'
 
 export const dynamic = 'force-dynamic'
 
@@ -112,7 +113,7 @@ Return this EXACT JSON structure:
 }`
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.7, 2000)
-    const result = parseAIJSON<ItineraryResponse>(aiResponse.content)
+    const result = parseAIJSON(aiResponse.content, AIItinerarySchema)
 
     // Cache permanently (or for a very long time)
     // In production, save to Supabase instead

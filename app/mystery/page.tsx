@@ -18,6 +18,7 @@ import CompareReveals from '@/components/CompareReveals'
 import type { SavedTrip } from '@/lib/trip-history'
 import { useMystery } from '@/components/MysteryContext'
 import PassportSelector from '@/components/PassportSelector'
+import Breadcrumb from '@/components/Breadcrumb'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -147,13 +148,17 @@ function AlternativesBar({ alternatives }: { alternatives: { destination: string
   return (
     <div className="mt-6 pt-4 border-t border-slate-700/50">
       <p className="text-sm text-white/50 mb-3">Also considered:</p>
-      <div className="flex gap-3 overflow-x-auto pb-1">
-        {alternatives.map((alt, i) => (
-          <div key={i} className="flex-shrink-0 bg-slate-800/50 border border-slate-700/40 rounded-lg px-4 py-2.5 text-sm">
-            <p className="text-white/90 font-medium">{alt.city || alt.destination}</p>
-            <p className="text-white/50 text-xs">{alt.country} &middot; ~${alt.price} flight</p>
-          </div>
-        ))}
+      <div className="relative">
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {alternatives.map((alt, i) => (
+            <div key={i} className="flex-shrink-0 bg-slate-800/50 border border-slate-700/40 rounded-lg px-4 py-2.5 text-sm">
+              <p className="text-white/90 font-medium">{alt.city || alt.destination}</p>
+              <p className="text-white/50 text-xs">{alt.country} &middot; ~${alt.price} flight</p>
+            </div>
+          ))}
+        </div>
+        {/* Fade hint on right edge */}
+        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-slate-950 to-transparent pointer-events-none lg:hidden" />
       </div>
     </div>
   )
@@ -550,6 +555,10 @@ function MysteryPageContent() {
       <Navigation />
 
       <div className="container mx-auto px-4 py-12">
+        <Breadcrumb items={[
+          { label: 'AI Trip Planner', href: '/plan-my-trip' },
+          { label: 'Mystery Trip' },
+        ]} />
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">

@@ -6,6 +6,7 @@ import { getDestinationCost, getAllDestinations, type BudgetTier } from '@/lib/d
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { findCheapestDestinations, dateToMonth, vibeToInterest } from '@/lib/flight-providers/serpapi-explore'
 import { discoverCheapDestinations } from '@/lib/flight-engine'
+import { MultiCityAIResultSchema } from '@/lib/ai-schemas'
 
 export const dynamic = 'force-dynamic'
 
@@ -375,12 +376,7 @@ Return this EXACT JSON structure (no wrapping, no markdown):
     console.log('[Multi-City] Calling AI for trip planning...')
     const maxTokens = numCities <= 5 ? 2500 : numCities <= 7 ? 3500 : 4500
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.8, maxTokens)
-    const aiResult = parseAIJSON<{
-      cities: CityStop[]
-      totalEstimatedCost: number
-      returnFlightCost?: number
-      reasoning: string
-    }>(aiResponse.content)
+    const aiResult = parseAIJSON(aiResponse.content, MultiCityAIResultSchema)
 
     // ─── Override AI flight prices with real data where available ───
     if (hasRealPrices) {

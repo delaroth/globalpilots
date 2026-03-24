@@ -23,6 +23,7 @@ export async function GET() {
       base: 'USD',
       rates,
       currencies: SUPPORTED_CURRENCIES,
+      fetchedAt: new Date().toISOString(),
     },
     {
       headers: {

@@ -141,23 +141,27 @@ export default function Home() {
               See all →
             </Link>
           </div>
-          <div ref={scrollRef} className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
-            {trending.map((dest, i) => (
-              <Link
-                key={dest.airportCode || dest.name}
-                href={`/mystery?dest=${dest.airportCode || ''}`}
-                className="flex-shrink-0 w-44 bg-white/[0.04] border border-white/[0.08] rounded-xl p-4 hover:bg-white/[0.07] hover:border-sky-500/20 transition-all group"
-              >
-                <p className="text-lg mb-1">{dest.flag || '🌍'}</p>
-                <p className="text-white font-semibold text-sm group-hover:text-sky-400 transition">{dest.name}</p>
-                <p className="text-slate-500 text-xs">{dest.country}</p>
-                {(dest.flightPrice || dest.dailyCost) && (
-                  <p className="text-sky-400 text-xs mt-2 font-medium">
-                    {dest.flightPrice ? `From ${currency.format(dest.flightPrice)}` : `~${currency.format(dest.dailyCost)}/day`}
-                  </p>
-                )}
-              </Link>
-            ))}
+          <div className="relative">
+            <div ref={scrollRef} className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+              {trending.map((dest, i) => (
+                <Link
+                  key={dest.airportCode || dest.name}
+                  href={`/mystery?dest=${dest.airportCode || ''}`}
+                  className="flex-shrink-0 w-44 bg-white/[0.04] border border-white/[0.08] rounded-xl p-4 hover:bg-white/[0.07] hover:border-sky-500/20 transition-all group"
+                >
+                  <p className="text-lg mb-1">{dest.flag || '🌍'}</p>
+                  <p className="text-white font-semibold text-sm group-hover:text-sky-400 transition">{dest.name}</p>
+                  <p className="text-slate-500 text-xs">{dest.country}</p>
+                  {(dest.flightPrice || dest.dailyCost) && (
+                    <p className="text-sky-400 text-xs mt-2 font-medium">
+                      {dest.flightPrice ? `From ${currency.format(dest.flightPrice)}` : `~${currency.format(dest.dailyCost)}/day`}
+                    </p>
+                  )}
+                </Link>
+              ))}
+            </div>
+            {/* Fade hint on right edge */}
+            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-slate-950 to-transparent pointer-events-none lg:hidden" />
           </div>
         </section>
       )}

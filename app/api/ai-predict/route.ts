@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { PredictResponseSchema } from '@/lib/ai-schemas'
 
 export const dynamic = 'force-dynamic'
 
@@ -127,7 +128,7 @@ Return this EXACT JSON structure:
 }`
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.5, 300)
-    const result = parseAIJSON<PredictResponse>(aiResponse.content)
+    const result = parseAIJSON(aiResponse.content, PredictResponseSchema)
 
     // Cache for 6 hours
     setCache(cacheKey, result, 6 * 60 * 60 * 1000)

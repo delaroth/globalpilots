@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { searchDestinations, type DestinationCost } from '@/lib/destination-costs'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { DayTripResponseSchema } from '@/lib/ai-schemas'
 
 export const dynamic = 'force-dynamic'
 
@@ -152,7 +153,7 @@ Return JSON with this exact structure:
     console.log(`[DayTrip] Generating ${days}-day itinerary for ${destination}`)
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.9, 3000)
-    const result = parseAIJSON<DayTripResponse>(aiResponse.content)
+    const result = parseAIJSON(aiResponse.content, DayTripResponseSchema)
 
     // Ensure the itinerary array exists and has the right structure
     if (!result.itinerary || !Array.isArray(result.itinerary)) {

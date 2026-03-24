@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { searchHotels } from '@/lib/flight-providers/serpapi-hotels'
+import { PlanTripAIResultSchema } from '@/lib/ai-schemas'
 
 export const dynamic = 'force-dynamic'
 
@@ -184,7 +185,7 @@ RULES:
       hotelsPromise,
     ])
 
-    const result = parseAIJSON<any>(aiResponse.content)
+    const result = parseAIJSON(aiResponse.content, PlanTripAIResultSchema)
 
     // Use real hotels if available, otherwise keep AI-generated ones (with warning)
     if (realHotels) {

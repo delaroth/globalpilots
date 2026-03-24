@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
 import { supabase } from '@/lib/supabase'
+import { BlogContentSchema } from '@/lib/ai-schemas'
 
 export const dynamic = 'force-dynamic'
 
@@ -115,7 +116,7 @@ Return this EXACT JSON structure:
     console.log('[Blog Generate] Calling AI to generate blog content...')
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.7, 3000)
-    const blogContent = parseAIJSON<BlogContent>(aiResponse.content)
+    const blogContent = parseAIJSON(aiResponse.content, BlogContentSchema)
 
     // Ensure disclaimer exists
     if (!blogContent.sections.disclaimer) {
