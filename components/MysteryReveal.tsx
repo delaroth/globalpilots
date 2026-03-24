@@ -252,6 +252,7 @@ export default function MysteryReveal({
   // Enrichment
   const [enrichment, setEnrichment] = useState<EnrichmentData | null>(null)
   const [enrichmentLoading, setEnrichmentLoading] = useState(false)
+  const enrichmentAttempted = useRef(false)
 
   const iata = destination.city_code_IATA || destination.iata || ''
 
@@ -402,17 +403,22 @@ export default function MysteryReveal({
     }
   }, [destination.destination, destination.country, iata, effectiveDepartDate, totalCost])
 
-  // Fetch enrichment data immediately (no waiting for "reveal")
+  // Fetch enrichment data once when we have a valid city name (not an IATA code)
   useEffect(() => {
+    if (enrichmentAttempted.current) return
     if (enrichment || enrichmentLoading) return
-    if (!destination.destination) return
+    // Don't fetch if destination looks like a bare IATA code (3 uppercase letters)
+    const name = destination.destination || ''
+    if (!name || /^[A-Z]{3}$/.test(name)) return
+    if (!destination.country) return
 
+    enrichmentAttempted.current = true
     setEnrichmentLoading(true)
     fetch('/api/enrich-destination', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        cityName: destination.destination,
+        cityName: name,
         country: destination.country,
         iata,
         departDate: effectiveDepartDate,

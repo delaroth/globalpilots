@@ -11,6 +11,7 @@ import { trackFeatureUse } from '@/lib/analytics'
 import { getCachedDestination, cacheDestination, incrementRevealCount, buildBasicInfo } from '@/lib/destination-cache'
 import { checkVisaRequirement } from '@/lib/enrichment/visa'
 import { callAI } from '@/lib/ai'
+import { lookupAirportByCode } from '@/lib/geolocation'
 
 export const dynamic = 'force-dynamic'
 
@@ -363,7 +364,15 @@ export async function POST(request: NextRequest) {
               return (data.data || [])
                 .filter((d: any) => d.value <= maxFlightPrice)
                 .slice(0, 20)
-                .map((d: any) => ({ destination: d.destination, price: d.value }))
+                .map((d: any) => {
+                  const airport = lookupAirportByCode(d.destination)
+                  return {
+                    destination: d.destination,
+                    city: airport?.city || d.destination,
+                    country: airport?.country || '',
+                    price: d.value,
+                  }
+                })
                 .sort((a: any, b: any) => a.price - b.price)
             })
         : Promise.resolve([] as typeof priceInfo)
@@ -527,7 +536,7 @@ Respond with ONLY the 3-letter IATA code. Nothing else.`
 
     try {
       const validated = await searchFlight({
-        origin,
+        origin: primaryOrigin,
         destination: picked.destination,
         departDate: computedDepartDate,
         routeType: 'price-check',
