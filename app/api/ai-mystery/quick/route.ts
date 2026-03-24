@@ -580,9 +580,16 @@ Respond with ONLY the 3-letter IATA code. Nothing else.`
       return d.toISOString().split('T')[0]
     })()
 
+    // Ensure city/country are resolved — TravelPayouts only returns IATA codes
+    const resolvedAirport = (!picked.city || !picked.country)
+      ? lookupAirportByCode(picked.destination)
+      : null
+    const resolvedCity = picked.city || resolvedAirport?.city || picked.destination
+    const resolvedCountry = picked.country || resolvedAirport?.country || ''
+
     const result = {
-      destination: picked.city || picked.destination,
-      country: picked.country || '',
+      destination: resolvedCity,
+      country: resolvedCountry,
       iata: picked.destination,
       city_code_IATA: picked.destination,
       estimated_flight_cost: validatedPrice,

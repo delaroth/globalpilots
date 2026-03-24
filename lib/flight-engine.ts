@@ -18,6 +18,7 @@ import { getSerpApiUsage, searchGoogleFlights } from './flight-providers/serpapi
 import { findCheapestDestinations } from './flight-providers/serpapi-explore'
 import { searchFlightApi, isFlightApiAvailable } from './flightapi'
 import { getAirportCoords } from '@/data/airport-coordinates'
+import { lookupAirportByCode } from './geolocation'
 import { checkVisaRequirement, checkBestVisaStatus } from './enrichment/visa'
 import { getDestinationCost, type BudgetTier } from './destination-costs'
 import { callAI, parseAIJSON } from './ai'
@@ -336,10 +337,15 @@ export async function discoverCheapDestinations(params: {
     if (filtered.length > 0) {
       console.log(`[FlightEngine] discoverCheap: TravelPayouts returned ${filtered.length} destinations from ${origin}`)
       return {
-        destinations: filtered.slice(0, limit).map(d => ({
-          destination: d.destination,
-          price: d.price,
-        })),
+        destinations: filtered.slice(0, limit).map(d => {
+          const airport = lookupAirportByCode(d.destination)
+          return {
+            destination: d.destination,
+            city: airport?.city || d.destination,
+            country: airport?.country || '',
+            price: d.price,
+          }
+        }),
         source: 'travelpayouts',
       }
     }

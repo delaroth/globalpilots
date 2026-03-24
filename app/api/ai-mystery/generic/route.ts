@@ -42,10 +42,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
     }
 
-    const { destination, country, iata } = body
+    const { destination, iata } = body
+    let { country } = body
 
-    if (!destination || !country || !iata) {
-      return NextResponse.json({ error: 'Missing required parameters: destination, country, iata' }, { status: 400 })
+    if (!destination || !iata) {
+      return NextResponse.json({ error: 'Missing required parameters: destination, iata' }, { status: 400 })
+    }
+
+    // Resolve country from IATA if missing (TravelPayouts doesn't always provide it)
+    if (!country) {
+      const { lookupAirportByCode } = await import('@/lib/geolocation')
+      const airport = lookupAirportByCode(iata)
+      country = airport?.country || 'Unknown'
     }
 
     // ── Check Supabase destination_cache for existing AI content ──

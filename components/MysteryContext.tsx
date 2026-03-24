@@ -89,13 +89,13 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
   const isVisible = state.status !== 'idle'
 
   // -------------------------------------------------------------------
-  // Fetch generic cached data for a destination
+  // Fetch generic cached data for a destination (with one retry)
   // -------------------------------------------------------------------
   const fetchGenericData = useCallback((
     dest: { destination: string; country: string; iata: string },
     abortSignal: AbortSignal,
   ) => {
-    return fetch('/api/ai-mystery/generic', {
+    const doFetch = () => fetch('/api/ai-mystery/generic', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: abortSignal,
@@ -105,8 +105,20 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
         iata: dest.iata,
       }),
     }).then(async (res) => {
-      if (!res.ok) throw new Error('Failed to fetch generic data')
+      if (!res.ok) throw new Error(`Failed to fetch generic data (${res.status})`)
       return res.json()
+    })
+
+    return doFetch().catch((err) => {
+      if (err.name === 'AbortError') throw err
+      console.warn('[MysteryContext] Generic fetch failed, retrying in 2s:', err.message)
+      return new Promise<any>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          doFetch().then(resolve).catch(reject)
+        }, 2000)
+        // Clean up timer if aborted during wait
+        abortSignal.addEventListener('abort', () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')) }, { once: true })
+      })
     })
   }, [])
 
@@ -439,6 +451,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
                   best_local_food: detailsData.best_local_food?.length > 0 ? detailsData.best_local_food : prev.destination.best_local_food || [],
                   insider_tip: detailsData.insider_tip || prev.destination.insider_tip || '',
                   localTip: detailsData.localTip || prev.destination.localTip || '',
+                  bestTimeToGo: detailsData.bestTimeToGo || prev.destination.bestTimeToGo || '',
                   genericData: prev.destination.genericData || detailsData.genericData,
                 },
               }

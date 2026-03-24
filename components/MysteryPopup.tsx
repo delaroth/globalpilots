@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useMystery } from '@/components/MysteryContext'
 import { useCurrency } from '@/hooks/useCurrency'
@@ -94,7 +94,6 @@ function MysteryPanel() {
   const { state, minimize, dismiss, searchParams, rerollCount, maxRerolls, handleReroll, handleShowAnother } = useMystery()
   const currency = useCurrency()
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Lock body scroll when panel is open
   useEffect(() => {
@@ -123,81 +122,54 @@ function MysteryPanel() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[70]"
     >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={minimize}
-      />
-
-      {/* Panel */}
+      {/* Panel — full screen by default */}
       <motion.div
-        initial={{ y: '100%', opacity: 0.5 }}
+        initial={{ y: 20, opacity: 0.8 }}
         animate={{ y: 0, opacity: 1 }}
-        exit={{ y: '100%', opacity: 0.5 }}
-        transition={{ type: 'spring', stiffness: 350, damping: 35 }}
-        className={`relative w-full overflow-hidden shadow-2xl border border-white/10 ${
-          isFullscreen
-            ? 'max-w-none max-h-none h-screen rounded-none'
-            : 'sm:max-w-[800px] max-h-[90vh] sm:max-h-[80vh] rounded-t-2xl sm:rounded-2xl'
-        }`}
+        exit={{ y: 20, opacity: 0 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+        className="relative w-full h-full overflow-hidden"
         style={{
-          background: 'linear-gradient(145deg, rgba(15,23,42,0.97) 0%, rgba(30,41,59,0.97) 100%)',
-          backdropFilter: 'blur(20px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          background: 'linear-gradient(145deg, rgba(10,15,30,0.99) 0%, rgba(15,23,42,0.99) 50%, rgba(20,30,50,0.99) 100%)',
         }}
       >
         {/* Header bar */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-white/5">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/[0.06] bg-white/[0.02]">
+          <div className="flex items-center gap-3 min-w-0">
             {state.status === 'searching' && (
-              <div className="w-4 h-4 border-2 border-sky-400/30 border-t-sky-400 rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-sky-400/30 border-t-sky-400 rounded-full animate-spin shrink-0" />
             )}
-            {state.status === 'quick-ready' && (
-              <div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-            )}
-            {state.status === 'generic-ready' && (
-              <div className="w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+            {(state.status === 'quick-ready' || state.status === 'generic-ready') && (
+              <div className="w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin shrink-0" />
             )}
             {state.status === 'ready' && (
-              <span className="text-emerald-400">&#x2713;</span>
+              <span className="text-emerald-400 shrink-0">&#x2713;</span>
             )}
             {state.status === 'error' && (
-              <span className="text-red-400">&#x2715;</span>
+              <span className="text-red-400 shrink-0">&#x2715;</span>
             )}
-            <h3 className="text-white font-semibold text-sm">
+            <h3 className="text-white font-semibold text-sm truncate">
               {state.status === 'searching' && 'Finding your mystery destination...'}
-              {state.status === 'quick-ready' && `${state.destination?.destination || 'Destination'} - Loading details...`}
-              {state.status === 'generic-ready' && `${state.destination?.destination || 'Destination'} - Finalizing itinerary...`}
-              {state.status === 'ready' && `${state.destination?.destination || 'Mystery Trip'} - Ready!`}
+              {state.status === 'quick-ready' && `${state.destination?.destination || 'Destination'} — Loading details...`}
+              {state.status === 'generic-ready' && `${state.destination?.destination || 'Destination'} — Finalizing itinerary...`}
+              {state.status === 'ready' && `${state.destination?.destination || 'Mystery Trip'} — Ready!`}
               {state.status === 'error' && 'Search Failed'}
             </h3>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={minimize}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition"
               aria-label="Minimize"
-              title="Minimize"
+              title="Minimize to pill"
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 10l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
-            <button
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition hidden sm:flex"
-              aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-            >
-              {isFullscreen ? (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2v4H2M10 14v-4h4M2 10h4v4M14 6h-4V2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 6V2h4M14 10v4h-4M10 2h4v4M6 14H2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              )}
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
             </button>
             <button
               onClick={dismiss}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-white/50 hover:text-red-400 hover:bg-white/10 transition"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-red-400 hover:bg-white/10 transition"
               aria-label="Close"
               title="Close"
             >
@@ -206,39 +178,37 @@ function MysteryPanel() {
           </div>
         </div>
 
-        {/* Scrollable content */}
-        <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 56px)' }}>
+        {/* Scrollable content — full viewport height minus header */}
+        <div ref={scrollRef} className="overflow-y-auto h-[calc(100vh-49px)]">
           {/* Searching state */}
           {state.status === 'searching' && (
-            <div className="flex flex-col items-center justify-center py-20 px-6">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
               <div className="w-16 h-16 border-4 border-sky-400/20 border-t-sky-400 rounded-full animate-spin mb-6" />
               <p className="text-white/80 text-lg font-medium">Finding your mystery destination...</p>
-              <p className="text-white/40 text-sm mt-2">You can browse other pages while we search</p>
+              <p className="text-white/40 text-sm mt-2">You can minimize this while we search</p>
             </div>
           )}
 
           {/* Show MysteryReveal as soon as destination is known — content loads progressively */}
           {(state.status === 'quick-ready' || state.status === 'generic-ready' || state.status === 'ready') && state.destination && state.destination.destination && (state.destination.city_code_IATA || state.destination.iata) && (
-            <div className="mystery-popup-reveal">
-              <MysteryReveal
-                destination={state.destination}
-                origin={origin}
-                departDate={departDate}
-                tripDuration={tripDuration}
-                onShowAnother={handleShowAnother}
-                onReroll={handleReroll}
-                rerollCount={rerollCount}
-                maxRerolls={maxRerolls}
-                detailsLoading={state.status !== 'ready' || state.detailsLoading}
-                currencyFormat={currency.format}
-                userBudgetUSD={searchParams?.budget}
-              />
-            </div>
+            <MysteryReveal
+              destination={state.destination}
+              origin={origin}
+              departDate={departDate}
+              tripDuration={tripDuration}
+              onShowAnother={handleShowAnother}
+              onReroll={handleReroll}
+              rerollCount={rerollCount}
+              maxRerolls={maxRerolls}
+              detailsLoading={state.status !== 'ready' || state.detailsLoading}
+              currencyFormat={currency.format}
+              userBudgetUSD={searchParams?.budget}
+            />
           )}
 
           {/* Ready but invalid destination */}
           {state.status === 'ready' && state.destination && (!state.destination.destination || !state.destination.city_code_IATA) && (
-            <div className="flex flex-col items-center justify-center py-16 px-6">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
               <div className="text-6xl mb-4">&#x1F615;</div>
               <h2 className="text-2xl font-bold text-red-400 mb-3">Oops! Something went wrong</h2>
               <p className="text-white/60 mb-6 text-center">
@@ -255,7 +225,7 @@ function MysteryPanel() {
 
           {/* Error state */}
           {state.status === 'error' && (
-            <div className="flex flex-col items-center justify-center py-16 px-6">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
               <div className="text-6xl mb-4">&#x26A0;&#xFE0F;</div>
               <h2 className="text-xl font-bold text-red-400 mb-3">Search Failed</h2>
               <p className="text-white/60 mb-6 text-center max-w-md">

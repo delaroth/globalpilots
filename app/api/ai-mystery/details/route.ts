@@ -111,7 +111,6 @@ export async function POST(request: NextRequest) {
 
     const {
       destination,
-      country,
       iata,
       origin,
       budget,
@@ -121,6 +120,7 @@ export async function POST(request: NextRequest) {
       flightPrice,
       hotelEstimate,
     } = body
+    let { country } = body
     const accommodationLevel = body.accommodationLevel || 'mid-range'
     const budgetPriority = body.budgetPriority || 'balanced'
     const components: PackageComponents = body.packageComponents || {
@@ -131,11 +131,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Validation
-    if (!destination || !country || !iata || !origin || !budget || !vibes || vibes.length === 0) {
+    if (!destination || !iata || !origin || !budget || !vibes || vibes.length === 0) {
       return NextResponse.json(
         { error: 'Missing required parameters' },
         { status: 400 }
       )
+    }
+
+    // Resolve country from IATA if missing
+    if (!country) {
+      const { lookupAirportByCode } = await import('@/lib/geolocation')
+      const airport = lookupAirportByCode(iata)
+      country = airport?.country || 'Unknown'
     }
 
     // Budget allocation — uses customSplit if provided, otherwise priority preset
@@ -161,18 +168,25 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Details] Generating content for ${destination} (${iata}) — itinerary AI + real hotel search + transport AI`)
 
-    // ── Call A: Itinerary (~800 tokens max) ──
+    // ── Call A: Itinerary + generic fallback (~1000 tokens max) ──
     const itineraryPromise = (components.includeItinerary !== false)
       ? callAI(
           `Travel planner for ${destination}, ${country}. JSON only.`,
-          `Generate a ${tripDuration}-day itinerary for ${destination}.
+          `Generate a ${tripDuration}-day itinerary for ${destination} plus quick destination info.
 Budget: $${dailyActivityBudget}/day for activities. Style: ${vibes.join(', ')}.
-Return JSON: {"daily_itinerary":[{"day":1,"activities":[{"time":"09:00 AM","activity":"...","estimated_cost":0}],"total_day_cost":0}],"itinerary":[{"day":1,"activities":["Activity 1","Activity 2","Activity 3"]}]}
+Return JSON: {"daily_itinerary":[{"day":1,"activities":[{"time":"09:00 AM","activity":"...","estimated_cost":0}],"total_day_cost":0}],"itinerary":[{"day":1,"activities":["Activity 1","Activity 2","Activity 3"]}],"whyThisPlace":"2-3 sentences on why ${destination} is great for ${vibes.join(', ')} travelers","best_local_food":["Dish 1","Dish 2","Dish 3","Dish 4","Dish 5"],"insider_tip":"One practical insider tip for visitors","bestTimeToGo":"Best months or season to visit"}
 Keep activity descriptions under 10 words each. ${tripDuration} days total. Daily costs must not exceed $${dailyActivityBudget}.`,
           0.9,
-          800,
+          1000,
         ).then(res => {
-          const parsed = parseAIJSON<{ daily_itinerary?: DetailsResponse['daily_itinerary']; itinerary?: DetailsResponse['itinerary'] }>(res.content)
+          const parsed = parseAIJSON<{
+            daily_itinerary?: DetailsResponse['daily_itinerary']
+            itinerary?: DetailsResponse['itinerary']
+            whyThisPlace?: string
+            best_local_food?: string[]
+            insider_tip?: string
+            bestTimeToGo?: string
+          }>(res.content)
           return parsed
         }).catch(err => {
           console.warn('[Details] Itinerary call failed:', err.message)
@@ -279,6 +293,12 @@ Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per
         result.day2 = result.itinerary[1]?.activities || []
         result.day3 = result.itinerary[2]?.activities || []
       }
+
+      // Generic-like fields from the itinerary AI call (redundancy for when generic endpoint fails)
+      if (itineraryData.whyThisPlace) result.whyThisPlace = itineraryData.whyThisPlace
+      if (itineraryData.best_local_food?.length) result.best_local_food = itineraryData.best_local_food
+      if (itineraryData.insider_tip) result.insider_tip = itineraryData.insider_tip
+      if (itineraryData.bestTimeToGo) result.bestTimeToGo = itineraryData.bestTimeToGo
     }
 
     // Hotels

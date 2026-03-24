@@ -540,15 +540,15 @@ export default function MysteryReveal({
   // -----------------------------------------------------------------------
 
   return (
-    <div className="max-w-4xl mx-auto pb-20 lg:pb-0">
+    <div className="pb-20 lg:pb-0">
       {/* Progressive reveal — content appears as data loads */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } }}
       >
-            <div className="bg-white/[0.04] backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden border border-white/10">
-              {/* ---- Hero header ---- */}
-              <div className="h-64 relative overflow-hidden">
+            <div>
+              {/* ---- Hero header — full width ---- */}
+              <div className="h-56 sm:h-72 lg:h-80 relative overflow-hidden">
                 {heroPhoto ? (
                   <>
                     <img
@@ -556,40 +556,43 @@ export default function MysteryReveal({
                       alt={heroPhoto.alt}
                       className="absolute inset-0 w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,15,30,1)] via-[rgba(10,15,30,0.4)] to-transparent" />
                   </>
                 ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-sky-500 via-sky-600 to-slate-900">
+                  <div className="absolute inset-0 bg-gradient-to-br from-sky-600/80 via-sky-700/60 to-transparent">
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-9xl">
+                      <span className="text-[10rem] opacity-30">
                         {enrichment?.country?.flag || '🌍'}
                       </span>
                     </div>
                   </div>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-6">
-                  <motion.h2
-                    {...staggerChild(0)}
-                    className="text-4xl font-bold text-white drop-shadow-lg"
-                  >
-                    {destination.destination}
-                  </motion.h2>
-                  <motion.p {...staggerChild(1)} className="text-xl text-sky-300">
-                    {enrichment?.country?.flag ? `${enrichment.country.flag} ` : ''}
-                    {destination.country}
-                  </motion.p>
-                  <motion.p {...staggerChild(2)} className="text-sm text-white/80 mt-1">
-                    {formatDate(effectiveDepartDate)} &rarr;{' '}
-                    {formatDate(effectiveReturnDate)} &middot; {tripDuration} nights
-                  </motion.p>
+                <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 lg:px-12">
+                  <div className="max-w-6xl mx-auto">
+                    <motion.h2
+                      {...staggerChild(0)}
+                      className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white drop-shadow-lg"
+                    >
+                      {destination.destination}
+                    </motion.h2>
+                    <motion.p {...staggerChild(1)} className="text-xl sm:text-2xl text-sky-300 mt-1">
+                      {enrichment?.country?.flag ? `${enrichment.country.flag} ` : ''}
+                      {destination.country}
+                    </motion.p>
+                    <motion.p {...staggerChild(2)} className="text-sm sm:text-base text-white/70 mt-2">
+                      {formatDate(effectiveDepartDate)} &rarr;{' '}
+                      {formatDate(effectiveReturnDate)} &middot; {tripDuration} nights
+                    </motion.p>
+                  </div>
                 </div>
               </div>
 
-              {/* ---- Card body ---- */}
-              <div className="p-8 space-y-6">
+              {/* ---- Content body — 2-column grid on desktop ---- */}
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 lg:py-8 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-x-10">
+
                 {/* Blog link */}
                 {destination.blog_post_slug && (
-                  <motion.div {...staggerChild(3)}>
+                  <motion.div {...staggerChild(3)} className="lg:col-span-2">
                     <Link
                       href={`/blog/${destination.blog_post_slug}`}
                       className="block bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 hover:bg-amber-500/20 transition"
@@ -606,7 +609,7 @@ export default function MysteryReveal({
                 )}
 
                 {/* ---- Budget Breakdown ---- */}
-                <motion.div {...staggerChild(4)}>
+                <motion.div {...staggerChild(4)} className="lg:col-span-2">
                   {destination.budget_breakdown ? (
                     <div className={`bg-white/[0.06] border rounded-xl p-6 ${destination.budget_breakdown.over_budget ? 'border-amber-500/30' : 'border-emerald-500/20'}`}>
                       <h3 className="text-xl font-bold text-white mb-4">
@@ -800,30 +803,28 @@ export default function MysteryReveal({
                 </motion.p>
 
                 {/* Why It's Perfect */}
+                {(destination.whyThisPlace || destination.why_its_perfect || detailsLoading) && (
                 <motion.div {...staggerChild(6)}>
                   <div className="bg-white/[0.04] backdrop-blur-sm rounded-xl p-5 border border-white/10">
                     <h3 className="text-xl font-bold text-white mb-2">
                       Why This Destination?
                     </h3>
-                    {hasAIDetails ? (
+                    {(destination.whyThisPlace || destination.why_its_perfect) ? (
                       <FadeIn visible={true}>
                         <p className="text-white/70">
                           {destination.whyThisPlace || destination.why_its_perfect}
                         </p>
                       </FadeIn>
-                    ) : detailsLoading ? (
+                    ) : (
                       <div className="space-y-2">
                         <Shimmer className="h-4 w-full" />
                         <Shimmer className="h-4 w-11/12" />
                         <Shimmer className="h-4 w-9/12" />
                       </div>
-                    ) : (
-                      <p className="text-white/70">
-                        {destination.whyThisPlace || destination.why_its_perfect}
-                      </p>
                     )}
                   </div>
                 </motion.div>
+                )}
 
                 {/* Best Time to Go */}
                 {destination.bestTimeToGo ? (
@@ -1084,31 +1085,39 @@ export default function MysteryReveal({
                 ) : null}
 
                 {/* Food */}
-                <motion.div {...staggerChild(11)}>
-                  <h3 className="text-xl font-bold text-white mb-3">
-                    Must-Try Local Food
-                  </h3>
-                  {destination.best_local_food && destination.best_local_food.length > 0 ? (
-                    <FadeIn visible={true}>
-                      <div className="flex flex-wrap gap-2">
-                        {destination.best_local_food.map((food, idx) => (
-                          <span
-                            key={idx}
-                            className="bg-amber-500/10 border border-amber-500/20 text-amber-300 px-4 py-2 rounded-full text-sm font-medium"
-                          >
-                            {food}
-                          </span>
-                        ))}
-                      </div>
-                    </FadeIn>
-                  ) : detailsLoading ? (
-                    <div className="flex flex-wrap gap-2">
-                      <Shimmer className="h-9 w-24 rounded-full" />
-                      <Shimmer className="h-9 w-32 rounded-full" />
-                      <Shimmer className="h-9 w-28 rounded-full" />
-                    </div>
-                  ) : null}
-                </motion.div>
+                {(() => {
+                  const cachedFood = destination.cachedBasicInfo?.localFood
+                  const foodList = (destination.best_local_food && destination.best_local_food.length > 0)
+                    ? destination.best_local_food
+                    : (cachedFood && cachedFood.length > 0 ? cachedFood : null)
+                  return (foodList || detailsLoading) ? (
+                    <motion.div {...staggerChild(11)}>
+                      <h3 className="text-xl font-bold text-white mb-3">
+                        Must-Try Local Food
+                      </h3>
+                      {foodList ? (
+                        <FadeIn visible={true}>
+                          <div className="flex flex-wrap gap-2">
+                            {foodList.map((food, idx) => (
+                              <span
+                                key={idx}
+                                className="bg-amber-500/10 border border-amber-500/20 text-amber-300 px-4 py-2 rounded-full text-sm font-medium"
+                              >
+                                {food}
+                              </span>
+                            ))}
+                          </div>
+                        </FadeIn>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          <Shimmer className="h-9 w-24 rounded-full" />
+                          <Shimmer className="h-9 w-32 rounded-full" />
+                          <Shimmer className="h-9 w-28 rounded-full" />
+                        </div>
+                      )}
+                    </motion.div>
+                  ) : null
+                })()}
 
                 {/* Insider Tip */}
                 <motion.div {...staggerChild(12)}>
@@ -1200,73 +1209,74 @@ export default function MysteryReveal({
                 {/* ============================================================
                     BOOKING BUTTONS
                 ============================================================ */}
-                <motion.div {...staggerChild(14)} ref={bookingRef} className="space-y-3">
+                <motion.div {...staggerChild(14)} ref={bookingRef} className="lg:col-span-2">
                   <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                     Book Your Trip
                     <AffiliateDisclosure />
                   </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Flight */}
+                    <BookingTracker
+                      stampId={stampId || ''}
+                      type="flight"
+                      provider={AFFILIATE_FLAGS.kiwi ? 'Kiwi' : 'Aviasales'}
+                      href={bookingBundle.flightUrl}
+                      className="block w-full bg-emerald-500/90 hover:bg-emerald-500 text-white font-bold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl text-center"
+                    >
+                      {flightPrice ? (
+                        <>Book Flights (~{fmt(flightPrice)}{isEstimate ? ' est.' : ''})</>
+                      ) : (
+                        <>Search Flights</>
+                      )}
+                      <span className="block text-sm font-normal mt-1 opacity-90">
+                        {formatDate(effectiveDepartDate)} &middot;{' '}
+                        {AFFILIATE_FLAGS.kiwi
+                          ? 'Search on Kiwi'
+                          : 'Search on Aviasales'}
+                      </span>
+                    </BookingTracker>
 
-                  {/* Flight */}
-                  <BookingTracker
-                    stampId={stampId || ''}
-                    type="flight"
-                    provider={AFFILIATE_FLAGS.kiwi ? 'Kiwi' : 'Aviasales'}
-                    href={bookingBundle.flightUrl}
-                    className="block w-full bg-emerald-500/90 hover:bg-emerald-500 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl text-center"
-                  >
-                    {flightPrice ? (
-                      <>Book Flights (~{fmt(flightPrice)}{isEstimate ? ' est.' : ''})</>
-                    ) : (
-                      <>Search Flights</>
-                    )}
-                    <span className="block text-sm font-normal mt-1 opacity-90">
-                      {formatDate(effectiveDepartDate)} &middot;{' '}
-                      {AFFILIATE_FLAGS.kiwi
-                        ? 'Search on Kiwi'
-                        : 'Search on Aviasales'}
-                    </span>
-                  </BookingTracker>
+                    {/* Hotel */}
+                    <BookingTracker
+                      stampId={stampId || ''}
+                      type="hotel"
+                      provider="Agoda"
+                      href={bookingBundle.hotelUrl}
+                      className="block w-full bg-blue-500/90 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl text-center"
+                    >
+                      {destination.estimated_hotel_per_night ? (
+                        <>Find Hotels (~{fmt(destination.estimated_hotel_per_night)}/night)</>
+                      ) : (
+                        <>Search Hotels</>
+                      )}
+                      <span className="block text-sm font-normal mt-1 opacity-90">
+                        {formatDate(effectiveDepartDate)} &ndash;{' '}
+                        {formatDate(effectiveReturnDate)} &middot; Booking.com
+                      </span>
+                    </BookingTracker>
 
-                  {/* Hotel */}
-                  <BookingTracker
-                    stampId={stampId || ''}
-                    type="hotel"
-                    provider="Agoda"
-                    href={bookingBundle.hotelUrl}
-                    className="block w-full bg-blue-500/90 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl text-center"
-                  >
-                    {destination.estimated_hotel_per_night ? (
-                      <>Find Hotels (~{fmt(destination.estimated_hotel_per_night)}/night)</>
-                    ) : (
-                      <>Search Hotels</>
-                    )}
-                    <span className="block text-sm font-normal mt-1 opacity-90">
-                      {formatDate(effectiveDepartDate)} &ndash;{' '}
-                      {formatDate(effectiveReturnDate)} &middot; Search on Booking.com
-                    </span>
-                  </BookingTracker>
-
-                  {/* Activities */}
-                  <BookingTracker
-                    stampId={stampId || ''}
-                    type="activity"
-                    provider="GetYourGuide"
-                    href={bookingBundle.activitiesUrl}
-                    className="block w-full bg-purple-500/90 hover:bg-purple-500 text-white font-bold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl text-center"
-                  >
-                    Find Activities
-                    <span className="block text-sm font-normal mt-1 opacity-90">
-                      Browse on GetYourGuide
-                    </span>
-                  </BookingTracker>
-                  <p className="text-xs text-white/40 text-center mt-2">You book directly with the airline or hotel. GlobePilots never handles your payment.</p>
+                    {/* Activities */}
+                    <BookingTracker
+                      stampId={stampId || ''}
+                      type="activity"
+                      provider="GetYourGuide"
+                      href={bookingBundle.activitiesUrl}
+                      className="block w-full bg-purple-500/90 hover:bg-purple-500 text-white font-bold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl text-center"
+                    >
+                      Find Activities
+                      <span className="block text-sm font-normal mt-1 opacity-90">
+                        Browse on GetYourGuide
+                      </span>
+                    </BookingTracker>
+                  </div>
+                  <p className="text-xs text-white/40 text-center mt-3">You book directly with the airline or hotel. GlobePilots never handles your payment.</p>
                 </motion.div>
 
                 {/* ============================================================
                     DESTINATION INTEL (Enrichment Data)
                     Shows cached basicInfo instantly, enrichment fills in live data
                 ============================================================ */}
-                <motion.div {...staggerChild(15)}>
+                <motion.div {...staggerChild(15)} className="lg:col-span-2">
                   {enrichmentLoading && !enrichment ? (
                     <div className="space-y-3">
                       <h3 className="text-xl font-bold text-white mb-4">
@@ -1668,7 +1678,7 @@ export default function MysteryReveal({
 
                 {/* ---- Trip Prep: Phrasebook, Packing, Practical ---- */}
                 {enrichment?.country && (
-                  <motion.div {...staggerChild(16)}>
+                  <motion.div {...staggerChild(16)} className="lg:col-span-2">
                     <TripPrep
                       countryCode={countryNameToCode(destination.country) || ''}
                       cityName={destination.destination}
@@ -1679,8 +1689,8 @@ export default function MysteryReveal({
                 )}
 
                 {/* ---- Email capture — shown after full reveal ---- */}
-                <motion.div {...staggerChild(17)}>
-                  <div className="mt-6 bg-white/[0.04] border border-white/10 rounded-xl p-5 text-center">
+                <motion.div {...staggerChild(17)} className="lg:col-span-2">
+                  <div className="bg-white/[0.04] border border-white/10 rounded-xl p-5 text-center">
                     <p className="text-white font-medium mb-1">Track prices for this trip</p>
                     <p className="text-white/50 text-sm mb-3">We&apos;ll email you if flights to {destination.destination} drop in price</p>
                     <form onSubmit={handleEmailCapture} className="flex gap-2 max-w-md mx-auto">
@@ -1700,7 +1710,7 @@ export default function MysteryReveal({
                 </motion.div>
 
                 {/* ---- Continue Planning Links ---- */}
-                <motion.div {...staggerChild(18)}>
+                <motion.div {...staggerChild(18)} className="lg:col-span-2">
                   <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
                     <span className="text-xs text-white/30 mr-1">
                       Continue planning:
@@ -1730,7 +1740,7 @@ export default function MysteryReveal({
 
                 {/* ---- Re-roll Section ---- */}
                 {onReroll && (
-                  <motion.div {...staggerChild(19)}>
+                  <motion.div {...staggerChild(19)} className="lg:col-span-2">
                     <div className="border-t border-white/10 pt-6">
                       {rerollCount < maxRerolls ? (
                         <div className="text-center">
@@ -1758,7 +1768,7 @@ export default function MysteryReveal({
                 )}
 
                 {/* ---- Save Trip + Show Another + Share ---- */}
-                <motion.div {...staggerChild(20)}>
+                <motion.div {...staggerChild(20)} className="lg:col-span-2">
                   {/* Save Trip */}
                   <div className="mb-4 flex justify-center">
                     <SaveTripButton
@@ -1821,7 +1831,7 @@ export default function MysteryReveal({
 
                 {/* Share URL display */}
                 {shareUrl && (
-                  <motion.div {...staggerChild(21)}>
+                  <motion.div {...staggerChild(21)} className="lg:col-span-2">
                     <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
                       <p className="text-sm font-semibold text-emerald-400 mb-2">
                         Shareable link created!
@@ -1852,7 +1862,7 @@ export default function MysteryReveal({
                 )}
 
                 {/* ---- Dare a Friend + Download Story Card ---- */}
-                <motion.div {...staggerChild(22)}>
+                <motion.div {...staggerChild(22)} className="lg:col-span-2">
                   <div className="grid grid-cols-2 gap-4">
                     {/* Dare a Friend */}
                     <button
@@ -1929,7 +1939,7 @@ export default function MysteryReveal({
             </div>
       </motion.div>
 
-      {/* Mobile sticky action bar */}
+      {/* Mobile sticky action bar — only on small screens */}
       {(
         <div className="fixed bottom-0 left-0 right-0 z-30 p-3 bg-slate-950/95 backdrop-blur border-t border-white/10 lg:hidden">
           <div className="flex gap-2 max-w-lg mx-auto">

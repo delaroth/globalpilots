@@ -226,12 +226,14 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
 
           <div className="p-8">
             {/* Why This Destination */}
+            {(trip.whyThisPlace || trip.why_its_perfect) && (
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-3">Why This Destination?</h2>
               <p className="text-gray-700 text-lg leading-relaxed">
                 {trip.whyThisPlace || trip.why_its_perfect}
               </p>
             </div>
+            )}
 
             {/* Best Time to Go */}
             {trip.bestTimeToGo && (
