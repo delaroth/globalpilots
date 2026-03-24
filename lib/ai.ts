@@ -1,4 +1,5 @@
 // AI utilities with DeepSeek primary and Claude fallback
+import { z, type ZodType } from 'zod'
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
@@ -11,8 +12,8 @@ interface AIResponse {
   provider: 'deepseek' | 'claude'
 }
 
-// Timeout duration for AI calls (30 seconds)
-const AI_TIMEOUT_MS = 30000
+// Timeout duration for AI calls (15 seconds per provider, 30s total max)
+const AI_TIMEOUT_MS = 15000
 
 /**
  * Fetch with a timeout. Rejects with a clear error if the request takes too long.
@@ -67,14 +68,16 @@ export async function callAI(
     }, AI_TIMEOUT_MS)
 
     if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.status}`)
+      console.error(`DeepSeek API error: ${response.status}`)
+      throw new Error('AI service error')
     }
 
     const data = await response.json()
     const content = data.choices?.[0]?.message?.content
 
     if (!content) {
-      throw new Error('No response from DeepSeek')
+      console.error('No response from DeepSeek')
+      throw new Error('AI service error')
     }
 
     const tokensUsed = data.usage?.total_tokens || 0
@@ -116,14 +119,16 @@ export async function callAI(
       }, AI_TIMEOUT_MS)
 
       if (!response.ok) {
-        throw new Error(`Claude API error: ${response.status}`)
+        console.error(`Claude API error: ${response.status}`)
+        throw new Error('AI service error')
       }
 
       const data = await response.json()
       const content = data.content?.[0]?.text
 
       if (!content) {
-        throw new Error('No response from Claude')
+        console.error('No response from Claude')
+        throw new Error('AI service error')
       }
 
       const tokensUsed = (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0)
@@ -144,14 +149,21 @@ export async function callAI(
 
 /**
  * Parse JSON from AI response (handles markdown code blocks)
+ * Optionally validates against a Zod schema.
  */
-export function parseAIJSON<T>(content: string): T {
+export function parseAIJSON<T>(content: string, schema?: ZodType<T>): T {
   try {
-    // Try to extract JSON if it's wrapped in markdown code blocks
     const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/```\n?([\s\S]*?)\n?```/)
     const jsonString = jsonMatch ? jsonMatch[1] : content
-    return JSON.parse(jsonString.trim())
+    const parsed = JSON.parse(jsonString.trim())
+    if (schema) {
+      return schema.parse(parsed)
+    }
+    return parsed as T
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new Error(`AI response validation failed: ${error.issues.map((e: { message: string }) => e.message).join(', ')}`)
+    }
     throw new Error(`Failed to parse AI JSON response: ${content.slice(0, 200)}`)
   }
 }

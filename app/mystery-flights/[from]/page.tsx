@@ -72,6 +72,21 @@ export function generateStaticParams() {
   }))
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ from: string }> }) {
+  const { from } = await params
+  const code = from.toUpperCase()
+  const airport = majorAirports.find(a => a.code === code)
+  const city = airport?.city || code
+  return {
+    title: `Mystery Flights from ${city} — Surprise Destinations | GlobePilots`,
+    description: `Discover surprise travel destinations from ${city} (${code}). AI-powered mystery vacation planner finds cheap flights and builds your perfect itinerary.`,
+    openGraph: {
+      title: `Mystery Flights from ${city}`,
+      description: `Let AI pick your next adventure from ${city}. Budget-friendly surprise destinations with real flight prices.`,
+    },
+  }
+}
+
 export default async function MysteryFlightsFromPage({ params }: { params: Promise<{ from: string }> }) {
   const { from } = await params
   const code = from.toUpperCase()

@@ -298,11 +298,13 @@ export default function MysteryReveal({
   const [captureEmail, setCaptureEmail] = useState('')
   const [emailCaptured, setEmailCaptured] = useState(false)
 
+  const [emailError, setEmailError] = useState('')
   const handleEmailCapture = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!captureEmail) return
+    setEmailError('')
     try {
-      await fetch('/api/price-track', {
+      const res = await fetch('/api/price-track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -312,10 +314,10 @@ export default function MysteryReveal({
           targetPrice: flightPrice || 500,
         }),
       })
+      if (!res.ok) throw new Error()
       setEmailCaptured(true)
     } catch {
-      // Silently fail — non-critical
-      setEmailCaptured(true)
+      setEmailError('Could not save — please try again')
     }
   }
 
@@ -553,8 +555,10 @@ export default function MysteryReveal({
                   <>
                     <img
                       src={heroPhoto.url}
-                      alt={heroPhoto.alt}
+                      alt={heroPhoto.alt || `${destination.destination}, ${destination.country}`}
                       className="absolute inset-0 w-full h-full object-cover"
+                      loading="eager"
+                      fetchPriority="high"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,15,30,1)] via-[rgba(10,15,30,0.4)] to-transparent" />
                   </>
@@ -626,29 +630,29 @@ export default function MysteryReveal({
                           </p>
                         </div>
                       )}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div className="text-center">
-                          <p className="text-xs text-white/50">Flight</p>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                        <div className="text-center min-w-0">
+                          <p className="text-xs text-white/60">Flight</p>
                           <p className="text-lg font-bold text-emerald-400">
                             {isEstimate ? '~' : ''}{fmt(destination.budget_breakdown.flight)}
                             {isEstimate ? ' est.' : ''}
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-white/50">Hotel ({tripDuration} nights)</p>
+                          <p className="text-xs text-white/60">Hotel ({tripDuration} nights)</p>
                           <p className="text-lg font-bold text-emerald-400">
                             {fmt(destination.budget_breakdown.hotel_total)}
                           </p>
                           <p className="text-xs text-white/30">{fmt(destination.budget_breakdown.hotel_per_night)}/night</p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-white/50">Activities</p>
+                          <p className="text-xs text-white/60">Activities</p>
                           <p className="text-lg font-bold text-emerald-400">
                             {fmt(destination.budget_breakdown.activities)}
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-white/50">
+                          <p className="text-xs text-white/60">
                             {destination.budget_breakdown.user_budget ? 'Your Budget' : 'Estimated Total'}
                           </p>
                           <p className={`text-2xl font-bold ${destination.budget_breakdown.over_budget ? 'text-amber-400' : 'text-emerald-400'}`}>
@@ -656,23 +660,23 @@ export default function MysteryReveal({
                           </p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center text-sm">
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 text-center text-sm">
                         {destination.budget_breakdown.local_transport > 0 && (
                           <div>
-                            <p className="text-xs text-white/50">Transport</p>
+                            <p className="text-xs text-white/60">Transport</p>
                             <p className="font-semibold text-emerald-400/80">
                               {fmt(destination.budget_breakdown.local_transport)}
                             </p>
                           </div>
                         )}
                         <div>
-                          <p className="text-xs text-white/50">Food</p>
+                          <p className="text-xs text-white/60">Food</p>
                           <p className="font-semibold text-emerald-400/80">
                             {fmt(destination.budget_breakdown.food_estimate)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-white/50">Buffer</p>
+                          <p className="text-xs text-white/60">Buffer</p>
                           <p className="font-semibold text-emerald-400/80">
                             {fmt(destination.budget_breakdown.buffer)}
                           </p>
@@ -686,7 +690,7 @@ export default function MysteryReveal({
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="text-center">
-                          <p className="text-xs text-white/50">Flights</p>
+                          <p className="text-xs text-white/60">Flights</p>
                           <p className="text-lg font-bold text-emerald-400">
                             {isEstimate ? '~' : ''}$
                             {destination.budgetBreakdown.flights}
@@ -694,19 +698,19 @@ export default function MysteryReveal({
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-white/50">Hotel</p>
+                          <p className="text-xs text-white/60">Hotel</p>
                           <p className="text-lg font-bold text-emerald-400">
                             {fmt(destination.budgetBreakdown.hotel)}
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-white/50">Activities</p>
+                          <p className="text-xs text-white/60">Activities</p>
                           <p className="text-lg font-bold text-emerald-400">
                             {fmt(destination.budgetBreakdown.activities)}
                           </p>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs text-white/50">Total</p>
+                          <p className="text-xs text-white/60">Total</p>
                           <p className="text-2xl font-bold text-emerald-400">
                             {fmt(destination.budgetBreakdown.total)}
                           </p>
@@ -1513,6 +1517,9 @@ export default function MysteryReveal({
                                 {enrichment.visa.note}
                               </p>
                             )}
+                            <p className="text-xs text-amber-400/50 mt-1">
+                              Rules change — verify with your embassy before booking
+                            </p>
                           </div>
                         )}
 
@@ -1621,7 +1628,7 @@ export default function MysteryReveal({
                           <div className="grid grid-cols-3 gap-2">
                             {enrichment.weather.forecast.slice(0, 3).map((day) => (
                               <div key={day.date} className="text-center">
-                                <p className="text-xs text-white/50">
+                                <p className="text-xs text-white/60">
                                   {new Date(day.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                                 </p>
                                 <p className="text-white font-medium text-sm mt-1">
@@ -1732,6 +1739,7 @@ export default function MysteryReveal({
                       </button>
                     </form>
                     {emailCaptured && <p className="text-emerald-400 text-sm mt-2">We&apos;ll let you know when prices drop!</p>}
+                    {emailError && <p className="text-red-400 text-sm mt-2">{emailError}</p>}
                   </div>
                 </motion.div>
 
@@ -1917,7 +1925,7 @@ export default function MysteryReveal({
                           <span className="flex items-center gap-2 text-base">
                             <span>&#9889;</span> Dare a Friend
                           </span>
-                          <span className="block text-xs text-white/50 mt-1 font-normal group-hover:text-white/60 transition">
+                          <span className="block text-xs text-white/60 mt-1 font-normal group-hover:text-white/60 transition">
                             Dare a friend to beat your deal
                           </span>
                         </>
@@ -1953,7 +1961,7 @@ export default function MysteryReveal({
                             </svg>
                             Download Story Card
                           </span>
-                          <span className="block text-xs text-white/50 mt-1 font-normal group-hover:text-white/60 transition">
+                          <span className="block text-xs text-white/60 mt-1 font-normal group-hover:text-white/60 transition">
                             Share on Instagram / TikTok
                           </span>
                         </>

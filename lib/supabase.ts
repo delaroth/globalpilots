@@ -17,11 +17,12 @@ export function getSupabase() {
   if (supabaseClient) return supabaseClient
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  // Prefer service role key (server-side, bypasses RLS) over anon key
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // SECURITY: Never expose the service role key to the client bundle.
+  // The anon key respects Row Level Security (RLS), which is the safe default.
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY')
+    throw new Error('Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
   }
 
   supabaseClient = createClient(supabaseUrl, supabaseKey)

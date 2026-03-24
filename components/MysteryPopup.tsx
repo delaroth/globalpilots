@@ -150,7 +150,7 @@ function MysteryPanel() {
             {state.status === 'error' && (
               <span className="text-red-400 shrink-0">&#x2715;</span>
             )}
-            <h3 className="text-white font-semibold text-sm truncate">
+            <h3 className="text-white font-semibold text-sm truncate" role="status" aria-live="polite">
               {state.status === 'searching' && 'Finding your mystery destination...'}
               {state.status === 'quick-ready' && `${state.destination?.destination || 'Destination'} — Loading details...`}
               {state.status === 'generic-ready' && `${state.destination?.destination || 'Destination'} — Finalizing itinerary...`}
@@ -185,7 +185,8 @@ function MysteryPanel() {
             <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
               <div className="w-16 h-16 border-4 border-sky-400/20 border-t-sky-400 rounded-full animate-spin mb-6" />
               <p className="text-white/80 text-lg font-medium">Finding your mystery destination...</p>
-              <p className="text-white/40 text-sm mt-2">You can minimize this while we search</p>
+              <p className="text-white/40 text-sm mt-2">This typically takes 5-10 seconds</p>
+              <p className="text-white/30 text-xs mt-1">You can minimize this while we search</p>
             </div>
           )}
 

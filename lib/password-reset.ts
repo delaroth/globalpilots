@@ -82,6 +82,7 @@ async function sendResetEmail(to: string, token: string): Promise<boolean> {
         subject: 'Reset your GlobePilot password',
         html,
       }),
+      signal: AbortSignal.timeout(5000),
     })
 
     if (!res.ok) {

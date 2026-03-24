@@ -357,7 +357,7 @@ export async function POST(request: NextRequest) {
         : Promise.resolve([] as typeof priceInfo)
 
       const tpPromise = tpEnabled
-        ? fetch(`${API_BASE}/v2/prices/latest?origin=${primaryOrigin}&currency=usd&limit=30&token=${TOKEN}`, { next: { revalidate: 3600 } })
+        ? fetch(`${API_BASE}/v2/prices/latest?origin=${primaryOrigin}&currency=usd&limit=30&token=${TOKEN}`, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(8000) })
             .then(async res => {
               if (!res.ok) return []
               const data = await res.json()

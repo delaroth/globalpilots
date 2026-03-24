@@ -45,6 +45,7 @@ async function getToken(): Promise<string> {
       client_id: AMADEUS_CLIENT_ID,
       client_secret: AMADEUS_CLIENT_SECRET,
     }),
+    signal: AbortSignal.timeout(8000),
   })
 
   if (!response.ok) {
@@ -102,6 +103,7 @@ export async function searchFlights(params: {
     `https://${AMADEUS_HOSTNAME}/v2/shopping/flight-offers?${searchParams}`,
     {
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(8000),
     }
   )
 

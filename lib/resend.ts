@@ -44,6 +44,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
         subject,
         html,
       }),
+      signal: AbortSignal.timeout(5000),
     })
 
     if (!res.ok) {

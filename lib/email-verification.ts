@@ -161,6 +161,7 @@ export async function sendVerificationEmail(email: string, token: string): Promi
         subject: 'Verify your GlobePilot email address',
         html,
       }),
+      signal: AbortSignal.timeout(5000),
     })
 
     if (!res.ok) {

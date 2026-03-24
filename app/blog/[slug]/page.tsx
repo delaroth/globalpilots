@@ -1,5 +1,6 @@
 'use client'
 
+import DOMPurify from 'isomorphic-dompurify'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { useState, useEffect } from 'react'
@@ -108,7 +109,7 @@ function EditorialPostView({ post }: { post: EditorialPost }) {
               prose-li:text-gray-700
               prose-strong:text-slate-900
               prose-ul:my-4 prose-li:my-1"
-            dangerouslySetInnerHTML={{ __html: post.content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
           />
         </article>
 

@@ -3,38 +3,9 @@ import { exploreDestinations, dateToMonth, type ExploreDestination } from '@/lib
 import { searchFlight } from '@/lib/flight-engine'
 import { getSerpApiUsage } from '@/lib/flight-providers/serpapi'
 import { trackFeatureUse } from '@/lib/analytics'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
-
-// Simple in-memory rate limiter: max 5 requests per IP per minute
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-const RATE_LIMIT_WINDOW = 60_000
-const RATE_LIMIT_MAX = 5
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
-    return true
-  }
-
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return false
-  }
-
-  entry.count++
-  return true
-}
-
-// Clean up stale entries every 5 minutes
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of rateLimitMap) {
-    if (now > entry.resetAt) rateLimitMap.delete(key)
-  }
-}, 5 * 60_000)
 
 /**
  * Flexible flight search API.
@@ -54,14 +25,12 @@ setInterval(() => {
  *   returnMonth: YYYY-MM (required if returnType=month)
  */
 export async function GET(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || request.headers.get('x-real-ip')
-    || 'unknown'
-
-  if (!checkRateLimit(ip)) {
+  const clientIp = getClientIp(request)
+  const rl = rateLimit(`flight-search:${clientIp}`, 5, 60 * 1000)
+  if (!rl.success) {
     return NextResponse.json(
-      { error: 'Too many requests. Please wait a minute before searching again.' },
-      { status: 429 }
+      { error: 'Too many requests. Please wait a moment.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) } }
     )
   }
 

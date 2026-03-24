@@ -23,7 +23,7 @@ interface CacheEntry {
 }
 
 const hotelCache = new Map<string, CacheEntry>()
-const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+const CACHE_TTL = 6 * 60 * 60 * 1000 // 6 hours — hotel prices don't change fast enough to justify more frequent API calls
 
 function getCacheKey(params: HotelSearchParams): string {
   return [

@@ -1,33 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchFlight } from '@/lib/flight-engine'
 import { callAI } from '@/lib/ai'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
-
-// Rate limiter: 3 requests per minute per IP (compute-heavy)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-const RATE_LIMIT_WINDOW = 60_000
-const RATE_LIMIT_MAX = 3
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
-    return true
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false
-  entry.count++
-  return true
-}
-
-// Clean up stale entries
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of rateLimitMap) {
-    if (now > entry.resetAt) rateLimitMap.delete(key)
-  }
-}, 5 * 60_000)
 
 interface OptimizeRequest {
   origin: string
@@ -82,14 +58,12 @@ async function getLegPrice(
 }
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || request.headers.get('x-real-ip')
-    || 'unknown'
-
-  if (!checkRateLimit(ip)) {
+  const clientIp = getClientIp(request)
+  const rl = rateLimit(`flight-search:${clientIp}`, 3, 60 * 1000)
+  if (!rl.success) {
     return NextResponse.json(
-      { error: 'Too many requests. Budget optimizer is limited to 3 requests per minute.' },
-      { status: 429 }
+      { error: 'Too many requests. Please wait a moment.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.resetMs / 1000)) } }
     )
   }
 
