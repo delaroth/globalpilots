@@ -12,6 +12,7 @@ import { getCachedDestination, cacheDestination, incrementRevealCount, buildBasi
 import { checkVisaRequirement } from '@/lib/enrichment/visa'
 import { callAI } from '@/lib/ai'
 import { lookupAirportByCode } from '@/lib/geolocation'
+import { withRetry } from '@/lib/retry'
 
 export const dynamic = 'force-dynamic'
 
@@ -535,13 +536,20 @@ Respond with ONLY the 3-letter IATA code. Nothing else.`
     let validatedPriceIsLive = priceIsLive
 
     try {
-      const validated = await searchFlight({
-        origin: primaryOrigin,
-        destination: picked.destination,
-        departDate: computedDepartDate,
-        routeType: 'price-check',
-        maxTier: 2, // free + SerpApi only — no FlightAPI credits for mystery picks
-      })
+      const validated = await withRetry(
+        () => searchFlight({
+          origin: primaryOrigin,
+          destination: picked.destination,
+          departDate: computedDepartDate,
+          routeType: 'price-check',
+          maxTier: 2,
+        }),
+        {
+          maxAttempts: 2,
+          baseDelay: 1500,
+          onRetry: (err, attempt) => console.warn(`[Quick] Price validation retry ${attempt}:`, err.message),
+        },
+      )
       if (validated.price !== null) {
         validatedPrice = validated.price
         if (validated.airlines.length > 0) validatedAirlines = validated.airlines
@@ -550,7 +558,7 @@ Respond with ONLY the 3-letter IATA code. Nothing else.`
         console.log(`[Quick] Price validated: $${picked.price} -> $${validatedPrice} (${validated.source})`)
       }
     } catch (err) {
-      console.warn('[Quick] Price validation failed, using original:', err instanceof Error ? err.message : err)
+      console.warn('[Quick] Price validation failed after retries, using original:', err instanceof Error ? err.message : err)
     }
 
     // Estimate hotel price

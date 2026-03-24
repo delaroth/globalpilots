@@ -173,8 +173,51 @@ export default function SharedTripPage({ params }: { params: { id: string } }) {
     ? new Date(createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : ''
 
+  // Compute duration from itinerary or default to 3 nights
+  const nights = trip.daily_itinerary?.length
+    || trip.itinerary?.length
+    || (trip.day1 ? 3 : 3)
+
+  // Compute return date from depart date + nights
+  const returnDate = (() => {
+    try {
+      const d = new Date(departDate)
+      d.setDate(d.getDate() + nights)
+      return d.toISOString().split('T')[0]
+    } catch {
+      return ''
+    }
+  })()
+
+  // JSON-LD structured data for SEO
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'TravelAction',
+    name: `Mystery Trip to ${trip.destination}`,
+    description: `A ${nights}-night trip to ${trip.destination}, ${trip.country}`,
+    fromLocation: {
+      '@type': 'Place',
+      name: origin || 'Unknown origin',
+    },
+    toLocation: {
+      '@type': 'Place',
+      name: `${trip.destination}, ${trip.country}`,
+    },
+    startTime: departDate,
+    endTime: returnDate,
+    offers: {
+      '@type': 'Offer',
+      price: String(Math.round(totalCost)),
+      priceCurrency: 'USD',
+    },
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Navigation */}
       <nav className="w-full px-6 py-4 bg-slate-900/95 backdrop-blur-sm border-b border-sky-500/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">

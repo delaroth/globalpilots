@@ -5,6 +5,7 @@ import { getCached, setCache } from '@/lib/cache'
 import { calculateBudgetAllocation, PackageComponents, formatAllocationForAI, getBudgetTier } from '@/lib/budget-allocation'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { searchHotels } from '@/lib/flight-providers/serpapi-hotels'
+import { withRetry } from '@/lib/retry'
 
 export const dynamic = 'force-dynamic'
 
@@ -173,7 +174,7 @@ export async function POST(request: NextRequest) {
     // Token budget scales with trip length: ~200 tokens/day for activities + 200 for extras
     const itineraryMaxTokens = Math.min(3000, 200 * tripDuration + 400)
     const itineraryPromise = (components.includeItinerary !== false)
-      ? callAI(
+      ? withRetry(() => callAI(
           `Travel planner. Return ONLY valid JSON. No markdown, no explanation.`,
           `Create a ${tripDuration}-day travel itinerary for ${destination}, ${country}.
 Activity budget: $${dailyActivityBudget}/day. Travel style: ${vibes.join(', ')}.
@@ -205,7 +206,11 @@ Rules:
 - Use real place names and realistic costs for ${destination}`,
           0.7,
           itineraryMaxTokens,
-        ).then(res => {
+        ), {
+          maxAttempts: 2,
+          baseDelay: 2000,
+          onRetry: (err, attempt) => console.warn(`[Details] Itinerary AI retry ${attempt}:`, err.message),
+        }).then(res => {
           const parsed = parseAIJSON(res.content, ItineraryResponseSchema)
           // Derive simple itinerary format from daily_itinerary for backward compat
           if (parsed.daily_itinerary && !parsed.itinerary) {
@@ -216,7 +221,7 @@ Rules:
           }
           return parsed
         }).catch(err => {
-          console.warn('[Details] Itinerary call failed:', err.message)
+          console.warn('[Details] Itinerary call failed after retries:', err.message)
           return null
         })
       : Promise.resolve(null)

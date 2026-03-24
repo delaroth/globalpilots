@@ -590,7 +590,7 @@ function MysteryPageContent() {
                 {/* ── Section 2: Budget (moved up for MVP) ────────────────── */}
                 <div className="mb-5">
                   <label htmlFor="budget" className="block text-sm font-medium text-gray-600 mb-1.5">
-                    Budget
+                    Budget <span className="font-normal text-gray-400">— total for flights + hotel + activities</span>
                   </label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">

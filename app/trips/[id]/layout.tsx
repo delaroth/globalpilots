@@ -38,9 +38,13 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
       ? Object.values(dest.budget_breakdown as Record<string, number>).reduce((s: number, v: number) => s + v, 0)
       : 0)
 
-  const title = `Mystery Vacation: ${dest.destination} for $${Math.round(totalCost)} | GlobePilot`
+  const nights = dest.daily_itinerary?.length
+    || dest.itinerary?.length
+    || (dest.day1 ? 3 : 3)
+
+  const title = `Mystery Vacation: ${dest.destination}, ${dest.country} for $${Math.round(totalCost)} | GlobePilot`
   const description = dest.whyThisPlace || dest.why_its_perfect
-    || `An AI-picked mystery trip to ${dest.destination}, ${dest.country}. Flights, hotels, and a full itinerary — all within budget.`
+    || `A ${nights}-night AI-picked mystery trip to ${dest.destination}, ${dest.country}. Flights, hotels, and a full itinerary — all within budget.`
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
     || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')

@@ -49,13 +49,19 @@ export default function NaturalLanguageSearch() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to parse query')
+        if (response.status === 429) {
+          setError("You're searching too fast — please wait a moment")
+          return
+        }
+        setError('Search is temporarily unavailable — please try again')
+        return
       }
 
       const data = await response.json()
 
       if (data.error) {
-        throw new Error(data.error)
+        setError(data.error)
+        return
       }
 
       // Route based on parsed data
@@ -70,15 +76,24 @@ export default function NaturalLanguageSearch() {
         const originCode = toIataCode(data.origin)
         console.log('[NL Search] Redirecting to weekend:', { origin: data.origin, originCode })
         router.push(`/weekend?origin=${originCode}`)
+      } else if (data.destination && !data.origin) {
+        // Has destination but no origin
+        setError("Got it! Where are you flying from? Try: 'Bangkok to Bali' or 'from London'")
+        return
       } else if (data.vibe && data.vibe.length > 0) {
         // Has vibes - go to mystery
         router.push(`/mystery`)
+      } else if (data.confidence === 'low' && !data.origin && !data.destination) {
+        // Nothing useful was parsed
+        setError("I didn't catch that. Try something like 'cheap flights from Bangkok to Tokyo in March'")
+        return
       } else {
         // Generic search - show results page or default to calendar
         router.push('/calendar')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      // Network errors, timeouts, JSON parse failures, etc.
+      setError('Search is temporarily unavailable — please try again')
     } finally {
       setLoading(false)
     }
@@ -110,8 +125,16 @@ export default function NaturalLanguageSearch() {
         </div>
 
         {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
-            <p className="text-red-700 text-sm">❌ {error}</p>
+          <div className={`mb-4 rounded-lg p-3 ${
+            error.includes('Try') || error.includes('flying from')
+              ? 'bg-amber-50 border border-amber-200'
+              : 'bg-red-50 border border-red-200'
+          }`}>
+            <p className={`text-sm ${
+              error.includes('Try') || error.includes('flying from')
+                ? 'text-amber-700'
+                : 'text-red-700'
+            }`}>{error}</p>
           </div>
         )}
 
