@@ -2,14 +2,21 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'motion/react'
 import { buildBookingBundle, AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { trackActivity } from '@/lib/activity-feed'
 import type { DestinationCost } from '@/lib/destination-costs'
-import SaveTripButton from '@/components/SaveTripButton'
+import dynamic from 'next/dynamic'
+
+const SaveTripButton = dynamic(() => import('@/components/SaveTripButton'), {
+  loading: () => <div className="h-10 w-32 animate-pulse bg-white/[0.04] rounded-lg" />,
+})
 import BookingTracker from '@/components/BookingTracker'
 import AffiliateDisclosure from '@/components/AffiliateDisclosure'
-import TripPrep from '@/components/TripPrep'
+const TripPrep = dynamic(() => import('@/components/TripPrep'), {
+  loading: () => <div className="h-32 animate-pulse bg-white/[0.04] rounded-xl" />,
+})
 import { addStamp } from '@/lib/travel-passport'
 import { countryNameToCode } from '@/lib/enrichment/country-data'
 import { hasSupportedCharacters } from '@/lib/enrichment/attractions'
@@ -564,12 +571,13 @@ export default function MysteryReveal({
               <div className="h-56 sm:h-72 lg:h-80 relative overflow-hidden">
                 {heroPhoto ? (
                   <>
-                    <img
+                    <Image
                       src={heroPhoto.url}
                       alt={heroPhoto.alt || `${destination.destination}, ${destination.country}`}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      loading="eager"
-                      fetchPriority="high"
+                      fill
+                      className="object-cover"
+                      priority
+                      sizes="100vw"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,15,30,1)] via-[rgba(10,15,30,0.4)] to-transparent" />
                   </>

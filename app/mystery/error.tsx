@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 
-export default function GlobalError({
+export default function MysteryError({
   error,
   reset,
 }: {
@@ -10,16 +10,16 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error('[GlobalError]', error)
+    console.error('[MysteryError]', error)
   }, [error])
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
       <div className="max-w-md text-center">
-        <div className="text-6xl mb-4">🌍</div>
-        <h1 className="text-2xl font-bold text-white mb-3">Something went wrong</h1>
+        <div className="text-6xl mb-4">🔮</div>
+        <h1 className="text-2xl font-bold text-white mb-3">Mystery trip hit a snag</h1>
         <p className="text-white/60 mb-6">
-          An unexpected error occurred. This has been logged and we&apos;ll look into it.
+          We couldn&apos;t load the mystery trip planner. Please try again.
         </p>
         <div className="flex gap-3 justify-center">
           <button

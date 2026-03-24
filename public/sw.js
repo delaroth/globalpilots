@@ -1,4 +1,4 @@
-const CACHE_NAME = 'globepilot-v1';
+const CACHE_NAME = 'globepilot-v2';
 
 const PRECACHE_URLS = [
   '/',
@@ -43,7 +43,13 @@ self.addEventListener('fetch', (event) => {
   // Skip Chrome extension requests and non-http(s)
   if (!url.protocol.startsWith('http')) return;
 
-  // API routes and HTML pages: network-first
+  // Cacheable API routes: stale-while-revalidate (fast from cache, updates in background)
+  if (url.pathname === '/api/currency' || url.pathname === '/api/social-proof') {
+    event.respondWith(staleWhileRevalidate(request));
+    return;
+  }
+
+  // Other API routes and HTML pages: network-first
   if (url.pathname.startsWith('/api/') || request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(networkFirst(request));
     return;
@@ -78,6 +84,21 @@ async function cacheFirst(request) {
   } catch {
     return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
   }
+}
+
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+
+  // Return cached immediately, update in background
+  const fetchPromise = fetch(request).then((response) => {
+    if (response.ok) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  }).catch(() => null);
+
+  return cached || (await fetchPromise) || new Response('Offline', { status: 503 });
 }
 
 async function networkFirst(request) {

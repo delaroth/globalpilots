@@ -4,7 +4,15 @@ import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useMystery } from '@/components/MysteryContext'
 import { useCurrency } from '@/hooks/useCurrency'
-import MysteryReveal from '@/components/MysteryReveal'
+import dynamic from 'next/dynamic'
+
+const MysteryReveal = dynamic(() => import('@/components/MysteryReveal'), {
+  loading: () => (
+    <div className="flex items-center justify-center py-20">
+      <div className="w-12 h-12 border-4 border-sky-400/20 border-t-sky-400 rounded-full animate-spin" />
+    </div>
+  ),
+})
 
 // ---------------------------------------------------------------------------
 // Minimized Pill (bottom-right corner)
