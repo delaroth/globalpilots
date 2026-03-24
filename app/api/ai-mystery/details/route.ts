@@ -168,16 +168,42 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Details] Generating content for ${destination} (${iata}) — itinerary AI + real hotel search + transport AI`)
 
-    // ── Call A: Itinerary + generic fallback (~1000 tokens max) ──
+    // ── Call A: Itinerary + destination info ──
+    // Token budget scales with trip length: ~200 tokens/day for activities + 200 for extras
+    const itineraryMaxTokens = Math.min(3000, 200 * tripDuration + 400)
     const itineraryPromise = (components.includeItinerary !== false)
       ? callAI(
-          `Travel planner for ${destination}, ${country}. JSON only.`,
-          `Generate a ${tripDuration}-day itinerary for ${destination} plus quick destination info.
-Budget: $${dailyActivityBudget}/day for activities. Style: ${vibes.join(', ')}.
-Return JSON: {"daily_itinerary":[{"day":1,"activities":[{"time":"09:00 AM","activity":"...","estimated_cost":0}],"total_day_cost":0}],"itinerary":[{"day":1,"activities":["Activity 1","Activity 2","Activity 3"]}],"whyThisPlace":"2-3 sentences on why ${destination} is great for ${vibes.join(', ')} travelers","best_local_food":["Dish 1","Dish 2","Dish 3","Dish 4","Dish 5"],"insider_tip":"One practical insider tip for visitors","bestTimeToGo":"Best months or season to visit"}
-Keep activity descriptions under 10 words each. ${tripDuration} days total. Daily costs must not exceed $${dailyActivityBudget}.`,
-          0.9,
-          1000,
+          `Travel planner. Return ONLY valid JSON. No markdown, no explanation.`,
+          `Create a ${tripDuration}-day travel itinerary for ${destination}, ${country}.
+Activity budget: $${dailyActivityBudget}/day. Travel style: ${vibes.join(', ')}.
+
+Return this exact JSON structure:
+{
+  "daily_itinerary": [
+    {
+      "day": 1,
+      "activities": [
+        {"time": "09:00 AM", "activity": "Visit morning market", "estimated_cost": 5},
+        {"time": "12:00 PM", "activity": "Lunch at local restaurant", "estimated_cost": 8},
+        {"time": "02:00 PM", "activity": "Temple tour", "estimated_cost": 10},
+        {"time": "06:00 PM", "activity": "Street food dinner", "estimated_cost": 6}
+      ],
+      "total_day_cost": 29
+    }
+  ],
+  "whyThisPlace": "2-3 sentences why ${destination} suits ${vibes.join('/')} travelers",
+  "best_local_food": ["Dish 1", "Dish 2", "Dish 3", "Dish 4", "Dish 5"],
+  "insider_tip": "One practical tip",
+  "bestTimeToGo": "Best season to visit"
+}
+
+Rules:
+- Include ALL ${tripDuration} days with 4-5 activities each
+- Each day total_day_cost must not exceed $${dailyActivityBudget}
+- Activity descriptions: max 8 words
+- Use real place names and realistic costs for ${destination}`,
+          0.7,
+          itineraryMaxTokens,
         ).then(res => {
           const parsed = parseAIJSON<{
             daily_itinerary?: DetailsResponse['daily_itinerary']
@@ -187,6 +213,13 @@ Keep activity descriptions under 10 words each. ${tripDuration} days total. Dail
             insider_tip?: string
             bestTimeToGo?: string
           }>(res.content)
+          // Derive simple itinerary format from daily_itinerary for backward compat
+          if (parsed.daily_itinerary && !parsed.itinerary) {
+            parsed.itinerary = parsed.daily_itinerary.map(d => ({
+              day: d.day,
+              activities: d.activities.map(a => a.activity),
+            }))
+          }
           return parsed
         }).catch(err => {
           console.warn('[Details] Itinerary call failed:', err.message)
@@ -260,23 +293,10 @@ Return JSON: {"local_transportation":{"airport_to_city":"How to get there","dail
     const realHotels = hotelsResult.status === 'fulfilled' ? hotelsResult.value : null
     const transportData = transportResult.status === 'fulfilled' ? transportResult.value : null
 
-    // If SerpApi returned no hotels, fall back to AI hotel recommendations
-    let hotelRecommendations: HotelRec[] | null = realHotels
+    // Use real hotels only — no AI hallucinated hotel names
+    const hotelRecommendations: HotelRec[] | null = realHotels
     if (!hotelRecommendations && components.includeHotel) {
-      console.log('[Details] Falling back to AI hotels')
-      try {
-        const aiHotels = await callAI(
-          `Hotel advisor for ${destination}, ${country}. JSON only.`,
-          `Recommend 3 ${accommodationLevel} hotels in ${destination} under $${hotelSearchMaxPrice}/night.
-Return JSON: {"hotel_recommendations":[{"name":"Hotel Name","estimated_price_per_night":0,"neighborhood":"Area","why_recommended":"Short reason"}]}`,
-          0.9,
-          300,
-        )
-        const parsed = parseAIJSON<{ hotel_recommendations?: DetailsResponse['hotel_recommendations'] }>(aiHotels.content)
-        hotelRecommendations = parsed?.hotel_recommendations?.map(h => ({ ...h, is_real_data: false })) || null
-      } catch (err) {
-        console.warn('[Details] AI hotels fallback also failed:', err instanceof Error ? err.message : err)
-      }
+      console.log('[Details] No real hotels found — client will show generic search links')
     }
 
     // Build the combined result

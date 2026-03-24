@@ -913,7 +913,33 @@ export default function MysteryReveal({
                         <Shimmer className="h-24 w-full" />
                       </div>
                     </motion.div>
-                  ) : null}
+                  ) : (
+                    <motion.div {...staggerChild(8)}>
+                      <FadeIn visible={true}>
+                        <h3 className="text-xl font-bold text-white mb-3">Where to Stay</h3>
+                        <a
+                          href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination.destination + ', ' + destination.country)}&checkin=${effectiveDepartDate}&checkout=${effectiveReturnDate}&group_adults=1&no_rooms=1&order=price&nflt=price%3DUSD-min-${Math.round((destination.estimated_hotel_per_night || 30) * 0.5)}-${Math.round((destination.estimated_hotel_per_night || 100) * 2)}-1`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block bg-blue-500/10 border border-blue-500/20 rounded-xl p-5 hover:bg-blue-500/20 hover:border-blue-500/30 transition group"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-semibold text-white group-hover:text-sky-400 transition">
+                              Search {destination.destination} Hotels
+                            </h4>
+                            <span className="text-sky-400 text-sm">{'\u2192'}</span>
+                          </div>
+                          <p className="text-sm text-white/60">
+                            {formatDate(effectiveDepartDate)} &ndash; {formatDate(effectiveReturnDate)} &middot; {tripDuration} nights
+                            {destination.estimated_hotel_per_night ? ` · Budget ~${fmt(destination.estimated_hotel_per_night)}/night` : ''}
+                          </p>
+                          <p className="text-xs text-sky-400/60 mt-2 group-hover:text-sky-400 transition">
+                            Browse real prices on Booking.com {'\u2197'}
+                          </p>
+                        </a>
+                      </FadeIn>
+                    </motion.div>
+                  )}
 
                 {/* ---- Itinerary ---- */}
                 <motion.div {...staggerChild(9)}>
