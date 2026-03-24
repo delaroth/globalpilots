@@ -13,6 +13,7 @@ import TripPrep from '@/components/TripPrep'
 import { addStamp } from '@/lib/travel-passport'
 import { countryNameToCode } from '@/lib/enrichment/country-data'
 import { hasSupportedCharacters } from '@/lib/enrichment/attractions'
+import { useToast } from '@/components/Toast'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -235,6 +236,7 @@ export default function MysteryReveal({
   currencyFormat,
   userBudgetUSD,
 }: MysteryRevealProps) {
+  const { toast } = useToast()
   // Currency formatting: use provided formatter or default to USD
   // Guard: if price is 0 or falsy, show "Check prices" instead of "$0"
   const rawFmt = currencyFormat || ((usd: number) => `$${usd}`)
@@ -321,14 +323,17 @@ export default function MysteryReveal({
     }
   }
 
-  // Dynamically import destination-costs
+  // Dynamically import destination-costs + seasonal data
   const [costData, setCostData] = useState<DestinationCost | undefined>(undefined)
+  const [seasonLabel, setSeasonLabel] = useState<'peak' | 'shoulder' | 'low' | null>(null)
   useEffect(() => {
     if (!iata) return
     import('@/lib/destination-costs').then((mod) => {
       setCostData(mod.getDestinationCost(iata))
+      const travelMonth = effectiveDepartDate ? new Date(effectiveDepartDate + 'T00:00:00').getMonth() + 1 : undefined
+      setSeasonLabel(mod.getSeasonLabel(iata, travelMonth))
     })
-  }, [iata])
+  }, [iata, effectiveDepartDate])
 
   // Build booking bundle
   const bookingBundle = buildBookingBundle({
@@ -449,6 +454,7 @@ export default function MysteryReveal({
   const handleShare = async () => {
     if (shareUrl) {
       navigator.clipboard.writeText(shareUrl)
+      toast('Link copied to clipboard', 'success')
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
       return
@@ -473,11 +479,13 @@ export default function MysteryReveal({
       const url = `${window.location.origin}/trips/${data.id}`
       setShareUrl(url)
       navigator.clipboard.writeText(url)
+      toast('Shareable link created and copied', 'success')
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
       const url = `${window.location.origin}/mystery?dest=${encodeURIComponent(destination.destination)}`
       navigator.clipboard.writeText(url)
+      toast('Link copied (couldn\'t save full trip details)', 'info')
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } finally {
@@ -496,15 +504,17 @@ export default function MysteryReveal({
           text: dareMessage,
           url: dareUrl,
         })
+        toast('Dare shared!', 'success')
       } else {
         await navigator.clipboard.writeText(dareMessage)
+        toast('Dare copied to clipboard', 'success')
       }
     } catch {
-      // User cancelled native share or clipboard failed — try clipboard as last resort
       try {
         await navigator.clipboard.writeText(dareMessage)
+        toast('Dare copied to clipboard', 'success')
       } catch {
-        // silently fail
+        toast('Could not share — try copying manually', 'error')
       }
     }
     setDared(true)
@@ -527,8 +537,9 @@ export default function MysteryReveal({
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      toast('Story card downloaded', 'success')
     } catch {
-      // silently fail
+      toast('Could not generate story card', 'error')
     } finally {
       setDownloading(false)
     }
@@ -586,6 +597,15 @@ export default function MysteryReveal({
                     <motion.p {...staggerChild(2)} className="text-sm sm:text-base text-white/70 mt-2">
                       {formatDate(effectiveDepartDate)} &rarr;{' '}
                       {formatDate(effectiveReturnDate)} &middot; {tripDuration} nights
+                      {seasonLabel && (
+                        <span className={`ml-2 inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                          seasonLabel === 'peak' ? 'bg-amber-500/20 text-amber-300' :
+                          seasonLabel === 'low' ? 'bg-emerald-500/20 text-emerald-300' :
+                          'bg-sky-500/20 text-sky-300'
+                        }`}>
+                          {seasonLabel === 'peak' ? 'Peak season' : seasonLabel === 'low' ? 'Low season' : 'Shoulder season'}
+                        </span>
+                      )}
                     </motion.p>
                   </div>
                 </div>
@@ -643,7 +663,7 @@ export default function MysteryReveal({
                           <p className="text-lg font-bold text-emerald-400">
                             {fmt(destination.budget_breakdown.hotel_total)}
                           </p>
-                          <p className="text-xs text-white/30">{fmt(destination.budget_breakdown.hotel_per_night)}/night</p>
+                          <p className="text-xs text-white/50">{fmt(destination.budget_breakdown.hotel_per_night)}/night</p>
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-white/60">Activities</p>
@@ -734,7 +754,7 @@ export default function MysteryReveal({
                             {isEstimate ? ' est.' : ''}
                           </p>
                           {destination.googleFlightsAirlines && destination.googleFlightsAirlines.length > 0 && (
-                            <p className="text-xs text-white/30 mt-0.5 flex items-center justify-center gap-1 flex-wrap">
+                            <p className="text-xs text-white/50 mt-0.5 flex items-center justify-center gap-1 flex-wrap">
                               {destination.googleFlightsAirlineLogos && destination.googleFlightsAirlineLogos.map((logo, i) => (
                                 <img key={i} src={logo} alt="" width={16} height={16} className="inline-block rounded-sm" />
                               ))}
@@ -872,6 +892,7 @@ export default function MysteryReveal({
                                 href={hotelUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                aria-label={`View ${hotel.name} on Booking.com`}
                                 className="block bg-white/[0.04] backdrop-blur-sm rounded-lg p-4 border border-white/10 hover:bg-white/[0.08] hover:border-white/20 transition group cursor-pointer"
                               >
                                 <div className="flex justify-between items-start mb-2">
@@ -1209,7 +1230,7 @@ export default function MysteryReveal({
                               <p className="text-xl font-bold text-white">
                                 ${total}
                               </p>
-                              <p className="text-xs text-white/30">per day</p>
+                              <p className="text-xs text-white/50">per day</p>
                               <div className="mt-2 space-y-0.5 text-xs text-white/40">
                                 <div className="flex justify-between">
                                   <span>Hotel</span>
@@ -1664,7 +1685,7 @@ export default function MysteryReveal({
                                 <div className="min-w-0">
                                   <p className="text-white font-medium text-sm">
                                     {a.name}
-                                    <span className="text-white/30 font-normal ml-1.5 text-xs">
+                                    <span className="text-white/50 font-normal ml-1.5 text-xs">
                                       {a.distance}
                                     </span>
                                   </p>
@@ -1746,7 +1767,7 @@ export default function MysteryReveal({
                 {/* ---- Continue Planning Links ---- */}
                 <motion.div {...staggerChild(18)} className="lg:col-span-2">
                   <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-                    <span className="text-xs text-white/30 mr-1">
+                    <span className="text-xs text-white/50 mr-1">
                       Continue planning:
                     </span>
                     {origin && (
@@ -1825,6 +1846,7 @@ export default function MysteryReveal({
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       onClick={onShowAnother}
+                      aria-label="Show me another mystery destination"
                       className="bg-sky-500 hover:bg-sky-600 text-slate-900 font-semibold py-4 px-6 rounded-lg transition shadow-lg hover:shadow-xl"
                     >
                       Show Me Another
@@ -1832,6 +1854,7 @@ export default function MysteryReveal({
                     <button
                       onClick={handleShare}
                       disabled={sharing}
+                      aria-label="Share this trip"
                       className="bg-white/[0.06] hover:bg-white/[0.10] text-white/80 font-medium py-4 px-6 rounded-lg transition border border-white/10 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       {sharing ? (
@@ -1886,6 +1909,7 @@ export default function MysteryReveal({
                             setCopied(true)
                             setTimeout(() => setCopied(false), 2000)
                           }}
+                          aria-label="Copy shareable link"
                           className="bg-emerald-500/90 hover:bg-emerald-500 text-white font-medium py-2 px-4 rounded-lg transition text-sm whitespace-nowrap"
                         >
                           {copied ? 'Copied!' : 'Copy Link'}
@@ -1901,6 +1925,7 @@ export default function MysteryReveal({
                     {/* Dare a Friend */}
                     <button
                       onClick={handleDare}
+                      aria-label="Dare a friend to beat your deal"
                       className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/20 hover:border-purple-500/40 text-white font-semibold py-4 px-5 rounded-lg transition-all group text-left"
                     >
                       {dared ? (
@@ -1936,6 +1961,7 @@ export default function MysteryReveal({
                     <button
                       onClick={handleDownloadStoryCard}
                       disabled={downloading}
+                      aria-label="Download story card for social media"
                       className="bg-white/[0.06] hover:bg-white/[0.10] border border-white/10 text-white font-semibold py-4 px-5 rounded-lg transition-all group text-left disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {downloading ? (

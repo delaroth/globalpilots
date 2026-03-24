@@ -2461,3 +2461,98 @@ export function getCheapestDestinations(tier: BudgetTier, limit: number = 10): D
     })
     .slice(0, limit)
 }
+
+// ── Seasonal price adjustments ───────────────────────────────────────────
+// Multipliers applied to hotel + activity costs by month.
+// 1.0 = base price, 1.3 = peak season (+30%), 0.8 = low season (-20%)
+// Only hotels and activities vary seasonally; food and transport stay stable.
+
+interface SeasonalPattern {
+  /** Months (1-12) with peak pricing */
+  peak: number[]
+  /** Months (1-12) with low/shoulder pricing */
+  low: number[]
+  /** Peak multiplier (default 1.3) */
+  peakMultiplier?: number
+  /** Low multiplier (default 0.8) */
+  lowMultiplier?: number
+}
+
+const SEASONAL_PATTERNS: Record<string, SeasonalPattern> = {
+  // Southeast Asia — peak = northern hemisphere winter (dry season)
+  'Southeast Asia': { peak: [12, 1, 2], low: [5, 6, 7, 8, 9] },
+  // South Asia — peak = winter, monsoon = low
+  'South Asia': { peak: [11, 12, 1, 2, 3], low: [6, 7, 8, 9] },
+  // East Asia — peak = cherry blossom + autumn leaves
+  'East Asia': { peak: [3, 4, 10, 11], low: [1, 2, 6, 7] },
+  // Europe — peak = summer
+  'Europe': { peak: [6, 7, 8], low: [11, 12, 1, 2], peakMultiplier: 1.35 },
+  // Middle East — peak = winter (cooler), low = summer (extreme heat)
+  'Middle East': { peak: [11, 12, 1, 2, 3], low: [6, 7, 8], lowMultiplier: 0.7 },
+  // Central America + Caribbean — peak = dry season
+  'Central America': { peak: [12, 1, 2, 3], low: [9, 10] },
+  'Caribbean': { peak: [12, 1, 2, 3, 4], low: [8, 9, 10] },
+  // South America — varies by country but generally summer (Dec-Feb) is peak
+  'South America': { peak: [12, 1, 2], low: [5, 6, 7] },
+  // Africa — dry season peak
+  'East Africa': { peak: [7, 8, 9, 10], low: [3, 4, 5], peakMultiplier: 1.4 },
+  'North Africa': { peak: [3, 4, 5, 10, 11], low: [7, 8] },
+  // Oceania — peak = southern summer
+  'Oceania': { peak: [12, 1, 2], low: [6, 7, 8] },
+}
+
+/**
+ * Get the seasonal price multiplier for a destination in a given month.
+ * Returns a number like 1.0 (normal), 1.3 (peak), or 0.8 (low season).
+ */
+export function getSeasonalMultiplier(code: string, month: number): number {
+  const dest = getDestinationCost(code)
+  if (!dest) return 1.0
+
+  const pattern = SEASONAL_PATTERNS[dest.region]
+  if (!pattern) return 1.0
+
+  if (pattern.peak.includes(month)) return pattern.peakMultiplier ?? 1.3
+  if (pattern.low.includes(month)) return pattern.lowMultiplier ?? 0.8
+  return 1.0
+}
+
+/**
+ * Get seasonally-adjusted daily costs for a destination.
+ * Applies seasonal multiplier to hotel and activity costs only.
+ */
+export function getSeasonalCost(
+  code: string,
+  tier: BudgetTier,
+  month?: number,
+): DailyCosts | null {
+  const dest = getDestinationCost(code)
+  if (!dest) return null
+
+  const base = dest.dailyCosts[tier]
+  const m = month ?? (new Date().getMonth() + 1)
+  const multiplier = getSeasonalMultiplier(code, m)
+
+  return {
+    hotel: Math.round(base.hotel * multiplier),
+    food: base.food, // food doesn't vary seasonally
+    transport: base.transport, // transport doesn't vary
+    activities: Math.round(base.activities * multiplier),
+  }
+}
+
+/**
+ * Get a human-readable season label for a destination in a given month.
+ */
+export function getSeasonLabel(code: string, month?: number): 'peak' | 'shoulder' | 'low' | null {
+  const dest = getDestinationCost(code)
+  if (!dest) return null
+
+  const pattern = SEASONAL_PATTERNS[dest.region]
+  if (!pattern) return null
+
+  const m = month ?? (new Date().getMonth() + 1)
+  if (pattern.peak.includes(m)) return 'peak'
+  if (pattern.low.includes(m)) return 'low'
+  return 'shoulder'
+}

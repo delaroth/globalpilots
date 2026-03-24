@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
+import { MysteryResponseSchema } from '@/lib/ai-schemas'
 import { getCached, setCache } from '@/lib/cache'
 import { calculateBudgetAllocation, PackageComponents, formatAllocationForAI, getBudgetTier } from '@/lib/budget-allocation'
 import { supabase } from '@/lib/supabase'
@@ -501,7 +502,7 @@ Pick ONE destination matching vibes. Explain WHY it matches (not just "affordabl
 }`
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.9, 2500)
-    const result = parseAIJSON<MysteryResponse>(aiResponse.content)
+    const result = parseAIJSON(aiResponse.content, MysteryResponseSchema)
 
     // ── Apply live pricing from Explore data ────────────────────────
     if (priceIsLive) {

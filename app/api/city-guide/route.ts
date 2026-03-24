@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
+// CityGuideSchema skipped — CityGuideData has complex fields not AI-generated
 import { getCached, setCache } from '@/lib/cache'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { checkVisaRequirement } from '@/lib/enrichment/visa'

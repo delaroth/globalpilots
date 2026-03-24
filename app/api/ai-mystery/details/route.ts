@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
+import { ItineraryResponseSchema, TransportSchema } from '@/lib/ai-schemas'
 import { getCached, setCache } from '@/lib/cache'
 import { calculateBudgetAllocation, PackageComponents, formatAllocationForAI, getBudgetTier } from '@/lib/budget-allocation'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
@@ -205,14 +206,7 @@ Rules:
           0.7,
           itineraryMaxTokens,
         ).then(res => {
-          const parsed = parseAIJSON<{
-            daily_itinerary?: DetailsResponse['daily_itinerary']
-            itinerary?: DetailsResponse['itinerary']
-            whyThisPlace?: string
-            best_local_food?: string[]
-            insider_tip?: string
-            bestTimeToGo?: string
-          }>(res.content)
+          const parsed = parseAIJSON(res.content, ItineraryResponseSchema)
           // Derive simple itinerary format from daily_itinerary for backward compat
           if (parsed.daily_itinerary && !parsed.itinerary) {
             parsed.itinerary = parsed.daily_itinerary.map(d => ({
@@ -274,7 +268,7 @@ Return JSON: {"local_transportation":{"airport_to_city":"How to get there","dail
           0.9,
           200,
         ).then(res => {
-          const parsed = parseAIJSON<{ local_transportation?: DetailsResponse['local_transportation'] }>(res.content)
+          const parsed = parseAIJSON(res.content, TransportSchema)
           return parsed?.local_transportation || null
         }).catch(err => {
           console.warn('[Details] Transport call failed:', err.message)

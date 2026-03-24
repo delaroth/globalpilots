@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import Providers from '@/components/Providers'
 import MysteryPopup from '@/components/MysteryPopup'
+import { ToastProvider } from '@/components/Toast'
 import CookieConsent from '@/components/CookieConsent'
 import FeedbackButton from '@/components/FeedbackButton'
 
@@ -90,9 +91,11 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <Providers>
-          {children}
-          <MysteryPopup />
-          <FeedbackButton />
+          <ToastProvider>
+            {children}
+            <MysteryPopup />
+            <FeedbackButton />
+          </ToastProvider>
         </Providers>
         <Analytics />
         <SpeedInsights />

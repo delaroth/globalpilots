@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { callAI, parseAIJSON } from '@/lib/ai'
+import { GenericAIContentSchema } from '@/lib/ai-schemas'
 import { getCachedDestination, cacheDestination, buildBasicInfo } from '@/lib/destination-cache'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
@@ -98,7 +99,7 @@ Return JSON:
 5 attractions, 5 foods, 3 tips, 3 neighborhoods. Keep all descriptions under 15 words.`
 
     const aiResponse = await callAI(systemPrompt, userPrompt, 0.8, 600)
-    const aiContent = parseAIJSON<GenericAIContent>(aiResponse.content)
+    const aiContent = parseAIJSON(aiResponse.content, GenericAIContentSchema)
 
     // Ensure we have proper arrays
     if (!Array.isArray(aiContent.topAttractions)) aiContent.topAttractions = []
