@@ -85,6 +85,7 @@ export default function DayTripDetail({
   totalEstimatedCost, loading, currencyFormat,
 }: DayTripDetailProps) {
   const [open, setOpen] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
 
   const hasContent = itinerary.length > 0
@@ -173,7 +174,11 @@ export default function DayTripDetail({
               animate={{ y: 0, opacity: 1, scale: 1 }}
               exit={{ y: 30, opacity: 0, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="relative w-full max-w-3xl max-h-[90vh] bg-slate-900 rounded-2xl shadow-2xl border border-white/10 overflow-hidden"
+              className={`relative w-full bg-slate-900 shadow-2xl border border-white/10 overflow-hidden ${
+                fullscreen
+                  ? 'max-w-none max-h-none h-screen rounded-none'
+                  : 'max-w-4xl max-h-[92vh] rounded-2xl mx-4'
+              }`}
             >
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-white/[0.02]">
@@ -191,6 +196,17 @@ export default function DayTripDetail({
                     PDF
                   </button>
                   <button
+                    onClick={() => setFullscreen(!fullscreen)}
+                    className="w-8 h-8 items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition hidden sm:flex"
+                    aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                  >
+                    {fullscreen ? (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2v4H2M10 14v-4h4M2 10h4v4M14 6h-4V2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 6V2h4M14 10v4h-4M10 2h4v4M6 14H2v-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    )}
+                  </button>
+                  <button
                     onClick={() => setOpen(false)}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition"
                     aria-label="Close"
@@ -201,7 +217,7 @@ export default function DayTripDetail({
               </div>
 
               {/* Scrollable content */}
-              <div className="overflow-y-auto p-6 space-y-6" style={{ maxHeight: 'calc(90vh - 72px)' }}>
+              <div className="overflow-y-auto p-6 space-y-6" style={{ maxHeight: fullscreen ? 'calc(100vh - 72px)' : 'calc(92vh - 72px)' }}>
 
                 {/* Hidden print content */}
                 <div ref={printRef} className="hidden">

@@ -478,43 +478,44 @@ export default function DayTripPage() {
               </div>
             )}
 
-            {/* Submit */}
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={loading}
-              className="w-full py-3 bg-sky-400 hover:bg-sky-300 disabled:opacity-50 disabled:cursor-not-allowed text-slate-900 font-bold rounded-xl text-base transition"
-            >
-              {loading ? (
-                <span className="inline-flex items-center gap-2">
-                  <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    />
-                  </svg>
-                  Generating Itinerary...
-                </span>
+            {/* Single action row: generate/view button + regenerate */}
+            <div className="flex gap-2">
+              {!result && !loading ? (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="flex-1 py-3 bg-sky-400 hover:bg-sky-300 text-slate-900 font-bold rounded-xl text-base transition"
+                >
+                  Plan My Day
+                </button>
               ) : (
-                'Plan My Day'
+                <>
+                  <div className="flex-1">
+                    <DayTripDetail
+                      destination={result?.destination || cityName}
+                      days={days}
+                      itinerary={result?.itinerary || []}
+                      tips={result?.tips || []}
+                      savingTips={result?.costData?.savingTips}
+                      totalEstimatedCost={result?.totalEstimatedCost || 0}
+                      loading={loading}
+                      currencyFormat={currencyFormat}
+                    />
+                  </div>
+                  {result && !loading && (
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      className="px-4 py-3 bg-white/[0.06] hover:bg-white/[0.10] border border-white/10 text-white/70 hover:text-white font-medium rounded-xl text-sm transition whitespace-nowrap"
+                      aria-label="Generate a different itinerary"
+                      title="Generate a different itinerary"
+                    >
+                      Regenerate
+                    </button>
+                  )}
+                </>
               )}
-            </button>
-          </div>
-
-          {/* Itinerary button — shows loading state, opens popup when ready */}
-          <div className="mt-6">
-            <DayTripDetail
-              destination={result?.destination || cityName}
-              days={days}
-              itinerary={result?.itinerary || []}
-              tips={result?.tips || []}
-              savingTips={result?.costData?.savingTips}
-              totalEstimatedCost={result?.totalEstimatedCost || 0}
-              loading={loading}
-              currencyFormat={currencyFormat}
-            />
+            </div>
           </div>
         </div>
       </main>
