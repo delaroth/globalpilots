@@ -24,12 +24,21 @@ export const metadata: Metadata = {
     url: 'https://globepilots.com',
     siteName: 'GlobePilot',
     type: 'website',
+    images: [
+      {
+        url: '/api/og?title=GlobePilot&subtitle=Budget+in.+Adventure+out.',
+        width: 1200,
+        height: 630,
+        alt: 'GlobePilot - Budget in. Adventure out.',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     site: '@globepilots',
     title: 'GlobePilot - Budget in. Adventure out.',
     description: 'AI-powered budget travel planning - Find the best flight deals and plan your perfect adventure.',
+    images: ['/api/og?title=GlobePilot&subtitle=Budget+in.+Adventure+out.'],
   },
 }
 

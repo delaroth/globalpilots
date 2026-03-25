@@ -19,16 +19,12 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl
 
-    const dest = sanitizeString(searchParams.get('dest'), 50, '')
-    const country = sanitizeString(searchParams.get('country'), 50, '')
+    const dest = sanitizeString(searchParams.get('dest'), 50, 'Mystery Destination')
+    const country = sanitizeString(searchParams.get('country'), 50, 'Somewhere Amazing')
     const price = sanitizeNumber(searchParams.get('price'))
     const duration = sanitizeNumber(searchParams.get('duration'))
     const origin = sanitizeString(searchParams.get('origin'), 10, '')
     const flag = sanitizeString(searchParams.get('flag'), 4, '')
-
-    if (!dest || !country) {
-      return new Response('Missing required params: dest, country', { status: 400 })
-    }
 
     // Scale font size for vertical layout — more room so we go bigger
     const destFontSize = dest.length > 20 ? 56 : dest.length > 12 ? 72 : 88
@@ -357,6 +353,42 @@ export async function GET(req: NextRequest) {
     )
   } catch (error) {
     console.error('[OG Mystery Card] Error:', error)
-    return new Response('Failed to generate image', { status: 500 })
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(180deg, #0A1F44 0%, #071630 60%, #050e20 100%)',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '72px',
+              fontWeight: 700,
+              color: 'white',
+              display: 'flex',
+            }}
+          >
+            Mystery Destination
+          </div>
+          <div
+            style={{
+              fontSize: '28px',
+              color: '#87CEEB',
+              marginTop: '24px',
+              display: 'flex',
+            }}
+          >
+            globepilots.com
+          </div>
+        </div>
+      ),
+      { width: 1080, height: 1920 }
+    )
   }
 }

@@ -19,16 +19,12 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl
 
-    const dest = sanitizeString(searchParams.get('dest'), 50, '')
-    const country = sanitizeString(searchParams.get('country'), 50, '')
+    const dest = sanitizeString(searchParams.get('dest'), 50, 'Mystery Destination')
+    const country = sanitizeString(searchParams.get('country'), 50, 'Somewhere Amazing')
     const price = sanitizeNumber(searchParams.get('price'))
     const duration = sanitizeNumber(searchParams.get('duration'))
     const origin = sanitizeString(searchParams.get('origin'), 10, '')
     const flag = sanitizeString(searchParams.get('flag'), 4, '')
-
-    if (!dest || !country) {
-      return new Response('Missing required params: dest, country', { status: 400 })
-    }
 
     // Scale font size based on destination name length
     const destFontSize = dest.length > 20 ? 48 : dest.length > 12 ? 56 : 64
@@ -321,6 +317,42 @@ export async function GET(req: NextRequest) {
     )
   } catch (error) {
     console.error('[OG Mystery] Error:', error)
-    return new Response('Failed to generate image', { status: 500 })
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #0A1F44 0%, #071630 100%)',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '56px',
+              fontWeight: 700,
+              color: 'white',
+              display: 'flex',
+            }}
+          >
+            Mystery Destination
+          </div>
+          <div
+            style={{
+              fontSize: '24px',
+              color: '#87CEEB',
+              marginTop: '16px',
+              display: 'flex',
+            }}
+          >
+            globepilots.com
+          </div>
+        </div>
+      ),
+      { width: 1200, height: 630 }
+    )
   }
 }

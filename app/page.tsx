@@ -63,7 +63,7 @@ export default function Home() {
             AI-powered trip planning with live flight prices, total cost breakdowns, and destinations you&apos;d never think of.
           </p>
           <p className="text-sm text-slate-500 mb-6 md:mb-12">
-            113 destinations · 30 currencies · Live Google Flights data
+            200+ destinations · 30 currencies · Live Google Flights data
           </p>
 
           {/* Mobile hero CTA — above the fold */}
@@ -128,6 +128,28 @@ export default function Home() {
                 View deals →
               </span>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How It Works ── */}
+      <section className="max-w-5xl mx-auto px-6 pb-16 w-full">
+        <h2 className="text-2xl font-bold text-white text-center mb-10">How It Works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-full bg-sky-500/20 text-sky-400 font-bold text-xl flex items-center justify-center mx-auto mb-4">1</div>
+            <h3 className="text-lg font-semibold text-white mb-2">Set Your Budget & Vibe</h3>
+            <p className="text-sm text-slate-400">Tell us how much you want to spend and what kind of trip you&apos;re after — beach, city, adventure, food, or anything else.</p>
+          </div>
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-full bg-sky-500/20 text-sky-400 font-bold text-xl flex items-center justify-center mx-auto mb-4">2</div>
+            <h3 className="text-lg font-semibold text-white mb-2">AI Picks Your Destination</h3>
+            <p className="text-sm text-slate-400">Our AI searches real flight prices, checks visa requirements, and finds a destination that fits your budget perfectly.</p>
+          </div>
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-full bg-sky-500/20 text-sky-400 font-bold text-xl flex items-center justify-center mx-auto mb-4">3</div>
+            <h3 className="text-lg font-semibold text-white mb-2">Book & Go</h3>
+            <p className="text-sm text-slate-400">Get a full daily itinerary, hotel links, cost breakdown, and booking links. You book directly — we never handle your payment.</p>
           </div>
         </div>
       </section>

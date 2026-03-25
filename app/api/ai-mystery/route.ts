@@ -8,7 +8,7 @@ import { AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { searchKiwiInspiration } from '@/lib/kiwi'
 import { findCheapestDestinations, vibeToInterest, daysToTravelDuration, dateToMonth } from '@/lib/flight-providers/serpapi-explore'
 import { discoverCheapDestinations } from '@/lib/flight-engine'
-import { rateLimit, getClientIp } from '@/lib/rate-limit'
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limit: 10 requests per minute for this expensive AI endpoint
     const clientIp = getClientIp(request)
-    const rl = rateLimit(`ai-mystery:${clientIp}`, 10, 60 * 1000)
+    const rl = await rateLimitAsync(`ai-mystery:${clientIp}`, 10, 60 * 1000)
     if (!rl.success) {
       return NextResponse.json(
         { error: 'Too many requests. Please wait a moment and try again.' },
