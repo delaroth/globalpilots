@@ -33,14 +33,18 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
+  // Accept multi-airport codes (BKK,DMK) — use primary for search
+  const primaryOrigin = origin.split(',')[0].trim()
+  const primaryDest = destination.split(',')[0].trim()
+
+  if (!/^[A-Z]{3}$/.test(primaryOrigin) || !/^[A-Z]{3}$/.test(primaryDest)) {
     return NextResponse.json(
       { error: 'origin and destination must be 3-letter IATA airport codes' },
       { status: 400 }
     )
   }
 
-  if (origin === destination) {
+  if (primaryOrigin === primaryDest) {
     return NextResponse.json(
       { error: 'Origin and destination must be different' },
       { status: 400 }
@@ -58,8 +62,8 @@ export async function GET(request: NextRequest) {
   try {
     // Unified tiered search — user explicitly searching = 'price-check'
     const result = await searchFlight({
-      origin,
-      destination,
+      origin: primaryOrigin,
+      destination: primaryDest,
       departDate,
       returnDate,
       routeType: 'price-check',

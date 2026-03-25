@@ -35,8 +35,11 @@ export async function GET(request: NextRequest) {
   }
 
   const p = request.nextUrl.searchParams
-  const origin = p.get('origin')
-  const destination = p.get('destination')
+  const rawOrigin = p.get('origin')
+  const rawDest = p.get('destination')
+  // Use primary airport from multi-airport groups (BKK,DMK → BKK)
+  const origin = rawOrigin?.split(',')[0].trim() || null
+  const destination = rawDest?.split(',')[0].trim() || null
   const departType = p.get('departType') as 'exact' | 'month' | 'anytime'
   const departDate = p.get('departDate') || undefined
   const departMonth = p.get('departMonth') || undefined
@@ -44,11 +47,11 @@ export async function GET(request: NextRequest) {
   const returnDate = p.get('returnDate') || undefined
   const returnMonth = p.get('returnMonth') || undefined
 
-  // Validation
+  // Validation — accept multi-airport codes (BKK,DMK), use primary
   if (!origin || !destination) {
     return NextResponse.json({ error: 'Missing origin or destination' }, { status: 400 })
   }
-  if (!/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
+  if (!/^[A-Z]{3}$/.test(origin) || (destination !== 'ANYWHERE' && !/^[A-Z]{3}$/.test(destination))) {
     return NextResponse.json({ error: 'origin and destination must be 3-letter IATA codes' }, { status: 400 })
   }
   if (origin === destination) {
