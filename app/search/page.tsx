@@ -36,12 +36,13 @@ const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type TripType = 'one-way' | 'round-trip' | 'multi-city' | 'stopovers'
-type DateFlexType = 'exact' | 'month' | 'anytime'
+type DateFlexType = 'exact' | 'month' | 'anytime' | 'day-of-week'
 
 interface FlexibleDateValue {
   type: DateFlexType
   exactDate?: string    // YYYY-MM-DD
   month?: string        // YYYY-MM (e.g., "2026-04")
+  dayOfWeek?: number    // 0=Sun, 1=Mon, ..., 6=Sat
 }
 
 interface WeekendDeal {
@@ -164,6 +165,33 @@ function getNextWeekendDate(): string {
   return d.toISOString().split('T')[0]
 }
 
+/** Compute next departure/return dates for a weekend trip */
+function getWeekendDates(departDay: 'thursday' | 'friday', returnDay: 'saturday' | 'sunday' | 'monday'): { depart: string; return: string } {
+  const dayMap = { sunday: 0, monday: 1, thursday: 4, friday: 5, saturday: 6 }
+  const now = new Date()
+  const today = now.getDay()
+
+  // Find next occurrence of depart day (at least 2 days from now for booking buffer)
+  let daysUntilDepart = (dayMap[departDay] - today + 7) % 7
+  if (daysUntilDepart < 2) daysUntilDepart += 7
+
+  const departDate = new Date(now)
+  departDate.setDate(departDate.getDate() + daysUntilDepart)
+
+  // Find the return day AFTER the depart date
+  const departDow = departDate.getDay()
+  let daysUntilReturn = (dayMap[returnDay] - departDow + 7) % 7
+  if (daysUntilReturn === 0) daysUntilReturn = 7 // at least next occurrence
+
+  const returnDate = new Date(departDate)
+  returnDate.setDate(returnDate.getDate() + daysUntilReturn)
+
+  return {
+    depart: departDate.toISOString().split('T')[0],
+    return: returnDate.toISOString().split('T')[0],
+  }
+}
+
 // ── FlexibleDateInput Component ────────────────────────────────────────────
 
 function FlexibleDateInput({
@@ -181,9 +209,12 @@ function FlexibleDateInput({
 }) {
   const typeOptions: { value: DateFlexType; label: string }[] = [
     { value: 'exact', label: 'Exact Date' },
+    { value: 'day-of-week', label: 'Day' },
     { value: 'month', label: 'Month' },
     { value: 'anytime', label: 'Anytime' },
   ]
+
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
   // Generate month options: current month through 12 months out
   const monthOptions: { value: string; label: string }[] = []
@@ -211,6 +242,8 @@ function FlexibleDateInput({
                 updated.exactDate = value.exactDate || minDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
               } else if (opt.value === 'month') {
                 updated.month = value.month || minMonth || now.toISOString().slice(0, 7)
+              } else if (opt.value === 'day-of-week') {
+                updated.dayOfWeek = value.dayOfWeek ?? 5 // Default to Friday
               }
               onChange(updated)
             }}
@@ -248,6 +281,37 @@ function FlexibleDateInput({
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
+      )}
+
+      {value.type === 'day-of-week' && (
+        <div className="space-y-1.5">
+          <div className="grid grid-cols-4 gap-1.5">
+            {dayNames.map((name, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onChange({ ...value, dayOfWeek: i })}
+                className={`py-2 rounded-lg text-xs font-medium transition ${
+                  value.dayOfWeek === i
+                    ? 'bg-sky-500 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {name.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+          {value.dayOfWeek !== undefined && (
+            <p className="text-xs text-gray-400">
+              Next {dayNames[value.dayOfWeek]}: {(() => {
+                const d = new Date()
+                const diff = (value.dayOfWeek - d.getDay() + 7) % 7 || 7
+                d.setDate(d.getDate() + (diff < 2 ? diff + 7 : diff))
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              })()}
+            </p>
+          )}
+        </div>
       )}
 
       {value.type === 'anytime' && (
@@ -365,8 +429,25 @@ function SearchPageContent() {
 
   // Compute derived values for display/search
   const isRoundTrip = tripType === 'round-trip'
-  const effectiveDepartDate = departureDate.type === 'exact' ? departureDate.exactDate : undefined
-  const effectiveReturnDate = returnDateFlex.type === 'exact' ? returnDateFlex.exactDate : undefined
+  // Resolve day-of-week to actual dates
+  const resolveDayOfWeek = (dow: number | undefined): string | undefined => {
+    if (dow === undefined) return undefined
+    const d = new Date()
+    const diff = (dow - d.getDay() + 7) % 7
+    d.setDate(d.getDate() + (diff < 2 ? diff + 7 : diff)) // At least 2 days out
+    return d.toISOString().split('T')[0]
+  }
+
+  const effectiveDepartDate = departureDate.type === 'exact'
+    ? departureDate.exactDate
+    : departureDate.type === 'day-of-week'
+      ? resolveDayOfWeek(departureDate.dayOfWeek)
+      : undefined
+  const effectiveReturnDate = returnDateFlex.type === 'exact'
+    ? returnDateFlex.exactDate
+    : returnDateFlex.type === 'day-of-week'
+      ? resolveDayOfWeek(returnDateFlex.dayOfWeek)
+      : undefined
 
   // Feature 9: One-way vs round-trip comparison
   // When a round-trip result is shown, check if 2 one-ways would be cheaper
@@ -581,8 +662,9 @@ function SearchPageContent() {
 
       // Determine if this is a simple exact+exact or exact+none case that
       // should use the existing direct flight search for maximum compatibility
-      const isSimpleExact = departureDate.type === 'exact' &&
-        (returnType === 'exact' || returnType === 'none')
+      const departIsResolved = departureDate.type === 'exact' || departureDate.type === 'day-of-week'
+      const returnIsResolved = returnType === 'exact' || returnType === 'day-of-week' || returnType === 'none'
+      const isSimpleExact = departIsResolved && returnIsResolved
 
       if (isSimpleExact) {
         // Use existing proven flow: direct SerpApi → Kiwi → TravelPayouts
