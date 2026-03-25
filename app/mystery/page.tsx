@@ -206,6 +206,8 @@ function MysteryPageContent() {
   const [showSpecificDates, setShowSpecificDates] = useState(false)
   const [departDate, setDepartDate] = useState(getTwoWeeksFromNow())
   const [flexibleDates, setFlexibleDates] = useState(false)
+  const [preferredDepartDay, setPreferredDepartDay] = useState<number | null>(null) // 0=Sun..6=Sat
+  const [preferredDepartTime, setPreferredDepartTime] = useState<number | undefined>(undefined) // 0-3
 
   // Travel style customization
   const [showStyleCustomize, setShowStyleCustomize] = useState(false)
@@ -959,6 +961,61 @@ function MysteryPageContent() {
                         </div>
                       </>
                     )}
+
+                    {/* Preferred departure day & time */}
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setPreferredDepartDay(preferredDepartDay !== null ? null : 5)}
+                        className="text-xs text-gray-400 hover:text-gray-600 transition flex items-center gap-1"
+                      >
+                        <span>{preferredDepartDay !== null ? '\u25BC' : '\u25B8'}</span>
+                        {preferredDepartDay !== null ? 'Hide departure preferences' : 'Preferred departure day & time'}
+                      </button>
+                      {preferredDepartDay !== null && (
+                        <div className="mt-2 space-y-2 p-3 bg-gray-50 rounded-lg">
+                          <div className="flex flex-wrap gap-1">
+                            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((name, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => setPreferredDepartDay(i)}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+                                  preferredDepartDay === i
+                                    ? 'bg-sky-500 text-white'
+                                    : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                }`}
+                              >
+                                {name}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-gray-400">Time:</span>
+                            {([
+                              { val: undefined, label: 'Any' },
+                              { val: 0, label: 'Morning' },
+                              { val: 1, label: 'Afternoon' },
+                              { val: 2, label: 'Evening' },
+                              { val: 3, label: 'Night' },
+                            ] as { val: number | undefined; label: string }[]).map(opt => (
+                              <button
+                                key={opt.label}
+                                type="button"
+                                onClick={() => setPreferredDepartTime(opt.val)}
+                                className={`px-2 py-1 rounded text-xs font-medium transition ${
+                                  preferredDepartTime === opt.val
+                                    ? 'bg-sky-500 text-white'
+                                    : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* ── Budget Split ──────────────────────────────────────── */}
