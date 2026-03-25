@@ -60,32 +60,54 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Unified tiered search — user explicitly searching = 'price-check'
-    const result = await searchFlight({
-      origin: primaryOrigin,
-      destination: primaryDest,
-      departDate,
-      returnDate,
-      routeType: 'price-check',
-      maxTier: 3,
-      departTime,
-      returnTime,
-    })
+    // Search from ALL origin airports in parallel and pick cheapest
+    const originCodes = origin.includes(',') ? origin.split(',').map(c => c.trim()).filter(c => /^[A-Z]{3}$/.test(c)) : [primaryOrigin]
+    const destCodes = destination.includes(',') ? destination.split(',').map(c => c.trim()).filter(c => /^[A-Z]{3}$/.test(c)) : [primaryDest]
+
+    // Search all origin×dest combinations in parallel
+    const searchCombinations = originCodes.flatMap(o => destCodes.map(d => ({ o, d })))
+      .filter(({ o, d }) => o !== d)
+
+    const results = await Promise.allSettled(
+      searchCombinations.map(({ o, d }) =>
+        searchFlight({
+          origin: o,
+          destination: d,
+          departDate,
+          returnDate,
+          routeType: 'price-check',
+          maxTier: 3,
+          departTime,
+          returnTime,
+        }).then(result => ({ origin: o, destination: d, result }))
+      )
+    )
+
+    // Find the cheapest result across all airport combinations
+    let best: { origin: string; destination: string; result: Awaited<ReturnType<typeof searchFlight>> } | null = null
+    for (const r of results) {
+      if (r.status !== 'fulfilled') continue
+      const { result } = r.value
+      if (result.price === null) continue
+      if (!best || result.price < (best.result.price ?? Infinity)) {
+        best = r.value
+      }
+    }
 
     const usage = getSerpApiUsage()
 
     trackFeatureUse('flight_search', {
-      origin,
-      destination,
-      source: result.source,
-      isLive: result.confidence === 'live',
+      origin: best?.origin || primaryOrigin,
+      destination: best?.destination || primaryDest,
+      source: best?.result.source || 'none',
+      isLive: best?.result.confidence === 'live',
       engine: 'flight-engine',
     })
 
-    if (result.price === null) {
+    if (!best) {
       return NextResponse.json({
         success: true,
-        source: result.source,
+        source: 'none',
         isLive: false,
         flight: null,
         message: 'No price data available for this route',
@@ -94,17 +116,19 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      source: result.source === 'serpapi' ? 'google-flights' : result.source,
-      isLive: result.confidence === 'live',
+      source: best.result.source === 'serpapi' ? 'google-flights' : best.result.source,
+      isLive: best.result.confidence === 'live',
+      bestOrigin: best.origin, // Which airport had the cheapest flight
+      bestDestination: best.destination,
       flight: {
-        price: result.price,
-        airlines: result.airlines,
-        stops: result.stops,
-        duration: result.duration,
+        price: best.result.price!,
+        airlines: best.result.airlines,
+        stops: best.result.stops,
+        duration: best.result.duration,
         priceLevel: null,
         typicalRange: null,
       },
-      allPrices: result.allPrices,
+      allPrices: best.result.allPrices,
       usage: {
         remaining: usage.remaining,
         limit: usage.limit,
