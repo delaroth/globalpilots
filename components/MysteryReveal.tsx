@@ -56,6 +56,7 @@ interface Destination {
   country: string
   city_code_IATA: string
   iata?: string
+  bestOriginCode?: string
   estimated_flight_cost: number
   indicativeFlightPrice?: number
   estimated_hotel_per_night: number
@@ -344,8 +345,10 @@ export default function MysteryReveal({
   }, [iata, effectiveDepartDate])
 
   // Build booking bundle
+  // Use the specific airport with the best price for booking links (e.g., BKK not BKK,DMK)
+  const bookingOrigin = destination.bestOriginCode || origin
   const bookingBundle = buildBookingBundle({
-    origin,
+    origin: bookingOrigin,
     destination: iata,
     cityName: destination.destination,
     departDate: effectiveDepartDate,

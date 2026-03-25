@@ -535,27 +535,40 @@ Respond with ONLY the 3-letter IATA code. Nothing else.`
     let validatedStops: number | undefined = picked.stops
     let validatedPriceIsLive = priceIsLive
 
+    // Search from ALL origin airports (BKK,DMK) and pick the cheapest
+    let bestOrigin = primaryOrigin
     try {
-      const validated = await withRetry(
-        () => searchFlight({
-          origin: primaryOrigin,
-          destination: picked.destination,
-          departDate: computedDepartDate,
-          routeType: 'price-check',
-          maxTier: 2,
-        }),
-        {
-          maxAttempts: 2,
-          baseDelay: 1500,
-          onRetry: (err, attempt) => console.warn(`[Quick] Price validation retry ${attempt}:`, err.message),
-        },
+      const priceChecks = await Promise.allSettled(
+        originCodes.map(code =>
+          withRetry(
+            () => searchFlight({
+              origin: code,
+              destination: picked.destination,
+              departDate: computedDepartDate,
+              routeType: 'price-check',
+              maxTier: 2,
+            }),
+            { maxAttempts: 2, baseDelay: 1500 },
+          ).then(result => ({ code, result }))
+        )
       )
-      if (validated.price !== null) {
-        validatedPrice = validated.price
-        if (validated.airlines.length > 0) validatedAirlines = validated.airlines
-        if (validated.stops !== null) validatedStops = validated.stops
-        validatedPriceIsLive = validated.confidence === 'live'
-        console.log(`[Quick] Price validated: $${picked.price} -> $${validatedPrice} (${validated.source})`)
+
+      let bestPrice = Infinity
+      for (const check of priceChecks) {
+        if (check.status !== 'fulfilled') continue
+        const { code, result } = check.value
+        if (result.price !== null && result.price < bestPrice) {
+          bestPrice = result.price
+          bestOrigin = code
+          validatedPrice = result.price
+          if (result.airlines.length > 0) validatedAirlines = result.airlines
+          if (result.stops !== null) validatedStops = result.stops
+          validatedPriceIsLive = result.confidence === 'live'
+        }
+      }
+
+      if (bestPrice < Infinity) {
+        console.log(`[Quick] Best price: $${validatedPrice} from ${bestOrigin} (checked ${originCodes.length} airports)`)
       }
     } catch (err) {
       console.warn('[Quick] Price validation failed after retries, using original:', err instanceof Error ? err.message : err)
@@ -617,6 +630,7 @@ Respond with ONLY the 3-letter IATA code. Nothing else.`
       googleFlightsStops: validatedStops ?? undefined,
       hotelEstimate,
       budgetTier: getBudgetTier(budget, tripDuration),
+      bestOriginCode: bestOrigin, // Specific airport with best price (e.g., BKK not BKK,DMK)
     }
 
     console.log(`[Quick] Picked destination: ${result.destination} (${result.iata}) — flight $${result.estimated_flight_cost}, hotel $${result.estimated_hotel_per_night}/night`)
