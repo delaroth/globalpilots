@@ -26,11 +26,11 @@ export async function GET() {
     if (!url || !key) {
       checks.supabase = 'missing'
     } else {
-      const res = await fetch(`${url}/rest/v1/`, {
+      const res = await fetch(`${url}/rest/v1/destination_cache?select=iata&limit=1`, {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         signal: AbortSignal.timeout(5000),
       })
-      checks.supabase = res.ok ? 'ok' : 'error'
+      checks.supabase = (res.ok || res.status === 406) ? 'ok' : 'error'
     }
   } catch {
     checks.supabase = 'error'
