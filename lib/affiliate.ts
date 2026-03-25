@@ -281,7 +281,10 @@ export function buildFlightLink(origin: string, dest: string, date: string, retu
   }
 
   const returnFormatted = returnDate ? formatDate(returnDate) : ''
-  const searchPath = `${origin}${departFormatted}${dest}${returnFormatted}1`
+  // Aviasales only accepts single IATA codes — use primary airport from multi-airport groups
+  const primaryOrigin = origin.includes(',') ? origin.split(',')[0] : origin
+  const primaryDest = dest.includes(',') ? dest.split(',')[0] : dest
+  const searchPath = `${primaryOrigin}${departFormatted}${primaryDest}${returnFormatted}1`
   const aviasalesUrl = `https://www.aviasales.com/search/${searchPath}`
 
   // Stealth mode: return raw search URL — no affiliate wrapper
