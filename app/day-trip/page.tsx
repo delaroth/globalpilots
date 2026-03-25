@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import CurrencySelector from '@/components/CurrencySelector'
 import { useCurrency } from '@/hooks/useCurrency'
 import { getAllDestinations } from '@/lib/destination-costs'
+import DayTripDetail from '@/components/DayTripDetail'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -502,101 +503,19 @@ export default function DayTripPage() {
             </button>
           </div>
 
-          {/* Loading skeleton */}
-          {loading && <LoadingSkeleton days={days} />}
-
-          {/* Results */}
-          {result && !loading && (
-            <div className="mt-10 space-y-6">
-              {/* Title */}
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-white">
-                  {result.itinerary.length}-Day Itinerary for {result.destination}
-                </h2>
-                <p className="text-white/50 text-sm mt-1">
-                  Estimated total: {currencyFormat(result.totalEstimatedCost)}
-                </p>
-                <p className="text-white/30 text-xs mt-1">
-                  AI-suggested activities with estimated costs — verify availability locally
-                </p>
-              </div>
-
-              {/* Day cards */}
-              {result.itinerary.map((day) => (
-                <DayCard key={day.day} day={day} currencyFormat={currencyFormat} />
-              ))}
-
-              {/* Practical tips */}
-              {result.tips && result.tips.length > 0 && (
-                <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
-                  <h3 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
-                    <span>💡</span> Practical Tips
-                  </h3>
-                  <ul className="space-y-2">
-                    {result.tips.map((tip, i) => (
-                      <li key={i} className="flex items-start gap-2 text-white/70 text-sm">
-                        <span className="text-sky-400 mt-0.5 flex-shrink-0">•</span>
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Saving tips from cost data */}
-              {result.costData?.savingTips && result.costData.savingTips.length > 0 && (
-                <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6">
-                  <h3 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
-                    <span>💰</span> Budget Tips for {result.costData.city}
-                  </h3>
-                  <ul className="space-y-2">
-                    {result.costData.savingTips.map((tip, i) => (
-                      <li key={i} className="flex items-start gap-2 text-white/70 text-sm">
-                        <span className="text-emerald-400 mt-0.5 flex-shrink-0">•</span>
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Total cost + Share */}
-              <div className="bg-gradient-to-r from-sky-400/10 to-emerald-400/10 border border-sky-400/20 rounded-2xl p-6 text-center">
-                <p className="text-white/60 text-sm mb-1">Total Estimated Cost</p>
-                <p className="text-3xl font-bold text-white">
-                  {currencyFormat(result.totalEstimatedCost)}
-                </p>
-                <p className="text-white/40 text-xs mt-1">
-                  {result.itinerary.length} day{result.itinerary.length > 1 ? 's' : ''} in {result.destination}
-                </p>
-                <button
-                  onClick={handleShare}
-                  className="mt-4 inline-flex items-center gap-2 px-5 py-2 bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.1] rounded-full text-white/80 text-sm font-medium transition"
-                >
-                  {copied ? (
-                    <>
-                      <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Link Copied!
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                        />
-                      </svg>
-                      Share Itinerary
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Itinerary button — shows loading state, opens popup when ready */}
+          <div className="mt-6">
+            <DayTripDetail
+              destination={result?.destination || cityName}
+              days={days}
+              itinerary={result?.itinerary || []}
+              tips={result?.tips || []}
+              savingTips={result?.costData?.savingTips}
+              totalEstimatedCost={result?.totalEstimatedCost || 0}
+              loading={loading}
+              currencyFormat={currencyFormat}
+            />
+          </div>
         </div>
       </main>
       <Footer />
