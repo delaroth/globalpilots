@@ -92,6 +92,9 @@ export interface FlightSearchOptions {
   maxTier?: 1 | 2 | 3
   /** Context helps the engine decide which tiers to engage. */
   routeType?: 'direct' | 'stopover-leg' | 'discovery' | 'price-check'
+  /** Time-of-day filter: 0=morning(6-12), 1=afternoon(12-18), 2=evening(18-24), 3=night(0-6) */
+  departTime?: number
+  returnTime?: number
 }
 
 export interface FlightSearchResult {
@@ -397,6 +400,8 @@ async function getSerpApiPrice(
   destination: string,
   departDate: string,
   returnDate?: string,
+  departTime?: number,
+  returnTime?: number,
 ): Promise<{
   price: number | null
   airlines: string[]
@@ -414,6 +419,8 @@ async function getSerpApiPrice(
       destination,
       outboundDate: departDate,
       returnDate,
+      outboundTimes: departTime,
+      returnTimes: returnTime,
     })
     const all = [...bestFlights, ...otherFlights]
     if (all.length === 0) return null
@@ -519,7 +526,7 @@ export async function searchFlight(opts: FlightSearchOptions): Promise<FlightSea
   // ── Tier 2: SerpApi (selective) ──
   let serpResult: Awaited<ReturnType<typeof getSerpApiPrice>> = null
   if (shouldRunTier2(opts, tpPrice)) {
-    serpResult = await getSerpApiPrice(origin, destination, departDate, returnDate)
+    serpResult = await getSerpApiPrice(origin, destination, departDate, returnDate, opts.departTime, opts.returnTime)
   }
   const serpPrice = serpResult?.price ?? null
 

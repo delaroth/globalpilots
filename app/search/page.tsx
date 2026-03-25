@@ -37,12 +37,15 @@ const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
 
 type TripType = 'one-way' | 'round-trip' | 'multi-city' | 'stopovers'
 type DateFlexType = 'exact' | 'month' | 'anytime' | 'day-of-week'
+/** 0=morning(6-12), 1=afternoon(12-18), 2=evening(18-24), 3=night(0-6) */
+type TimeOfDay = 0 | 1 | 2 | 3
 
 interface FlexibleDateValue {
   type: DateFlexType
   exactDate?: string    // YYYY-MM-DD
   month?: string        // YYYY-MM (e.g., "2026-04")
   dayOfWeek?: number    // 0=Sun, 1=Mon, ..., 6=Sat
+  timeOfDay?: TimeOfDay // optional time-of-day filter
 }
 
 interface WeekendDeal {
@@ -317,6 +320,33 @@ function FlexibleDateInput({
       {value.type === 'anytime' && (
         <div className="px-4 py-3 bg-sky-500/5 border-2 border-sky-500/20 rounded-lg text-sm text-gray-600">
           Best price in the next 6 months
+        </div>
+      )}
+
+      {/* Time-of-day filter — shown for exact date and day-of-week */}
+      {(value.type === 'exact' || value.type === 'day-of-week') && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-400 shrink-0">Time:</span>
+          {([
+            { val: undefined as TimeOfDay | undefined, label: 'Any' },
+            { val: 0 as TimeOfDay, label: 'Morning' },
+            { val: 1 as TimeOfDay, label: 'Afternoon' },
+            { val: 2 as TimeOfDay, label: 'Evening' },
+            { val: 3 as TimeOfDay, label: 'Night' },
+          ]).map(opt => (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => onChange({ ...value, timeOfDay: opt.val })}
+              className={`px-2 py-1 rounded text-xs font-medium transition ${
+                value.timeOfDay === opt.val
+                  ? 'bg-sky-500 text-white'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -683,8 +713,8 @@ function SearchPageContent() {
 
   // ── Exact date search flow (proven pipeline) ──
   const searchExactFlow = async (roundTrip: boolean) => {
-    const depDate = departureDate.exactDate!
-    const retDate = roundTrip ? returnDateFlex.exactDate : undefined
+    const depDate = effectiveDepartDate || departureDate.exactDate!
+    const retDate = roundTrip ? (effectiveReturnDate || returnDateFlex.exactDate) : undefined
     let gotPrice = false
 
     // Priority 1: SerpApi Google Flights
@@ -692,6 +722,12 @@ function SearchPageContent() {
       let flightUrl = `/api/search/flights?origin=${origin}&destination=${destination}&departDate=${depDate}`
       if (roundTrip && retDate) {
         flightUrl += `&returnDate=${retDate}`
+      }
+      if (departureDate.timeOfDay !== undefined) {
+        flightUrl += `&departTime=${departureDate.timeOfDay}`
+      }
+      if (roundTrip && returnDateFlex.timeOfDay !== undefined) {
+        flightUrl += `&returnTime=${returnDateFlex.timeOfDay}`
       }
       const flightRes = await fetch(flightUrl)
       if (flightRes.ok) {

@@ -21,6 +21,10 @@ export async function GET(request: NextRequest) {
   const destination = searchParams.get('destination')
   const departDate = searchParams.get('departDate')
   const returnDate = searchParams.get('returnDate') || undefined
+  const departTimeRaw = searchParams.get('departTime') // 0=morning,1=afternoon,2=evening,3=night
+  const returnTimeRaw = searchParams.get('returnTime')
+  const departTime = departTimeRaw !== null ? parseInt(departTimeRaw, 10) : undefined
+  const returnTime = returnTimeRaw !== null ? parseInt(returnTimeRaw, 10) : undefined
 
   if (!origin || !destination || !departDate) {
     return NextResponse.json(
@@ -60,6 +64,8 @@ export async function GET(request: NextRequest) {
       returnDate,
       routeType: 'price-check',
       maxTier: 3,
+      departTime,
+      returnTime,
     })
 
     const usage = getSerpApiUsage()

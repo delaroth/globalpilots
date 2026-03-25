@@ -67,6 +67,9 @@ export async function searchGoogleFlights(params: {
   returnDate?: string
   maxPrice?: number
   adults?: number
+  /** Time-of-day filter: 0=morning(6-12), 1=afternoon(12-18), 2=evening(18-24), 3=night(0-6) */
+  outboundTimes?: number
+  returnTimes?: number
 }): Promise<{ bestFlights: SerpApiResult[]; otherFlights: SerpApiResult[]; priceInsights?: any }> {
   resetUsageIfNewMonth()
 
@@ -94,6 +97,13 @@ export async function searchGoogleFlights(params: {
 
   if (params.maxPrice) {
     searchParams.set('max_price', String(params.maxPrice))
+  }
+
+  if (params.outboundTimes !== undefined) {
+    searchParams.set('outbound_times', String(params.outboundTimes))
+  }
+  if (params.returnTimes !== undefined) {
+    searchParams.set('return_times', String(params.returnTimes))
   }
 
   const url = `${BASE_URL}?${searchParams.toString()}`
