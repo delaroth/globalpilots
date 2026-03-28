@@ -135,9 +135,21 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[Flight Search API] Error:', error)
+    const errMsg = error instanceof Error ? error.message : String(error)
+    console.error('[Flight Search API] Error:', errMsg)
+
+    // Provide helpful error messages for common issues
+    let userMessage = 'Flight search failed. Please try again.'
+    if (errMsg.includes('timeout') || errMsg.includes('Timeout')) {
+      userMessage = 'Flight search timed out. Try again in a moment.'
+    } else if (errMsg.includes('rate') || errMsg.includes('429')) {
+      userMessage = 'Too many searches — please wait a moment and try again.'
+    } else if (errMsg.includes('No flights') || errMsg.includes('empty')) {
+      userMessage = 'No flights found for this route and dates. Try different dates or a nearby airport.'
+    }
+
     return NextResponse.json(
-      { error: 'Flight search failed. Please try again.' },
+      { error: userMessage },
       { status: 502 }
     )
   }

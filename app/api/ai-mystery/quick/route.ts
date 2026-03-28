@@ -309,6 +309,7 @@ export async function POST(request: NextRequest) {
       if (discovered.destinations.length > 0) {
         console.log(`[Quick] ${discovered.source} returned ${discovered.destinations.length} destinations`)
         priceIsLive = discovered.source === 'serpapi-explore'
+        priceIsEstimate = discovered.source === 'travelpayouts' // TP data is 1-3 days old aggregated
         priceInfo = discovered.destinations.map(d => ({
           destination: d.destination,
           city: d.city,
@@ -569,6 +570,12 @@ Respond with ONLY the 3-letter IATA code. Nothing else.`
 
       if (bestPrice < Infinity) {
         console.log(`[Quick] Best price: $${validatedPrice} from ${bestOrigin} (checked ${originCodes.length} airports)`)
+        // If validated price is 2x+ the original estimate, flag it
+        if (validatedPrice && picked.price && validatedPrice > picked.price * 2) {
+          console.warn(`[Quick] Large price discrepancy: estimate $${picked.price} vs live $${validatedPrice}`)
+          priceIsEstimate = false // It's now a live price, not estimate
+          validatedPriceIsLive = true
+        }
       }
     } catch (err) {
       console.warn('[Quick] Price validation failed after retries, using original:', err instanceof Error ? err.message : err)

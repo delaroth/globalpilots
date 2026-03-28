@@ -770,8 +770,10 @@ export default function MysteryReveal({
                           </p>
                           <p className="text-2xl font-bold text-emerald-400">
                             {isEstimate ? '~' : ''}{fmt(flightPrice)}
-                            {isEstimate ? ' est.' : ''}
                           </p>
+                          {isEstimate && (
+                            <p className="text-xs text-amber-400/70 mt-0.5">Estimate — verify on booking site</p>
+                          )}
                           {destination.googleFlightsAirlines && destination.googleFlightsAirlines.length > 0 && (
                             <p className="text-xs text-white/50 mt-0.5 flex items-center justify-center gap-1 flex-wrap">
                               {destination.googleFlightsAirlineLogos && destination.googleFlightsAirlineLogos.map((logo, i) => (
