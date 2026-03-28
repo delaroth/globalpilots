@@ -393,6 +393,161 @@ export async function discoverCheapDestinations(params: {
   return { destinations: [], source: 'none' }
 }
 
+// ─── Validate-before-commit: check top candidates with SerpApi ────────────
+
+export interface CandidateDestination {
+  destination: string // IATA code
+  city?: string
+  country?: string
+  tpPrice: number    // TravelPayouts estimate
+  score: number      // vibe/visa/budget score
+}
+
+export interface ValidatedCandidate extends CandidateDestination {
+  livePrice: number | null
+  airlines: string[]
+  stops: number
+  duration: string
+  isLive: boolean
+  status: 'accepted' | 'marginal' | 'rejected'
+  rejectReason?: string
+}
+
+/**
+ * Validate top candidates with SerpApi in parallel.
+ * Returns the best validated destination, or null if all fail.
+ *
+ * Uses 1 SerpApi call per candidate (parallel). Default: validate top 3.
+ * Cost: 3 credits per mystery search on average.
+ */
+export async function validateCandidatesWithSerpApi(params: {
+  origins: string[] // All origin airport codes (e.g., ['BKK', 'DMK'])
+  candidates: CandidateDestination[]
+  departDate: string
+  returnDate?: string
+  maxValidations?: number     // default 3
+  priceToleranceRatio?: number // accept if live <= TP * this (default 1.5)
+  maxBudget: number           // absolute flight budget ceiling
+}): Promise<{
+  validated: ValidatedCandidate | null
+  all: ValidatedCandidate[]
+  serpApiCallsUsed: number
+}> {
+  const {
+    origins,
+    candidates,
+    departDate,
+    returnDate,
+    maxValidations = 3,
+    priceToleranceRatio = 1.5,
+    maxBudget,
+  } = params
+
+  const usage = getSerpApiUsage()
+  // Budget guard: if low on credits, reduce validations
+  const creditsAvailable = Math.max(0, usage.remaining - 5) // keep 5 in reserve
+  const numToValidate = Math.min(maxValidations, candidates.length, creditsAvailable)
+
+  if (numToValidate === 0) {
+    console.log('[FlightEngine] SerpApi quota too low for validation, using TP estimates')
+    return {
+      validated: null,
+      all: candidates.map(c => ({
+        ...c, livePrice: null, airlines: [], stops: 0, duration: '',
+        isLive: false, status: 'marginal' as const, rejectReason: 'no-serpapi-credits',
+      })),
+      serpApiCallsUsed: 0,
+    }
+  }
+
+  const toValidate = candidates.slice(0, numToValidate)
+  const primaryOrigin = origins[0]
+
+  console.log(`[FlightEngine] Validating ${toValidate.length} candidates with SerpApi (${usage.remaining} credits remaining)`)
+
+  // Run all validations in parallel
+  const results = await Promise.allSettled(
+    toValidate.map(async (candidate) => {
+      const result = await getSerpApiPrice(
+        primaryOrigin,
+        candidate.destination,
+        departDate,
+        returnDate,
+      )
+      return { candidate, result }
+    })
+  )
+
+  const validated: ValidatedCandidate[] = []
+  let callsUsed = 0
+
+  for (const r of results) {
+    callsUsed++
+    if (r.status !== 'fulfilled' || !r.value.result) {
+      const c = r.status === 'fulfilled' ? r.value.candidate : toValidate[validated.length]
+      validated.push({
+        ...c,
+        livePrice: null, airlines: [], stops: 0, duration: '',
+        isLive: false, status: 'rejected', rejectReason: 'serpapi-failed',
+      })
+      continue
+    }
+
+    const { candidate, result } = r.value
+    const livePrice = result.price
+
+    if (livePrice === null) {
+      validated.push({
+        ...candidate,
+        livePrice: null, airlines: result.airlines, stops: result.stops,
+        duration: result.duration, isLive: false,
+        status: 'rejected', rejectReason: 'no-flights',
+      })
+      continue
+    }
+
+    // Determine acceptance
+    const withinTolerance = livePrice <= candidate.tpPrice * priceToleranceRatio
+    const withinBudget = livePrice <= maxBudget
+    const marginallyOk = livePrice <= candidate.tpPrice * 2.0 && livePrice <= maxBudget * 1.3
+
+    let status: ValidatedCandidate['status']
+    let rejectReason: string | undefined
+
+    if (withinTolerance && withinBudget) {
+      status = 'accepted'
+    } else if (marginallyOk) {
+      status = 'marginal'
+      rejectReason = withinBudget ? 'price-higher-than-expected' : 'slightly-over-budget'
+    } else {
+      status = 'rejected'
+      rejectReason = !withinBudget ? 'over-budget' : 'price-too-high'
+    }
+
+    validated.push({
+      ...candidate,
+      livePrice, airlines: result.airlines, stops: result.stops,
+      duration: result.duration, isLive: true, status, rejectReason,
+    })
+
+    console.log(`[FlightEngine] ${candidate.city || candidate.destination}: TP $${candidate.tpPrice} → Live $${livePrice} → ${status}${rejectReason ? ` (${rejectReason})` : ''}`)
+  }
+
+  // Pick best: accepted first (by original score), then marginal, then null
+  const accepted = validated.filter(v => v.status === 'accepted').sort((a, b) => b.score - a.score)
+  const marginal = validated.filter(v => v.status === 'marginal').sort((a, b) => b.score - a.score)
+
+  const winner = accepted[0] || marginal[0] || null
+
+  if (winner) {
+    console.log(`[FlightEngine] Winner: ${winner.city || winner.destination} at $${winner.livePrice} (${winner.status})`)
+  } else {
+    console.log(`[FlightEngine] All ${toValidate.length} candidates failed validation`)
+  }
+
+  return { validated: winner, all: validated, serpApiCallsUsed: callsUsed }
+}
+
 // ─── Tier 2: SerpApi Google Flights (live) ──────────────────────────────────
 
 async function getSerpApiPrice(

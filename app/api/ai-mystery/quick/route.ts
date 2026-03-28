@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findCheapestDestinations, vibeToInterest, daysToTravelDuration, dateToMonth } from '@/lib/flight-providers/serpapi-explore'
-import { searchFlight, discoverCheapDestinations } from '@/lib/flight-engine'
+import { searchFlight, discoverCheapDestinations, validateCandidatesWithSerpApi, type CandidateDestination } from '@/lib/flight-engine'
 import { getDestinationCost } from '@/lib/destination-costs'
 import { calculateBudgetAllocation, PackageComponents, getBudgetTier } from '@/lib/budget-allocation'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
@@ -13,6 +13,7 @@ import { checkVisaRequirement } from '@/lib/enrichment/visa'
 import { callAI } from '@/lib/ai'
 import { lookupAirportByCode } from '@/lib/geolocation'
 import { withRetry } from '@/lib/retry'
+import { pickDepartureDate, computeReturnDate } from '@/lib/date-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -475,117 +476,112 @@ export async function POST(request: NextRequest) {
     // 5. Expand candidate pool — top 12 instead of top 5
     const candidates = diverse.slice(0, Math.min(12, diverse.length))
 
-    // 6. Pick from candidates with weighted randomness
-    const vibeMatched = candidates.filter(c => c.score > 2)
-    const pool = vibeMatched.length >= 3 ? vibeMatched : candidates.slice(0, 6)
-    let picked = pool[Math.floor(Math.random() * pool.length)]
+    // ── VALIDATE-BEFORE-COMMIT: check top candidates with SerpApi ──
+    // Instead of picking one destination then validating, validate the
+    // top 3-5 candidates in parallel and pick the best that passes.
 
-    // 7. AI picks from the diverse pool (sees up to 12 destinations)
+    // Compute the user's actual departure/return dates
+    const computedDepartDate = pickDepartureDate(dates)
+    const computedReturnDate = computeReturnDate(computedDepartDate, tripDuration)
+
+    // 6. AI ranks the top candidates (optional — improves pick quality)
+    let rankedCandidates = candidates.slice(0, 8)
     if (candidates.length >= 3) {
       try {
-        // Build context with daily costs for better AI decisions
-        const candidateDescriptions = candidates.slice(0, 12).map(d => {
+        const candidateDescriptions = candidates.slice(0, 8).map(d => {
           const costs = getDestinationCost(d.city || d.destination)
           const dailyCostHint = costs ? ` (~$${costs.dailyCosts.mid.food + costs.dailyCosts.mid.activities + costs.dailyCosts.mid.transport}/day local)` : ''
           return `${d.city || d.destination} (${d.destination}), ${d.country || '?'}: $${d.price} flight${dailyCostHint}`
         }).join('\n')
 
-        const aiPrompt = `Pick the single best travel destination for:
-- Total budget: $${budget} for ${tripDuration} days (flight + hotel + activities + food)
+        const aiPrompt = `Rank the top 5 best travel destinations for:
+- Total budget: $${budget} for ${tripDuration} days
 - Vibes: ${vibes.join(', ') || 'any'}
 - Flying from: ${primaryOrigin}
 - Style: ${accommodationLevel}
 
-IMPORTANT: Pick a destination that USES the budget well — don't pick the cheapest option if the budget allows something better. A $700 budget should explore farther than a $200 budget.
-
-Available destinations (flight price + estimated daily local costs):
+Available destinations:
 ${candidateDescriptions}
 
-Respond with ONLY the 3-letter IATA code. Nothing else.`
+Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN,DPS,HAN,SIN`
 
-        const aiResponse = await callAI('Travel advisor. Respond with only an IATA code.', aiPrompt, 0.5, 10)
-        const pickedIata = aiResponse.content.trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3)
-        const aiPick = candidates.find(d => d.destination === pickedIata)
-        if (aiPick) {
-          picked = { ...aiPick, score: 100 }
-          console.log(`[Quick] AI picked: ${pickedIata} (${aiPick.city}) from ${candidates.length} diverse candidates`)
+        const aiResponse = await callAI('Travel advisor. Respond with IATA codes only.', aiPrompt, 0.5, 30)
+        const aiCodes = aiResponse.content.trim().toUpperCase().replace(/[^A-Z,]/g, '').split(',').filter(c => c.length === 3)
+        if (aiCodes.length >= 3) {
+          const aiRanked = aiCodes
+            .map(code => candidates.find(d => d.destination === code))
+            .filter((d): d is NonNullable<typeof d> => !!d)
+          if (aiRanked.length >= 3) {
+            rankedCandidates = aiRanked
+            console.log(`[Quick] AI ranked: ${aiCodes.slice(0, 5).join(',')} from ${candidates.length} candidates`)
+          }
         }
       } catch {
-        // AI failed, fall through to random pick
+        // AI failed, use score-based ranking
       }
     }
 
-    // Build runner-up alternatives (diverse set excluding the picked one)
-    const alternativeCandidates = diverse
-      .filter(d => d.destination !== picked.destination)
+    // 7. Validate top candidates with SerpApi (parallel, ~3 calls)
+    const validationCandidates: CandidateDestination[] = rankedCandidates.slice(0, 5).map(d => ({
+      destination: d.destination,
+      city: d.city || d.destination,
+      country: d.country || '',
+      tpPrice: d.price,
+      score: d.score,
+    }))
+
+    const validation = await validateCandidatesWithSerpApi({
+      origins: originCodes,
+      candidates: validationCandidates,
+      departDate: computedDepartDate,
+      returnDate: computedReturnDate,
+      maxValidations: 3,
+      priceToleranceRatio: 1.5,
+      maxBudget: maxFlightPrice,
+    })
+
+    // Use validated winner, or fall back to AI/score top pick with TP estimate
+    const winner = validation.validated
+    const picked = winner
+      ? rankedCandidates.find(d => d.destination === winner.destination) || rankedCandidates[0]
+      : rankedCandidates[0]
+
+    let validatedPrice = winner?.livePrice ?? picked.price
+    let validatedAirlines: string[] = winner?.airlines ?? (picked.airline ? [picked.airline] : [])
+    let validatedStops: number | undefined = winner?.stops ?? picked.stops
+    let validatedPriceIsLive = winner?.isLive ?? false
+    let bestOrigin = primaryOrigin
+
+    if (winner?.isLive) {
+      priceIsEstimate = false
+      priceIsLive = true
+    } else if (!winner) {
+      priceIsEstimate = true
+      console.log(`[Quick] No candidate passed validation, using TP estimate for ${picked.city || picked.destination}`)
+    }
+
+    // Build runner-up alternatives from validated candidates
+    const alternativeCandidates = validation.all
+      .filter(v => v.destination !== picked.destination && v.status !== 'rejected')
       .slice(0, 3)
-      .map(d => ({
-        destination: d.destination,
-        city: d.city || d.destination,
-        country: d.country || '',
-        price: d.price,
+      .map(v => ({
+        destination: v.destination,
+        city: v.city || v.destination,
+        country: v.country || '',
+        price: v.livePrice ?? v.tpPrice,
       }))
 
-    // ── Price validation via unified flight engine ──
-    // If the initial price came from Explore/TP (cached), validate with
-    // the tiered engine using only free + SerpApi (tier 2 max) to avoid
-    // burning FlightAPI credits on discovery flows.
-    // User's requested date takes priority over the API's flight date
-    // (API may return deals on different days than what user asked for)
-    const userRequestedDate = !isFlexible ? dates.split(' ')[0] : null
-    const hasValidUserDate = userRequestedDate && /^\d{4}-\d{2}-\d{2}$/.test(userRequestedDate)
-    const computedDepartDate = (hasValidUserDate ? userRequestedDate : null)
-      || picked.startDate
-      || (isFlexible ? flexibleRange?.dateFrom : null)
-      || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
-    let validatedPrice = picked.price
-    let validatedAirlines: string[] = picked.airline ? [picked.airline] : []
-    let validatedStops: number | undefined = picked.stops
-    let validatedPriceIsLive = priceIsLive
-
-    // Search from ALL origin airports (BKK,DMK) and pick the cheapest
-    let bestOrigin = primaryOrigin
-    try {
-      const priceChecks = await Promise.allSettled(
-        originCodes.map(code =>
-          withRetry(
-            () => searchFlight({
-              origin: code,
-              destination: picked.destination,
-              departDate: computedDepartDate,
-              routeType: 'price-check',
-              maxTier: 2,
-            }),
-            { maxAttempts: 2, baseDelay: 1500 },
-          ).then(result => ({ code, result }))
-        )
-      )
-
-      let bestPrice = Infinity
-      for (const check of priceChecks) {
-        if (check.status !== 'fulfilled') continue
-        const { code, result } = check.value
-        if (result.price !== null && result.price < bestPrice) {
-          bestPrice = result.price
-          bestOrigin = code
-          validatedPrice = result.price
-          if (result.airlines.length > 0) validatedAirlines = result.airlines
-          if (result.stops !== null) validatedStops = result.stops
-          validatedPriceIsLive = result.confidence === 'live'
-        }
-      }
-
-      if (bestPrice < Infinity) {
-        console.log(`[Quick] Best price: $${validatedPrice} from ${bestOrigin} (checked ${originCodes.length} airports)`)
-        // If validated price is 2x+ the original estimate, flag it
-        if (validatedPrice && picked.price && validatedPrice > picked.price * 2) {
-          console.warn(`[Quick] Large price discrepancy: estimate $${picked.price} vs live $${validatedPrice}`)
-          priceIsEstimate = false // It's now a live price, not estimate
-          validatedPriceIsLive = true
-        }
-      }
-    } catch (err) {
-      console.warn('[Quick] Price validation failed after retries, using original:', err instanceof Error ? err.message : err)
+    // If no alternatives from validation, fall back to diverse list
+    if (alternativeCandidates.length === 0) {
+      diverse
+        .filter(d => d.destination !== picked.destination)
+        .slice(0, 3)
+        .forEach(d => alternativeCandidates.push({
+          destination: d.destination,
+          city: d.city || d.destination,
+          country: d.country || '',
+          price: d.price,
+        }))
     }
 
     // Estimate hotel price
@@ -601,20 +597,14 @@ Respond with ONLY the 3-letter IATA code. Nothing else.`
     let hotelEstimate = allocation.hotel_per_night
 
     if (picked.hotelPrice && picked.hotelPrice > 0) {
-      // Use Explore hotel price if available
       hotelEstimate = picked.hotelPrice
     } else if (costData) {
       hotelEstimate = costData.dailyCosts[costTier].hotel
     }
 
-    // Compute suggested dates — always use user's tripDuration, not the API's endDate
-    // (API endDate might be a 1-night deal when user requested 2+ days)
+    // Dates already computed above via pickDepartureDate/computeReturnDate
     const effectiveDepartDate = computedDepartDate
-    const effectiveReturnDate = (() => {
-      const d = new Date(effectiveDepartDate + 'T00:00:00')
-      d.setDate(d.getDate() + tripDuration)
-      return d.toISOString().split('T')[0]
-    })()
+    const effectiveReturnDate = computedReturnDate
 
     // Ensure city/country are resolved — TravelPayouts only returns IATA codes
     const resolvedAirport = (!picked.city || !picked.country)
