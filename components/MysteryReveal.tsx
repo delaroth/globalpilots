@@ -355,8 +355,8 @@ export default function MysteryReveal({
     returnDate: effectiveReturnDate,
     nights: tripDuration,
     maxHotelPerNight:
-      destination.budget_breakdown?.hotel_per_night ||
-      destination.estimated_hotel_per_night ||
+      destination.budget_breakdown?.hotel_per_night ??
+      destination.estimated_hotel_per_night ??
       undefined,
     country: destination.country,
   })

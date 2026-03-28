@@ -35,6 +35,7 @@ interface SearchParams {
   customSplit?: { flights: number; hotels: number; activities: number }
   passports?: string[] // ISO alpha-2 codes for visa filtering (e.g. ['US', 'DE'])
   destination?: string // Pre-selected destination (skips mystery pick, goes straight to AI planning)
+  departTime?: number // Time-of-day filter: 0=morning, 1=afternoon, 2=evening, 3=night
 }
 
 interface MysteryContextType {
@@ -379,6 +380,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
         // Handle generic data as it arrives (likely faster — cached)
         genericPromise
           .then((genericData) => {
+            if (abortController.signal.aborted) return
             console.log('[MysteryContext] Phase 2a success: Generic data received')
             setState(prev => {
               if (!prev.destination) return prev
@@ -419,6 +421,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
         // Handle personalized details as they arrive
         detailsPromise
           .then((detailsData) => {
+            if (abortController.signal.aborted) return
             console.log('[MysteryContext] Phase 2b success: Personalized details received')
             setState(prev => {
               if (!prev.destination) return prev
@@ -452,6 +455,9 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
                   insider_tip: detailsData.insider_tip || prev.destination.insider_tip || '',
                   localTip: detailsData.localTip || prev.destination.localTip || '',
                   bestTimeToGo: detailsData.bestTimeToGo || prev.destination.bestTimeToGo || '',
+                  // Use details budget_breakdown when available, clear old format to prevent conflicts
+                  budget_breakdown: detailsData.budget_breakdown || prev.destination.budget_breakdown,
+                  budgetBreakdown: detailsData.budgetBreakdown || (detailsData.budget_breakdown ? undefined : prev.destination.budgetBreakdown),
                   genericData: prev.destination.genericData || detailsData.genericData,
                 },
               }

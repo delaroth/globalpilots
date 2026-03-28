@@ -411,6 +411,10 @@ function MysteryPageContent() {
         : `Please enter a budget of at least $${minBudget} USD (your budget converts to ~$${budgetInUSD} USD).`)
       return
     }
+    if (budgetInUSD > 50000) {
+      setError('Maximum budget is $50,000 USD.')
+      return
+    }
 
     if (showSpecificDates) {
       if (!departDate) {
@@ -532,6 +536,7 @@ function MysteryPageContent() {
         customSplit: splitPayload,
         passports: passports.length > 0 ? passports : undefined,
         destination: chosenDestination,
+        departTime: preferredDepartTime,
       })
     } else {
       mystery.startSearch({
@@ -545,6 +550,7 @@ function MysteryPageContent() {
         budgetPriority: effectiveBudgetPriority,
         customSplit: splitPayload,
         passports: passports.length > 0 ? passports : undefined,
+        departTime: preferredDepartTime,
       })
     }
   }
