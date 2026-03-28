@@ -438,8 +438,15 @@ function MysteryPageContent() {
       includeTransportation: true,
     }
 
-    // Trip duration: 0 means AI decides — use a sensible default and tell the API it's flexible
-    const effectiveDuration = tripDuration === 0 ? 5 : tripDuration
+    // Trip duration: 0 means AI decides — scale with budget
+    // $100-200 → 2 days (weekend), $200-400 → 3 days, $400-700 → 4-5 days, $700+ → 5-7 days
+    const effectiveDuration = tripDuration === 0
+      ? (budgetInUSD <= 200 ? 2
+        : budgetInUSD <= 400 ? 3
+        : budgetInUSD <= 700 ? Math.round(4 + Math.random())
+        : budgetInUSD <= 1500 ? Math.round(5 + Math.random() * 2)
+        : 7)
+      : tripDuration
     const isFlexibleDuration = tripDuration === 0
 
     // If user set a preferred departure day, ALWAYS compute the actual date
@@ -942,7 +949,7 @@ function MysteryPageContent() {
                         onChange={(e) => setTripDuration(parseInt(e.target.value))}
                         className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:outline-none transition text-slate-900 bg-white text-sm"
                       >
-                        <option value={0}>AI picks best length</option>
+                        <option value={0}>Best for my budget</option>
                         {durationOptions.map(d => (
                           <option key={d} value={d}>{d} days</option>
                         ))}
@@ -950,7 +957,7 @@ function MysteryPageContent() {
                     </div>
                     {tripDuration === 0 && (
                       <p className="text-xs text-sky-600/80 mt-1.5">
-                        AI will optimize trip length based on your budget and destination costs
+                        Trip length scales with your budget: $100-200 = weekend, $400+ = 4-5 days, $700+ = up to a week
                       </p>
                     )}
 
