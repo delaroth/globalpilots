@@ -21,6 +21,7 @@ import CurrencySelector from '@/components/CurrencySelector'
 import { useCurrency } from '@/hooks/useCurrency'
 import Link from 'next/link'
 import PassportSelector from '@/components/PassportSelector'
+import { PriceBadgeLight } from '@/components/PriceBadge'
 
 // Lazy load CalendarGrid — only rendered after a flexible-month search completes
 const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
@@ -197,16 +198,16 @@ function getWeekendDates(departDay: 'thursday' | 'friday', returnDay: 'saturday'
 
 // ── TimeOfDaySelector — toggleable popout ──────────────────────────────────
 
-function TimeOfDaySelector({ value, onChange }: { value?: TimeOfDay; onChange: (v?: TimeOfDay) => void }) {
+function TimeOfDaySelector({ value, onChange, label = 'Depart' }: { value?: TimeOfDay; onChange: (v?: TimeOfDay) => void; label?: string }) {
   const [open, setOpen] = useState(false)
-  const timeLabels: { val?: TimeOfDay; label: string; hint: string }[] = [
+  const options: { val?: TimeOfDay; label: string; hint: string }[] = [
     { val: undefined, label: 'Any time', hint: '' },
-    { val: 0, label: 'Morning', hint: '6am–12pm' },
-    { val: 1, label: 'Afternoon', hint: '12–6pm' },
-    { val: 2, label: 'Evening', hint: '6pm–12am' },
-    { val: 3, label: 'Night', hint: '12–6am' },
+    { val: 0, label: `${label} morning`, hint: '6am–12pm' },
+    { val: 1, label: `${label} afternoon`, hint: '12–6pm' },
+    { val: 2, label: `After work / evening`, hint: 'After 6pm' },
+    { val: 3, label: `Late night / red-eye`, hint: 'After midnight' },
   ]
-  const current = timeLabels.find(t => t.val === value)
+  const current = options.find(t => t.val === value)
 
   return (
     <div className="relative">
@@ -222,25 +223,24 @@ function TimeOfDaySelector({ value, onChange }: { value?: TimeOfDay; onChange: (
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        {current?.label || 'Time'}
-        {current?.hint && <span className="text-[10px] opacity-70">({current.hint})</span>}
+        {current?.hint || current?.label || 'Time'}
       </button>
 
       {open && (
-        <div className="absolute z-50 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-1 min-w-[160px] animate-in fade-in slide-in-from-top-1 duration-150">
-          {timeLabels.map(opt => (
+        <div className="absolute z-50 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-200 py-1 min-w-[190px]">
+          {options.map(opt => (
             <button
               key={opt.label}
               type="button"
               onClick={() => { onChange(opt.val); setOpen(false) }}
-              className={`w-full text-left px-3 py-2 text-sm transition flex items-center justify-between ${
+              className={`w-full text-left px-3 py-2.5 text-sm transition flex items-center justify-between ${
                 value === opt.val
                   ? 'bg-sky-50 text-sky-700 font-medium'
                   : 'text-gray-700 hover:bg-gray-50'
               }`}
             >
               <span>{opt.label}</span>
-              {opt.hint && <span className="text-xs text-gray-400">{opt.hint}</span>}
+              {opt.hint && <span className="text-xs text-gray-400 ml-2">{opt.hint}</span>}
             </button>
           ))}
         </div>
@@ -257,12 +257,14 @@ function FlexibleDateInput({
   onChange,
   minDate,
   minMonth,
+  isReturn,
 }: {
   label: string
   value: FlexibleDateValue
   onChange: (v: FlexibleDateValue) => void
   minDate?: string
   minMonth?: string
+  isReturn?: boolean
 }) {
   const typeOptions: { value: DateFlexType; label: string }[] = [
     { value: 'exact', label: 'Exact Date' },
@@ -382,6 +384,7 @@ function FlexibleDateInput({
         <TimeOfDaySelector
           value={value.timeOfDay}
           onChange={(tod) => onChange({ ...value, timeOfDay: tod })}
+          label={isReturn ? 'Return' : 'Depart'}
         />
       )}
     </div>
@@ -1024,6 +1027,7 @@ function SearchPageContent() {
                     onChange={setReturnDateFlex}
                     minDate={departureDate.type === 'exact' ? departureDate.exactDate : today}
                     minMonth={departureDate.type === 'month' ? departureDate.month : new Date().toISOString().slice(0, 7)}
+                    isReturn
                   />
                 )}
               </div>
@@ -1446,6 +1450,9 @@ function SearchPageContent() {
                     <p className="text-slate-900 text-6xl font-bold mt-1">
                       {exactDateResult.isLive ? '' : '~'}${exactDateResult.price}
                     </p>
+                    <div className="mt-2">
+                      <PriceBadgeLight isLive={exactDateResult?.isLive} isEstimate={!exactDateResult?.isLive} />
+                    </div>
                     <p className="text-slate-900/80 text-sm mt-2">
                       {origin} {isRoundTrip ? '<>' : '>'} {destination} · {exactDateResult.departDate || effectiveDepartDate}
                       {isRoundTrip && (exactDateResult.returnDate || effectiveReturnDate) && ` — ${exactDateResult.returnDate || effectiveReturnDate}`}
@@ -2093,6 +2100,7 @@ function SearchPageContent() {
                             <p className={`text-3xl font-bold ${i === 0 ? 'text-green-600' : 'text-slate-900'}`}>
                               ${r.price}
                             </p>
+                            <div className="mt-1"><PriceBadgeLight isEstimate={true} /></div>
                             <p className="text-sky-400 text-xs font-medium mt-1">Check on Aviasales &rarr;</p>
                           </div>
                         </div>

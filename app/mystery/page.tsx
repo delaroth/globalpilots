@@ -1004,14 +1004,14 @@ function MysteryPageContent() {
                               </button>
                             ))}
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-gray-400">Time:</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs text-gray-400">Depart:</span>
                             {([
-                              { val: undefined, label: 'Any' },
-                              { val: 0, label: 'Morning' },
-                              { val: 1, label: 'Afternoon' },
-                              { val: 2, label: 'Evening' },
-                              { val: 3, label: 'Night' },
+                              { val: undefined, label: 'Any time' },
+                              { val: 0, label: 'Morning (6am-12pm)' },
+                              { val: 1, label: 'Afternoon (12-6pm)' },
+                              { val: 2, label: 'After work (6pm+)' },
+                              { val: 3, label: 'Late night (12am+)' },
                             ] as { val: number | undefined; label: string }[]).map(opt => (
                               <button
                                 key={opt.label}

@@ -9,6 +9,7 @@ import TripCostBadge from '@/components/TripCostBadge'
 import ValueBadge from '@/components/ValueBadge'
 import { getDestinationCost } from '@/lib/destination-costs'
 import { calculateValueScore } from '@/lib/value-score'
+import { PriceBadgeLight } from '@/components/PriceBadge'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -438,8 +439,9 @@ export default function DealsPage() {
                       {/* Price info */}
                       <div className="flex items-center justify-between">
                         {d.flightPrice ? (
-                          <span className="text-white font-bold text-sm sm:text-base">
+                          <span className="text-white font-bold text-sm sm:text-base flex items-center gap-1.5">
                             ${d.flightPrice}
+                            <PriceBadgeLight isEstimate={true} />
                           </span>
                         ) : (
                           <span className="text-white/30 text-xs italic">
