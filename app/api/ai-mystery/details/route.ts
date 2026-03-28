@@ -87,7 +87,8 @@ function extractDepartDate(dates: string): string {
   // Specific date: extract YYYY-MM-DD from start of string
   const match = dates.match(/^\d{4}-\d{2}-\d{2}/)
   if (match) return match[0]
-  // Fallback
+  // Fallback — log so we can detect when this happens
+  console.warn(`[Details] Could not extract departure date from "${dates.slice(0, 50)}" — using 14-day fallback`)
   const d = new Date(Date.now() + 14 * 86400000)
   return d.toISOString().split('T')[0]
 }

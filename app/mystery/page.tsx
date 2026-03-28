@@ -447,8 +447,8 @@ function MysteryPageContent() {
     let computedDepartDate = departDate
     if (preferredDepartDay !== null) {
       const now = new Date()
-      const today = now.getDay()
-      let diff = (preferredDepartDay - today + 7) % 7
+      const todayWeekday = now.getDay()
+      let diff = (preferredDepartDay - todayWeekday + 7) % 7
       if (diff < 2) diff += 7 // at least 2 days out for booking buffer
       const d = new Date(now)
       d.setDate(d.getDate() + diff)

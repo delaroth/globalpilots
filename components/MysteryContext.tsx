@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { useCurrency } from '@/hooks/useCurrency'
 import { trackConversion } from '@/lib/track-client'
+import { calculateBudgetAllocation } from '@/lib/budget-allocation'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -314,12 +315,12 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        // Cap hotel estimate at what the budget can actually afford
+        // Use the same budget allocation logic as the details endpoint (Phase 2)
         const flightCost = quickData.estimated_flight_cost || 0
-        const remainingAfterFlight = Math.max(0, params.budget - flightCost)
-        const maxHotelTotal = Math.floor(remainingAfterFlight * 0.5) // max 50% of remaining for hotel
-        const rawHotelTotal = (quickData.estimated_hotel_per_night || 0) * params.tripDuration
-        const cappedHotelTotal = Math.min(rawHotelTotal, maxHotelTotal)
+        const allocation = calculateBudgetAllocation(params.budget, params.tripDuration, params.packageComponents, {
+          budgetPriority: params.budgetPriority,
+          customSplit: params.customSplit,
+        })
 
         // Build partial destination
         const partialDestination = {
@@ -351,7 +352,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
           day3: [],
           budgetBreakdown: {
             flights: flightCost,
-            hotel: cappedHotelTotal,
+            hotel: allocation.hotel_per_night * params.tripDuration,
             activities: 0,
             food: 0,
             total: params.budget,

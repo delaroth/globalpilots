@@ -435,6 +435,7 @@ export function buildBookingBundle(params: {
   }
 
   // Use explicit return date if provided, otherwise compute from depart + nights
+  // NOTE: 'T00:00:00' suffix forces local-timezone parsing (without it, YYYY-MM-DD is parsed as UTC)
   const returnDate = params.returnDate || (() => {
     const d = new Date(departDate + 'T00:00:00')
     d.setDate(d.getDate() + nights)
