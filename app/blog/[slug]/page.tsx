@@ -1,6 +1,22 @@
 'use client'
 
-import DOMPurify from 'isomorphic-dompurify'
+// Use a simple sanitizer that works in both SSR and client
+// (isomorphic-dompurify has ESM issues on Vercel serverless)
+function sanitizeHTML(html: string): string {
+  if (typeof window !== 'undefined' && typeof window.document !== 'undefined') {
+    // Client-side: use DOMParser to strip scripts
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    doc.querySelectorAll('script,iframe,object,embed').forEach(el => el.remove())
+    return doc.body.innerHTML
+  }
+  // Server-side: basic tag stripping for dangerous elements
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^>]*>.*?<\/iframe>/gi, '')
+    .replace(/<object\b[^>]*>.*?<\/object>/gi, '')
+    .replace(/<embed\b[^>]*\/?>/gi, '')
+    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
+}
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { useState, useEffect } from 'react'
@@ -109,7 +125,7 @@ function EditorialPostView({ post }: { post: EditorialPost }) {
               prose-li:text-gray-700
               prose-strong:text-slate-900
               prose-ul:my-4 prose-li:my-1"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHTML(post.content) }}
           />
         </article>
 
