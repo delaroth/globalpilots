@@ -674,9 +674,11 @@ export default function MysteryReveal({
                         <div className="text-center min-w-0">
                           <p className="text-xs text-white/60">Flight</p>
                           <p className="text-lg font-bold text-emerald-400">
-                            {isEstimate ? '~' : ''}{fmt(destination.budget_breakdown.flight)}
-                            {isEstimate ? ' est.' : ''}
+                            {isLivePrice ? fmt(destination.budget_breakdown.flight) : `${fmt(Math.round(destination.budget_breakdown.flight * 0.8))}–${fmt(Math.round(destination.budget_breakdown.flight * 1.5))}`}
                           </p>
+                          {isEstimate && (
+                            <p className="text-[10px] text-amber-400/60">estimated range</p>
+                          )}
                         </div>
                         <div className="text-center">
                           <p className="text-xs text-white/60">Hotel ({tripDuration} nights)</p>
@@ -770,10 +772,14 @@ export default function MysteryReveal({
                             )}
                           </p>
                           <p className="text-2xl font-bold text-emerald-400">
-                            {isEstimate ? '~' : ''}{fmt(flightPrice)}
+                            {isLivePrice
+                              ? fmt(flightPrice)
+                              : flightPrice
+                                ? `${fmt(Math.round(flightPrice * 0.8))}–${fmt(Math.round(flightPrice * 1.5))}`
+                                : 'Check prices'}
                           </p>
-                          {isEstimate && (
-                            <p className="text-xs text-amber-400/70 mt-0.5">Estimate — verify on booking site</p>
+                          {isEstimate && flightPrice > 0 && (
+                            <p className="text-xs text-amber-400/70 mt-0.5">Estimated range — compare prices below</p>
                           )}
                           {destination.googleFlightsAirlines && destination.googleFlightsAirlines.length > 0 && (
                             <p className="text-xs text-white/50 mt-0.5 flex items-center justify-center gap-1 flex-wrap">
@@ -876,11 +882,11 @@ export default function MysteryReveal({
                 ============================================================ */}
                 <motion.div {...staggerChild(14)} ref={bookingRef} className="lg:col-span-2">
                   <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                    Book Your Trip
+                    Compare &amp; Book
                     <AffiliateDisclosure />
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Flight */}
+                  {/* Flight comparison — primary CTA */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                     <BookingTracker
                       stampId={stampId || ''}
                       type="flight"
@@ -888,20 +894,25 @@ export default function MysteryReveal({
                       href={bookingBundle.flightUrl}
                       className="block w-full bg-emerald-500/90 hover:bg-emerald-500 text-white font-bold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl text-center"
                     >
-                      {flightPrice ? (
-                        <>Book Flights (~{fmt(flightPrice)}{isEstimate ? ' est.' : ''})</>
-                      ) : (
-                        <>Search Flights</>
-                      )}
+                      Compare Flight Prices
                       <span className="block text-sm font-normal mt-1 opacity-90">
-                        {formatDate(effectiveDepartDate)} &middot;{' '}
-                        {AFFILIATE_FLAGS.kiwi
-                          ? 'Search on Kiwi'
-                          : 'Search on Aviasales'}
+                        {formatDate(effectiveDepartDate)} &middot; Aviasales
                       </span>
                     </BookingTracker>
-
-                    {/* Hotel */}
+                    <a
+                      href={`https://www.google.com/travel/flights?q=flights+from+${bookingOrigin}+to+${iata}+on+${effectiveDepartDate}+return+${effectiveReturnDate}&curr=USD`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full bg-white/[0.08] hover:bg-white/[0.12] text-white font-bold py-4 px-6 rounded-xl transition border border-white/10 text-center"
+                    >
+                      Check on Google Flights
+                      <span className="block text-sm font-normal mt-1 opacity-70">
+                        {formatDate(effectiveDepartDate)} &middot; Compare prices
+                      </span>
+                    </a>
+                  </div>
+                  {/* Hotel + Activities */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <BookingTracker
                       stampId={stampId || ''}
                       type="hotel"
@@ -915,12 +926,9 @@ export default function MysteryReveal({
                         <>Search Hotels</>
                       )}
                       <span className="block text-sm font-normal mt-1 opacity-90">
-                        {formatDate(effectiveDepartDate)} &ndash;{' '}
-                        {formatDate(effectiveReturnDate)} &middot; Booking.com
+                        {formatDate(effectiveDepartDate)} &ndash; {formatDate(effectiveReturnDate)} &middot; Booking.com
                       </span>
                     </BookingTracker>
-
-                    {/* Activities */}
                     <BookingTracker
                       stampId={stampId || ''}
                       type="activity"
@@ -934,7 +942,7 @@ export default function MysteryReveal({
                       </span>
                     </BookingTracker>
                   </div>
-                  <p className="text-xs text-white/40 text-center mt-3">You book directly with the airline or hotel. GlobePilots never handles your payment.</p>
+                  <p className="text-xs text-white/40 text-center mt-3">Compare prices across providers. You book directly — GlobePilots never handles your payment.</p>
                 </motion.div>
 
                 {/* ============================================================
