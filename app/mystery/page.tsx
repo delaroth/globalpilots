@@ -438,9 +438,10 @@ function MysteryPageContent() {
     const effectiveDuration = tripDuration === 0 ? 5 : tripDuration
     const isFlexibleDuration = tripDuration === 0
 
-    // If user set a preferred departure day, compute the actual date
+    // If user set a preferred departure day, ALWAYS compute the actual date
+    // (overrides both flexible timeframe AND specific date picker)
     let computedDepartDate = departDate
-    if (preferredDepartDay !== null && !showSpecificDates) {
+    if (preferredDepartDay !== null) {
       const now = new Date()
       const today = now.getDay()
       let diff = (preferredDepartDay - today + 7) % 7
@@ -450,11 +451,11 @@ function MysteryPageContent() {
       computedDepartDate = d.toISOString().split('T')[0]
     }
 
-    // Build dates string
-    let requestDates = showSpecificDates
-      ? `${departDate}${flexibleDates ? ' (flexible \u00B13 days)' : ''}`
-      : computedDepartDate && preferredDepartDay !== null
-        ? computedDepartDate // Use the computed date from day-of-week preference
+    // Build dates string — preferred day always wins when set
+    let requestDates = preferredDepartDay !== null
+      ? computedDepartDate
+      : showSpecificDates
+        ? `${departDate}${flexibleDates ? ' (flexible \u00B13 days)' : ''}`
         : `flexible:${timeframe}`
     if (isFlexibleDuration) {
       requestDates += ' (flexible trip length - optimize for budget)'
