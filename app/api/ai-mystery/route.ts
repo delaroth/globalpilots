@@ -257,12 +257,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!/^[A-Z]{3}$/.test(origin)) {
+    // Accept multi-airport codes (BKK,DMK) — use primary for search
+    if (!/^[A-Z]{3}(,[A-Z]{3})*$/.test(origin)) {
       return NextResponse.json(
         { error: 'origin must be a 3-letter IATA airport code' },
         { status: 400 }
       )
     }
+    const primaryOrigin = origin.split(',')[0]
 
     const components: PackageComponents = packageComponents || {
       includeFlight: true,
@@ -317,7 +319,7 @@ export async function POST(request: NextRequest) {
     // PRIMARY: discoverCheapDestinations (TravelPayouts free first, SerpApi Explore fallback)
     try {
       const discovered = await discoverCheapDestinations({
-        origin,
+        origin: primaryOrigin,
         maxPrice: maxFlightPrice,
         month: exploreMonth,
         travelDuration: exploreDuration,
@@ -363,7 +365,7 @@ export async function POST(request: NextRequest) {
 
       const kiwiPromise = kiwiEnabled
         ? searchKiwiInspiration({
-            origin,
+            origin: primaryOrigin,
             dateFrom: kiwiDateFrom,
             dateTo: kiwiDateTo,
             maxPrice: maxFlightPrice,
@@ -376,7 +378,7 @@ export async function POST(request: NextRequest) {
         : Promise.resolve([] as { destination: string; city?: string; country?: string; price: number }[])
 
       const tpPromise = tpEnabled
-        ? fetch(`${API_BASE}/v2/prices/latest?origin=${origin}&currency=usd&limit=30&token=${TOKEN}`, { next: { revalidate: 3600 } })
+        ? fetch(`${API_BASE}/v2/prices/latest?origin=${primaryOrigin}&currency=usd&limit=30&token=${TOKEN}`, { next: { revalidate: 3600 } })
             .then(async res => {
               if (!res.ok) return []
               const data = await res.json()
@@ -415,7 +417,7 @@ export async function POST(request: NextRequest) {
       console.log('[AI-Mystery] Thin cache detected, using hardcoded fallback')
       priceIsEstimate = true
       priceIsLive = false
-      const region = getOriginRegion(origin)
+      const region = getOriginRegion(primaryOrigin)
       const fallbacks = FALLBACK_DESTINATIONS[region] || FALLBACK_DESTINATIONS['SE Asia']
 
       priceInfo = fallbacks
