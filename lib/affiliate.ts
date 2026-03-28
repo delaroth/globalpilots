@@ -326,11 +326,13 @@ export function buildHotelLink(
     country?: string            // Appended to search text for better Agoda city resolution
   }
 ): string {
-  const checkInDate = new Date(checkIn)
+  const checkInDate = new Date(checkIn + 'T00:00:00') // Local timezone, not UTC
   const checkOutDate = new Date(checkInDate)
   checkOutDate.setDate(checkOutDate.getDate() + nights)
 
-  const formatDate = (d: Date) => d.toISOString().split('T')[0]
+  // Use local date to avoid UTC shift for users in UTC+ timezones
+  const formatDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
   // Use Booking.com — works with city names in URL (Agoda requires numeric IDs)
   const searchText = options?.country

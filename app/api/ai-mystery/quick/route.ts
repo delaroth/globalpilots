@@ -588,7 +588,7 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       departDate: computedDepartDate,
       returnDate: computedReturnDate,
       maxValidations: 3,
-      priceToleranceRatio: 1.5,
+      priceToleranceRatio: 1.3, // Accept if live price <= 1.3x TP estimate
       maxBudget: maxFlightPrice,
     })
 
@@ -604,6 +604,8 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
     let validatedPriceIsLive = winner?.isLive ?? false
     // Use the specific origin airport from the winning candidate
     let bestOrigin = winner?.validatedOrigin || winner?.originAirport || (picked as any).originAirport || primaryOrigin
+
+    console.log(`[Quick] Validation result: winner=${winner ? `${winner.city}@$${winner.livePrice}(${winner.status})` : 'null'}, fallback=${picked.city || picked.destination}@$${picked.price}, displayPrice=$${validatedPrice}, isLive=${validatedPriceIsLive}`)
 
     if (winner?.isLive) {
       priceIsEstimate = false
