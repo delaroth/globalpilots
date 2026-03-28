@@ -530,7 +530,14 @@ Respond with ONLY the 3-letter IATA code. Nothing else.`
     // If the initial price came from Explore/TP (cached), validate with
     // the tiered engine using only free + SerpApi (tier 2 max) to avoid
     // burning FlightAPI credits on discovery flows.
-    const computedDepartDate = picked.startDate || (isFlexible ? flexibleRange?.dateFrom : dates.split(' ')[0]) || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+    // User's requested date takes priority over the API's flight date
+    // (API may return deals on different days than what user asked for)
+    const userRequestedDate = !isFlexible ? dates.split(' ')[0] : null
+    const hasValidUserDate = userRequestedDate && /^\d{4}-\d{2}-\d{2}$/.test(userRequestedDate)
+    const computedDepartDate = (hasValidUserDate ? userRequestedDate : null)
+      || picked.startDate
+      || (isFlexible ? flexibleRange?.dateFrom : null)
+      || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
     let validatedPrice = picked.price
     let validatedAirlines: string[] = picked.airline ? [picked.airline] : []
     let validatedStops: number | undefined = picked.stops

@@ -415,6 +415,7 @@ export function buildBookingBundle(params: {
   destination: string
   cityName: string
   departDate: string
+  returnDate?: string
   nights?: number
   maxHotelPerNight?: number
   country?: string
@@ -433,8 +434,8 @@ export function buildBookingBundle(params: {
     }
   }
 
-  // Calculate return date from depart + nights
-  const returnDate = (() => {
+  // Use explicit return date if provided, otherwise compute from depart + nights
+  const returnDate = params.returnDate || (() => {
     const d = new Date(departDate + 'T00:00:00')
     d.setDate(d.getDate() + nights)
     return d.toISOString().split('T')[0]

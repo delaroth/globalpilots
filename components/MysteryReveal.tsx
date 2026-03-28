@@ -352,6 +352,7 @@ export default function MysteryReveal({
     destination: iata,
     cityName: destination.destination,
     departDate: effectiveDepartDate,
+    returnDate: effectiveReturnDate,
     nights: tripDuration,
     maxHotelPerNight:
       destination.budget_breakdown?.hotel_per_night ||
