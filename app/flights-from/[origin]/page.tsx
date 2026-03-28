@@ -291,6 +291,26 @@ export default async function FlightsFromOriginPage({
         </div>
       </section>
 
+      {/* Related Pages */}
+      <section className="px-6 pb-16">
+        <div className="max-w-3xl mx-auto">
+          <div className="mt-8 p-6 bg-white/[0.04] border border-white/[0.08] rounded-2xl">
+            <h3 className="text-lg font-bold text-white mb-3">More from {airport.city}</h3>
+            <div className="flex flex-wrap gap-3">
+              <Link href={`/mystery?origin=${airport.code}`} className="text-sm text-sky-400 hover:text-sky-300 transition">
+                Mystery trip from {airport.city} →
+              </Link>
+              <Link href={`/search?origin=${airport.code}`} className="text-sm text-sky-400 hover:text-sky-300 transition">
+                Search flights →
+              </Link>
+              <Link href={`/deals?origin=${airport.code}`} className="text-sm text-sky-400 hover:text-sky-300 transition">
+                Live deals →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </main>
   )
