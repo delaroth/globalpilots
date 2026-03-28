@@ -161,12 +161,17 @@ function getPopularSuggestions(origin: string): { dest: string; city: string }[]
   ].filter(s => s.dest !== origin)
 }
 
+/** Format a Date as YYYY-MM-DD using LOCAL timezone (not UTC) */
+function toLocalDateString(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function getNextWeekendDate(): string {
   const d = new Date()
   const dayOfWeek = d.getDay()
   const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7
   d.setDate(d.getDate() + daysUntilFriday)
-  return d.toISOString().split('T')[0]
+  return toLocalDateString(d)
 }
 
 /** Compute next departure/return dates for a weekend trip */
@@ -191,8 +196,8 @@ function getWeekendDates(departDay: 'thursday' | 'friday', returnDay: 'saturday'
   returnDate.setDate(returnDate.getDate() + daysUntilReturn)
 
   return {
-    depart: departDate.toISOString().split('T')[0],
-    return: returnDate.toISOString().split('T')[0],
+    depart: toLocalDateString(departDate),
+    return: toLocalDateString(returnDate),
   }
 }
 
@@ -503,7 +508,8 @@ function SearchPageContent() {
     const d = new Date()
     const diff = (dow - d.getDay() + 7) % 7
     d.setDate(d.getDate() + (diff < 2 ? diff + 7 : diff)) // At least 2 days out
-    return d.toISOString().split('T')[0]
+    // Use local date, not toISOString() which converts to UTC and can shift the day
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   }
 
   const effectiveDepartDate = departureDate.type === 'exact'

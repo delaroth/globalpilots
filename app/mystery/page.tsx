@@ -452,7 +452,12 @@ function MysteryPageContent() {
       if (diff < 2) diff += 7 // at least 2 days out for booking buffer
       const d = new Date(now)
       d.setDate(d.getDate() + diff)
-      computedDepartDate = d.toISOString().split('T')[0]
+      // Use local date components, NOT toISOString() which converts to UTC
+      // (UTC conversion can shift the date back 1 day for users east of Greenwich)
+      const yyyy = d.getFullYear()
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      computedDepartDate = `${yyyy}-${mm}-${dd}`
     }
 
     // Build dates string — preferred day always wins when set
