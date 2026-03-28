@@ -600,9 +600,10 @@ Respond with ONLY the 3-letter IATA code. Nothing else.`
       hotelEstimate = costData.dailyCosts[costTier].hotel
     }
 
-    // Compute suggested dates
+    // Compute suggested dates — always use user's tripDuration, not the API's endDate
+    // (API endDate might be a 1-night deal when user requested 2+ days)
     const effectiveDepartDate = computedDepartDate
-    const effectiveReturnDate = picked.endDate || (() => {
+    const effectiveReturnDate = (() => {
       const d = new Date(effectiveDepartDate + 'T00:00:00')
       d.setDate(d.getDate() + tripDuration)
       return d.toISOString().split('T')[0]
