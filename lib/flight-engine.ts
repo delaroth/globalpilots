@@ -463,48 +463,48 @@ export async function validateCandidatesWithSerpApi(params: {
   const toValidate = candidates.slice(0, numToValidate)
   const primaryOrigin = origins[0]
 
-  console.log(`[FlightEngine] Validating ${toValidate.length} candidates with SerpApi (${usage.remaining} credits remaining)`)
+  console.log(`[FlightEngine] Validating up to ${toValidate.length} candidates sequentially (${usage.remaining} credits remaining)`)
 
-  // Run all validations in parallel
-  const results = await Promise.allSettled(
-    toValidate.map(async (candidate) => {
-      const result = await getSerpApiPrice(
+  // Validate SEQUENTIALLY — stop as soon as one is accepted.
+  // Saves 1-2 SerpApi calls when the first candidate is accurate.
+  const validated: ValidatedCandidate[] = []
+  let callsUsed = 0
+  let earlyWinner: ValidatedCandidate | null = null
+
+  for (const candidate of toValidate) {
+    // Stop if we already found an accepted candidate
+    if (earlyWinner) break
+
+    callsUsed++
+    let result: Awaited<ReturnType<typeof getSerpApiPrice>> = null
+
+    try {
+      result = await getSerpApiPrice(
         primaryOrigin,
         candidate.destination,
         departDate,
         returnDate,
       )
-      return { candidate, result }
-    })
-  )
-
-  const validated: ValidatedCandidate[] = []
-  let callsUsed = 0
-
-  for (const r of results) {
-    callsUsed++
-    if (r.status !== 'fulfilled' || !r.value.result) {
-      const c = r.status === 'fulfilled' ? r.value.candidate : toValidate[validated.length]
+    } catch {
       validated.push({
-        ...c,
+        ...candidate,
         livePrice: null, airlines: [], stops: 0, duration: '',
         isLive: false, status: 'rejected', rejectReason: 'serpapi-failed',
       })
       continue
     }
 
-    const { candidate, result } = r.value
-    const livePrice = result.price
-
-    if (livePrice === null) {
+    if (!result || result.price === null) {
       validated.push({
         ...candidate,
-        livePrice: null, airlines: result.airlines, stops: result.stops,
-        duration: result.duration, isLive: false,
+        livePrice: null, airlines: result?.airlines || [], stops: result?.stops || 0,
+        duration: result?.duration || '', isLive: false,
         status: 'rejected', rejectReason: 'no-flights',
       })
       continue
     }
+
+    const livePrice = result.price
 
     // Determine acceptance
     const withinTolerance = livePrice <= candidate.tpPrice * priceToleranceRatio
@@ -524,25 +524,31 @@ export async function validateCandidatesWithSerpApi(params: {
       rejectReason = !withinBudget ? 'over-budget' : 'price-too-high'
     }
 
-    validated.push({
+    const entry: ValidatedCandidate = {
       ...candidate,
       livePrice, airlines: result.airlines, stops: result.stops,
       duration: result.duration, isLive: true, status, rejectReason,
-    })
+    }
+    validated.push(entry)
 
     console.log(`[FlightEngine] ${candidate.city || candidate.destination}: TP $${candidate.tpPrice} → Live $${livePrice} → ${status}${rejectReason ? ` (${rejectReason})` : ''}`)
+
+    // If accepted, stop immediately — no need to check more candidates
+    if (status === 'accepted') {
+      earlyWinner = entry
+      console.log(`[FlightEngine] Accepted on candidate ${callsUsed}/${toValidate.length} — saved ${toValidate.length - callsUsed} SerpApi calls`)
+    }
   }
 
-  // Pick best: accepted first (by original score), then marginal, then null
-  const accepted = validated.filter(v => v.status === 'accepted').sort((a, b) => b.score - a.score)
-  const marginal = validated.filter(v => v.status === 'marginal').sort((a, b) => b.score - a.score)
-
-  const winner = accepted[0] || marginal[0] || null
+  // Pick best: early winner, or best marginal from those checked
+  const winner = earlyWinner
+    || validated.filter(v => v.status === 'marginal').sort((a, b) => b.score - a.score)[0]
+    || null
 
   if (winner) {
-    console.log(`[FlightEngine] Winner: ${winner.city || winner.destination} at $${winner.livePrice} (${winner.status})`)
+    console.log(`[FlightEngine] Winner: ${winner.city || winner.destination} at $${winner.livePrice} (${winner.status}) — used ${callsUsed} SerpApi calls`)
   } else {
-    console.log(`[FlightEngine] All ${toValidate.length} candidates failed validation`)
+    console.log(`[FlightEngine] All ${callsUsed} candidates failed validation`)
   }
 
   return { validated: winner, all: validated, serpApiCallsUsed: callsUsed }
