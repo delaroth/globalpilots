@@ -401,6 +401,7 @@ export interface CandidateDestination {
   country?: string
   tpPrice: number    // TravelPayouts estimate
   score: number      // vibe/visa/budget score
+  originAirport?: string // Which origin airport found this deal (e.g., DMK)
 }
 
 export interface ValidatedCandidate extends CandidateDestination {
@@ -411,6 +412,7 @@ export interface ValidatedCandidate extends CandidateDestination {
   isLive: boolean
   status: 'accepted' | 'marginal' | 'rejected'
   rejectReason?: string
+  validatedOrigin?: string // The origin airport used for validation
 }
 
 /**
@@ -477,10 +479,12 @@ export async function validateCandidatesWithSerpApi(params: {
 
     callsUsed++
     let result: Awaited<ReturnType<typeof getSerpApiPrice>> = null
+    // Use the candidate's specific origin airport (e.g., DMK if that's where the deal was found)
+    const searchOrigin = candidate.originAirport || primaryOrigin
 
     try {
       result = await getSerpApiPrice(
-        primaryOrigin,
+        searchOrigin,
         candidate.destination,
         departDate,
         returnDate,
@@ -528,6 +532,7 @@ export async function validateCandidatesWithSerpApi(params: {
       ...candidate,
       livePrice, airlines: result.airlines, stops: result.stops,
       duration: result.duration, isLive: true, status, rejectReason,
+      validatedOrigin: searchOrigin,
     }
     validated.push(entry)
 

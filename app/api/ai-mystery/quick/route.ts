@@ -293,35 +293,64 @@ export async function POST(request: NextRequest) {
     const exploreDuration = daysToTravelDuration(tripDuration)
     const exploreInterest = vibeToInterest(vibes)
 
-    let priceInfo: { destination: string; city?: string; country?: string; price: number; startDate?: string; endDate?: string; airline?: string; stops?: number; hotelPrice?: number | null }[] = []
+    let priceInfo: { destination: string; city?: string; country?: string; price: number; startDate?: string; endDate?: string; airline?: string; stops?: number; hotelPrice?: number | null; originAirport?: string }[] = []
     let priceIsEstimate = false
     let priceIsLive = false
 
-    // PRIMARY: discoverCheapDestinations (TravelPayouts free first, SerpApi Explore fallback)
+    // PRIMARY: Search from ALL origin airports and merge results
+    // For BKK,DMK → search both, keep cheapest per destination with origin tagged
     try {
-      const discovered = await discoverCheapDestinations({
-        origin: primaryOrigin,
-        maxPrice: maxFlightPrice,
-        month: exploreMonth,
-        travelDuration: exploreDuration,
-        interest: exploreInterest,
-      })
+      const allDiscoveries = await Promise.allSettled(
+        originCodes.map(code =>
+          discoverCheapDestinations({
+            origin: code,
+            maxPrice: maxFlightPrice,
+            month: exploreMonth,
+            travelDuration: exploreDuration,
+            interest: exploreInterest,
+          }).then(result => ({ code, result }))
+        )
+      )
 
-      if (discovered.destinations.length > 0) {
-        console.log(`[Quick] ${discovered.source} returned ${discovered.destinations.length} destinations`)
-        priceIsLive = discovered.source === 'serpapi-explore'
-        priceIsEstimate = discovered.source === 'travelpayouts' // TP data is 1-3 days old aggregated
-        priceInfo = discovered.destinations.map(d => ({
-          destination: d.destination,
-          city: d.city,
-          country: d.country,
-          price: d.price,
-          startDate: d.startDate,
-          endDate: d.endDate,
-          airline: d.airline,
-          stops: d.stops,
-          hotelPrice: d.hotelPrice,
-        }))
+      // Merge all results, tagging each with its origin airport
+      const merged: typeof priceInfo = []
+      let anySource = ''
+      for (const discovery of allDiscoveries) {
+        if (discovery.status !== 'fulfilled') continue
+        const { code, result } = discovery.value
+        if (result.destinations.length > 0) {
+          anySource = result.source
+          for (const d of result.destinations) {
+            merged.push({
+              destination: d.destination,
+              city: d.city,
+              country: d.country,
+              price: d.price,
+              startDate: d.startDate,
+              endDate: d.endDate,
+              airline: d.airline,
+              stops: d.stops,
+              hotelPrice: d.hotelPrice,
+              originAirport: code, // Track which airport this deal is from
+            })
+          }
+        }
+      }
+
+      if (merged.length > 0) {
+        // Deduplicate by destination — keep cheapest origin per destination
+        const bestByDest = new Map<string, typeof merged[0]>()
+        for (const d of merged) {
+          const key = d.destination.toUpperCase()
+          const existing = bestByDest.get(key)
+          if (!existing || d.price < existing.price) {
+            bestByDest.set(key, d)
+          }
+        }
+        priceInfo = [...bestByDest.values()]
+        priceIsLive = anySource === 'serpapi-explore'
+        priceIsEstimate = anySource === 'travelpayouts'
+        console.log(`[Quick] Searched ${originCodes.length} airports, found ${merged.length} total → ${priceInfo.length} unique destinations (cheapest per dest)`)
       }
     } catch (err) {
       console.error('[Quick] discoverCheapDestinations failed:', err instanceof Error ? err.message : err)
@@ -345,49 +374,71 @@ export async function POST(request: NextRequest) {
       const kiwiEnabled = AFFILIATE_FLAGS.kiwi && !!process.env.KIWI_API_KEY
       const tpEnabled = !!TOKEN
 
-      const kiwiPromise = kiwiEnabled
-        ? searchKiwiInspiration({
-            origin: primaryOrigin,
-            dateFrom: kiwiDateFrom,
-            dateTo: kiwiDateTo,
-            maxPrice: maxFlightPrice,
-          }).then(results => results.map(r => ({
-            destination: r.flyTo,
-            city: r.cityTo,
-            country: r.countryTo?.name,
-            price: r.price,
-          })))
-        : Promise.resolve([] as typeof priceInfo)
+      // Search from ALL origin airports for both Kiwi and TravelPayouts
+      const fallbackResults: typeof priceInfo = []
 
-      const tpPromise = tpEnabled
-        ? fetch(`${API_BASE}/v2/prices/latest?origin=${primaryOrigin}&currency=usd&limit=30&token=${TOKEN}`, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(8000) })
-            .then(async res => {
-              if (!res.ok) return []
-              const data = await res.json()
-              return (data.data || [])
-                .filter((d: any) => d.value <= maxFlightPrice)
-                .slice(0, 20)
-                .map((d: any) => {
-                  const airport = lookupAirportByCode(d.destination)
-                  return {
-                    destination: d.destination,
-                    city: airport?.city || d.destination,
-                    country: airport?.country || '',
-                    price: d.value,
-                  }
-                })
-                .sort((a: any, b: any) => a.price - b.price)
-            })
-        : Promise.resolve([] as typeof priceInfo)
+      const fallbackPromises = originCodes.flatMap(code => {
+        const promises: Promise<typeof priceInfo>[] = []
 
-      const [kiwiResult, tpResult] = await Promise.allSettled([kiwiPromise, tpPromise])
-      const kiwiData = kiwiResult.status === 'fulfilled' ? kiwiResult.value : []
-      const tpData = tpResult.status === 'fulfilled' ? tpResult.value : []
+        if (kiwiEnabled) {
+          promises.push(
+            searchKiwiInspiration({
+              origin: code,
+              dateFrom: kiwiDateFrom,
+              dateTo: kiwiDateTo,
+              maxPrice: maxFlightPrice,
+            }).then(results => results.map(r => ({
+              destination: r.flyTo,
+              city: r.cityTo,
+              country: r.countryTo?.name,
+              price: r.price,
+              originAirport: code,
+            }))).catch(() => [] as typeof priceInfo)
+          )
+        }
 
-      if (kiwiData.length > 0) {
-        priceInfo = kiwiData
-      } else if (tpData.length > 0) {
-        priceInfo = tpData
+        if (tpEnabled) {
+          promises.push(
+            fetch(`${API_BASE}/v2/prices/latest?origin=${code}&currency=usd&limit=30&token=${TOKEN}`, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(8000) })
+              .then(async res => {
+                if (!res.ok) return []
+                const data = await res.json()
+                return (data.data || [])
+                  .filter((d: any) => d.value <= maxFlightPrice)
+                  .slice(0, 20)
+                  .map((d: any) => {
+                    const airport = lookupAirportByCode(d.destination)
+                    return {
+                      destination: d.destination,
+                      city: airport?.city || d.destination,
+                      country: airport?.country || '',
+                      price: d.value,
+                      originAirport: code,
+                    }
+                  })
+              }).catch(() => [] as typeof priceInfo)
+          )
+        }
+
+        return promises
+      })
+
+      const fallbackSettled = await Promise.allSettled(fallbackPromises)
+      for (const r of fallbackSettled) {
+        if (r.status === 'fulfilled') fallbackResults.push(...r.value)
+      }
+
+      // Deduplicate by destination — keep cheapest origin per destination
+      if (fallbackResults.length > 0) {
+        const bestByDest = new Map<string, typeof fallbackResults[0]>()
+        for (const d of fallbackResults) {
+          const key = d.destination.toUpperCase()
+          const existing = bestByDest.get(key)
+          if (!existing || d.price < existing.price) {
+            bestByDest.set(key, d)
+          }
+        }
+        priceInfo = [...bestByDest.values()].sort((a, b) => a.price - b.price)
       }
     }
 
@@ -528,6 +579,7 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       country: d.country || '',
       tpPrice: d.price,
       score: d.score,
+      originAirport: (d as any).originAirport || primaryOrigin,
     }))
 
     const validation = await validateCandidatesWithSerpApi({
@@ -550,7 +602,8 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
     let validatedAirlines: string[] = winner?.airlines ?? (picked.airline ? [picked.airline] : [])
     let validatedStops: number | undefined = winner?.stops ?? picked.stops
     let validatedPriceIsLive = winner?.isLive ?? false
-    let bestOrigin = primaryOrigin
+    // Use the specific origin airport from the winning candidate
+    let bestOrigin = winner?.validatedOrigin || winner?.originAirport || (picked as any).originAirport || primaryOrigin
 
     if (winner?.isLive) {
       priceIsEstimate = false
