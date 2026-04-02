@@ -668,8 +668,9 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
     // Pick randomly from top 5 cheapest combos
     const topCombos = dateCombos.slice(0, Math.min(5, dateCombos.length))
 
-    // 8. Validate up to 3 combos with SerpApi, collect all live prices,
-    //    then pick randomly from the cheapest group (within 10% of each other)
+    // 8. Validate combos with SerpApi — stop early if live price is within 20%
+    //    of the matrix estimate. If first two fail, validate a 3rd as fallback.
+    //    If none are within 20%, pick from the cheapest within 10% of each other.
     interface ValidatedCombo {
       combo: DateCombo
       livePrice: number
@@ -682,9 +683,10 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
 
     const shuffledCombos = [...topCombos].sort(() => Math.random() - 0.5)
     let serpCallsUsed = 0
+    let earlyWinner: ValidatedCombo | null = null
 
     for (const combo of shuffledCombos) {
-      if (serpCallsUsed >= 3) break
+      if (earlyWinner || serpCallsUsed >= 3) break
 
       const comboReturnDate = computeReturnDate(combo.date, tripDuration)
       serpCallsUsed++
@@ -698,15 +700,24 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
         })
 
         if (flightResult.price !== null && flightResult.price <= maxFlightPrice) {
-          validatedCombos.push({
+          const entry: ValidatedCombo = {
             combo,
             livePrice: flightResult.price,
             airlines: flightResult.airlines || [],
             stops: flightResult.stops ?? undefined,
             isLive: flightResult.confidence === 'live',
             returnDate: comboReturnDate,
-          })
-          console.log(`[Quick] Validated: ${combo.city} ${combo.date} matrix=$${combo.matrixPrice} live=$${flightResult.price} (${flightResult.source})`)
+          }
+          validatedCombos.push(entry)
+
+          const ratio = flightResult.price / combo.matrixPrice
+          console.log(`[Quick] Validated: ${combo.city} ${combo.date} matrix=$${combo.matrixPrice} live=$${flightResult.price} ratio=${ratio.toFixed(2)} (${flightResult.source})`)
+
+          // If live is within 20% of matrix, accept immediately (1 SerpApi call)
+          if (ratio <= 1.20 && ratio >= 0.5) {
+            earlyWinner = entry
+            console.log(`[Quick] Accepted (within 20%): ${combo.city} ${combo.date} $${flightResult.price} — ${serpCallsUsed} SerpApi call(s)`)
+          }
         } else if (flightResult.price !== null) {
           console.log(`[Quick] Over budget: ${combo.city} ${combo.date} $${flightResult.price} > $${maxFlightPrice}`)
         }
@@ -715,7 +726,7 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       }
     }
 
-    // Pick from validated combos: find cheapest group within 10% of each other
+    // Pick the winner
     let picked = rankedCandidates[0] // fallback
     let validatedPrice = picked.price
     let validatedAirlines: string[] = picked.airline ? [picked.airline] : []
@@ -725,15 +736,26 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
     let effectiveDepartDate = picked.startDate || fallbackDepartDate
     let effectiveReturnDate = picked.endDate || computeReturnDate(effectiveDepartDate, tripDuration)
 
-    if (validatedCombos.length > 0) {
-      // Sort by live price, group cheapest within 10%
+    if (earlyWinner) {
+      // One combo matched its matrix estimate — use it
+      picked = rankedCandidates.find(d => d.destination === earlyWinner!.combo.destination) || rankedCandidates[0]
+      validatedPrice = earlyWinner.livePrice
+      validatedAirlines = earlyWinner.airlines
+      validatedStops = earlyWinner.stops
+      validatedPriceIsLive = earlyWinner.isLive
+      bestOrigin = earlyWinner.combo.originAirport
+      effectiveDepartDate = earlyWinner.combo.date
+      effectiveReturnDate = earlyWinner.returnDate
+      priceIsEstimate = false
+      priceIsLive = validatedPriceIsLive
+    } else if (validatedCombos.length > 0) {
+      // None matched matrix, but we have live prices — pick from cheapest within 10%
       validatedCombos.sort((a, b) => a.livePrice - b.livePrice)
       const cheapest = validatedCombos[0].livePrice
-      const threshold = cheapest * 1.10
+      const threshold = Math.max(cheapest * 1.10, cheapest + 20) // 10% or $20, whichever is more
       const cheapGroup = validatedCombos.filter(v => v.livePrice <= threshold)
-
-      // Pick randomly from the cheapest group
       const winner = cheapGroup[Math.floor(Math.random() * cheapGroup.length)]
+
       picked = rankedCandidates.find(d => d.destination === winner.combo.destination) || rankedCandidates[0]
       validatedPrice = winner.livePrice
       validatedAirlines = winner.airlines
@@ -745,9 +767,9 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       priceIsEstimate = false
       priceIsLive = validatedPriceIsLive
 
-      console.log(`[Quick] Winner: ${winner.combo.city} ${winner.combo.date} $${winner.livePrice} — picked from ${cheapGroup.length} combos within 10% of $${cheapest} (${serpCallsUsed} SerpApi calls)`)
+      console.log(`[Quick] Fallback: picked ${winner.combo.city} ${winner.combo.date} $${winner.livePrice} from ${cheapGroup.length} combos within 10% of $${cheapest} (${serpCallsUsed} SerpApi calls)`)
     } else if (topCombos.length > 0) {
-      // No validated combos — fall back to cheapest matrix combo
+      // No live prices at all — fall back to matrix estimate
       const best = topCombos[0]
       picked = rankedCandidates.find(d => d.destination === best.destination) || rankedCandidates[0]
       validatedPrice = best.matrixPrice
@@ -755,7 +777,7 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       effectiveDepartDate = best.date
       effectiveReturnDate = computeReturnDate(best.date, tripDuration)
       priceIsEstimate = true
-      console.log(`[Quick] No SerpApi validation passed — using matrix price: ${best.city} ${best.date} $${best.matrixPrice}`)
+      console.log(`[Quick] No live prices — using matrix: ${best.city} ${best.date} $${best.matrixPrice}`)
     }
 
     console.log(`[Quick] Final pick: ${picked.city || picked.destination} (${picked.destination}) on ${effectiveDepartDate}, $${validatedPrice}, live=${priceIsLive}, calls=${serpCallsUsed}`)
