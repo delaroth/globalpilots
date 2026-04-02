@@ -668,15 +668,17 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
     // Pick randomly from top 5 cheapest combos
     const topCombos = dateCombos.slice(0, Math.min(5, dateCombos.length))
 
-    // 8. Validate combos with SerpApi — try up to 3 until one has an accurate price
-    let picked = rankedCandidates[0] // fallback
-    let validatedPrice = picked.price
-    let validatedAirlines: string[] = picked.airline ? [picked.airline] : []
-    let validatedStops: number | undefined = picked.stops
-    let validatedPriceIsLive = false
-    let bestOrigin = (picked as any).originAirport || primaryOrigin
-    let effectiveDepartDate = picked.startDate || fallbackDepartDate
-    let effectiveReturnDate = picked.endDate || computeReturnDate(effectiveDepartDate, tripDuration)
+    // 8. Validate up to 3 combos with SerpApi, collect all live prices,
+    //    then pick randomly from the cheapest group (within 10% of each other)
+    interface ValidatedCombo {
+      combo: DateCombo
+      livePrice: number
+      airlines: string[]
+      stops: number | undefined
+      isLive: boolean
+      returnDate: string
+    }
+    const validatedCombos: ValidatedCombo[] = []
 
     const shuffledCombos = [...topCombos].sort(() => Math.random() - 0.5)
     let serpCallsUsed = 0
@@ -695,35 +697,57 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
           returnDate: comboReturnDate,
         })
 
-        if (flightResult.price !== null) {
-          console.log(`[Quick] SerpApi ${combo.city} ${combo.date}: matrix=$${combo.matrixPrice}, live=$${flightResult.price}, source=${flightResult.source}`)
-
-          // Accept if live price is within the user's flight budget
-          // (don't reject based on matrix ratio — TP prices are often stale)
-          if (flightResult.price <= maxFlightPrice) {
-            picked = rankedCandidates.find(d => d.destination === combo.destination) || rankedCandidates[0]
-            validatedPrice = flightResult.price
-            validatedAirlines = flightResult.airlines || []
-            validatedStops = flightResult.stops ?? undefined
-            validatedPriceIsLive = flightResult.confidence === 'live'
-            bestOrigin = combo.originAirport
-            effectiveDepartDate = combo.date
-            effectiveReturnDate = comboReturnDate
-            priceIsEstimate = false
-            priceIsLive = validatedPriceIsLive
-            console.log(`[Quick] Validated: ${combo.city} on ${combo.date} at $${flightResult.price} (${flightResult.source}) — ${serpCallsUsed} SerpApi calls`)
-            break
-          } else {
-            console.log(`[Quick] Over budget: ${combo.city} ${combo.date} $${flightResult.price} > $${maxFlightPrice} — trying next`)
-          }
+        if (flightResult.price !== null && flightResult.price <= maxFlightPrice) {
+          validatedCombos.push({
+            combo,
+            livePrice: flightResult.price,
+            airlines: flightResult.airlines || [],
+            stops: flightResult.stops ?? undefined,
+            isLive: flightResult.confidence === 'live',
+            returnDate: comboReturnDate,
+          })
+          console.log(`[Quick] Validated: ${combo.city} ${combo.date} matrix=$${combo.matrixPrice} live=$${flightResult.price} (${flightResult.source})`)
+        } else if (flightResult.price !== null) {
+          console.log(`[Quick] Over budget: ${combo.city} ${combo.date} $${flightResult.price} > $${maxFlightPrice}`)
         }
       } catch {
         console.warn(`[Quick] SerpApi validation failed for ${combo.city} ${combo.date}`)
       }
     }
 
-    // If no combo was validated, use the cheapest matrix combo as estimate
-    if (!priceIsLive && topCombos.length > 0) {
+    // Pick from validated combos: find cheapest group within 10% of each other
+    let picked = rankedCandidates[0] // fallback
+    let validatedPrice = picked.price
+    let validatedAirlines: string[] = picked.airline ? [picked.airline] : []
+    let validatedStops: number | undefined = picked.stops
+    let validatedPriceIsLive = false
+    let bestOrigin = (picked as any).originAirport || primaryOrigin
+    let effectiveDepartDate = picked.startDate || fallbackDepartDate
+    let effectiveReturnDate = picked.endDate || computeReturnDate(effectiveDepartDate, tripDuration)
+
+    if (validatedCombos.length > 0) {
+      // Sort by live price, group cheapest within 10%
+      validatedCombos.sort((a, b) => a.livePrice - b.livePrice)
+      const cheapest = validatedCombos[0].livePrice
+      const threshold = cheapest * 1.10
+      const cheapGroup = validatedCombos.filter(v => v.livePrice <= threshold)
+
+      // Pick randomly from the cheapest group
+      const winner = cheapGroup[Math.floor(Math.random() * cheapGroup.length)]
+      picked = rankedCandidates.find(d => d.destination === winner.combo.destination) || rankedCandidates[0]
+      validatedPrice = winner.livePrice
+      validatedAirlines = winner.airlines
+      validatedStops = winner.stops
+      validatedPriceIsLive = winner.isLive
+      bestOrigin = winner.combo.originAirport
+      effectiveDepartDate = winner.combo.date
+      effectiveReturnDate = winner.returnDate
+      priceIsEstimate = false
+      priceIsLive = validatedPriceIsLive
+
+      console.log(`[Quick] Winner: ${winner.combo.city} ${winner.combo.date} $${winner.livePrice} — picked from ${cheapGroup.length} combos within 10% of $${cheapest} (${serpCallsUsed} SerpApi calls)`)
+    } else if (topCombos.length > 0) {
+      // No validated combos — fall back to cheapest matrix combo
       const best = topCombos[0]
       picked = rankedCandidates.find(d => d.destination === best.destination) || rankedCandidates[0]
       validatedPrice = best.matrixPrice
