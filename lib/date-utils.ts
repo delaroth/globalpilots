@@ -52,6 +52,42 @@ export function computeReturnDate(departDate: string, tripDuration: number): str
 }
 
 /**
+ * Parse a preferred departure day from a dates string.
+ * Returns 0-6 (Sun-Sat) or null if no preference.
+ * Format: "... preferred:thu" appended to dates string.
+ */
+export function parsePreferredDay(dates: string): number | null {
+  const match = dates.match(/preferred:(sun|mon|tue|wed|thu|fri|sat)/)
+  if (!match) return null
+  const dayMap: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 }
+  return dayMap[match[1]] ?? null
+}
+
+/**
+ * Snap a date to the nearest occurrence of a preferred weekday.
+ * Looks ±3 days from the base date and picks the closest match.
+ * If no match within range, returns the original date.
+ */
+export function snapToPreferredDay(baseDate: string, preferredDay: number): string {
+  const base = new Date(baseDate + 'T00:00:00')
+  const baseDay = base.getDay()
+  if (baseDay === preferredDay) return baseDate
+
+  // Try forward and backward up to 3 days
+  for (let offset = 1; offset <= 3; offset++) {
+    const forward = new Date(base)
+    forward.setDate(forward.getDate() + offset)
+    if (forward.getDay() === preferredDay) return localDateStr(forward)
+
+    const backward = new Date(base)
+    backward.setDate(backward.getDate() - offset)
+    if (backward.getDay() === preferredDay) return localDateStr(backward)
+  }
+
+  return baseDate
+}
+
+/**
  * Calculate a date range from a flexible timeframe string.
  * Extracted from quick/route.ts for reuse.
  */

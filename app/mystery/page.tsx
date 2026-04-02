@@ -468,12 +468,13 @@ function MysteryPageContent() {
       computedDepartDate = `${yyyy}-${mm}-${dd}`
     }
 
-    // Build dates string — preferred day always wins when set
-    let requestDates = preferredDepartDay !== null
-      ? computedDepartDate
-      : showSpecificDates
-        ? `${departDate}${flexibleDates ? ' (flexible \u00B13 days)' : ''}`
-        : `flexible:${timeframe}`
+    // Build dates string — send flexible timeframe with day preference as hint
+    // so the API can search the full range and snap to the best-priced matching day
+    const dayNames = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+    const dayHint = preferredDepartDay !== null ? ` preferred:${dayNames[preferredDepartDay]}` : ''
+    let requestDates = showSpecificDates
+      ? `${departDate}${flexibleDates ? ' (flexible \u00B13 days)' : ''}${dayHint}`
+      : `flexible:${timeframe}${dayHint}`
     if (isFlexibleDuration) {
       requestDates += ' (flexible trip length - optimize for budget)'
     }
