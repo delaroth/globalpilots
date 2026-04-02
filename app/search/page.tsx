@@ -22,6 +22,7 @@ import { useCurrency } from '@/hooks/useCurrency'
 import Link from 'next/link'
 import PassportSelector from '@/components/PassportSelector'
 import { PriceBadgeLight } from '@/components/PriceBadge'
+import { trackFlightSearch } from '@/lib/track-client'
 
 // Lazy load CalendarGrid — only rendered after a flexible-month search completes
 const CalendarGrid = dynamic(() => import('@/components/CalendarGrid'), {
@@ -641,6 +642,7 @@ function SearchPageContent() {
     }
 
     setLoading(true)
+    trackFlightSearch({ origin: origin || '', destination: destination || 'ANYWHERE', tripType })
     try {
       // ── "Anywhere" mode — find cheapest destinations ──
       if (destination === 'ANYWHERE') {

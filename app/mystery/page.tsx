@@ -19,6 +19,7 @@ import type { SavedTrip } from '@/lib/trip-history'
 import { useMystery } from '@/components/MysteryContext'
 import PassportSelector from '@/components/PassportSelector'
 import Breadcrumb from '@/components/Breadcrumb'
+import { trackMysterySearch } from '@/lib/track-client'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -482,6 +483,9 @@ function MysteryPageContent() {
 
     // Budget split: only send custom split if user expanded that section
     const splitPayload = showBudgetSplit ? customSplit : undefined
+
+    // Track in Vercel Analytics
+    trackMysterySearch({ origin: resolvedOrigin, budget: budgetInUSD, vibes: vibes.join(','), tripDuration: effectiveDuration })
 
     // --- Multi-city mystery flow ---
     if (numCities > 1) {

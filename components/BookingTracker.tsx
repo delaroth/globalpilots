@@ -4,6 +4,8 @@
 
 'use client'
 
+import { trackBookingClick } from '@/lib/track-client'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -15,16 +17,19 @@ interface BookingTrackerProps {
   href: string
   children: React.ReactNode
   className?: string
+  destination?: string
 }
 
 // ---------------------------------------------------------------------------
-// Component — pass-through mode (no tracking)
+// Component — Vercel Analytics tracking on click
 // ---------------------------------------------------------------------------
 
 export default function BookingTracker({
+  type,
   href,
   children,
   className = '',
+  destination = '',
 }: BookingTrackerProps) {
   return (
     <div className="relative">
@@ -33,6 +38,7 @@ export default function BookingTracker({
         target="_blank"
         rel="noopener noreferrer"
         className={className}
+        onClick={() => trackBookingClick({ type, destination })}
       >
         {children}
       </a>
