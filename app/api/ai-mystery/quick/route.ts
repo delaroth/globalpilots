@@ -527,14 +527,17 @@ export async function POST(request: NextRequest) {
     // 5. Expand candidate pool — top 12 instead of top 5
     const candidates = diverse.slice(0, Math.min(12, diverse.length))
 
-    // ── VALIDATE-BEFORE-COMMIT: check top candidates with SerpApi ──
-    // Instead of picking one destination then validating, validate the
-    // top 3-5 candidates in parallel and pick the best that passes.
+    // ── NEW FLOW: Month-matrix + SerpApi validation ──
+    // 1. Take top 5 destinations
+    // 2. Fetch month-matrix for all 5 in parallel (free)
+    // 3. Pool all (destination, date, price) combos that fit budget + preferred day
+    // 4. Pick randomly from top 5 cheapest
+    // 5. Validate winner with SerpApi — if >2x off, try next combo
 
-    // Compute departure/return dates — prefer the API's best-price dates for the
-    // winning destination, fall back to pickDepartureDate for flexible ranges
     const fallbackDepartDate = pickDepartureDate(dates)
-    const fallbackReturnDate = computeReturnDate(fallbackDepartDate, tripDuration)
+    const preferredDay = parsePreferredDay(dates)
+    const flexTimeframe = isFlexible ? dates.replace('flexible:', '').split(' ')[0] : null
+    const flexRange = flexTimeframe ? calculateFlexibleDateRange(flexTimeframe) : null
 
     // 6. AI ranks the top candidates (optional — improves pick quality)
     let rankedCandidates = candidates.slice(0, 8)
@@ -573,73 +576,167 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       }
     }
 
-    // 7. Validate top candidates with SerpApi (parallel, ~3 calls)
-    const validationCandidates: CandidateDestination[] = rankedCandidates.slice(0, 5).map(d => ({
-      destination: d.destination,
-      city: d.city || d.destination,
-      country: d.country || '',
-      tpPrice: d.price,
-      score: d.score,
-      originAirport: (d as any).originAirport || primaryOrigin,
-    }))
+    // 7. Fetch month-matrix for top 5 destinations in parallel (free TP calls)
+    const top5 = rankedCandidates.slice(0, 5)
+    const searchMonth = flexRange
+      ? flexRange.dateFrom.substring(0, 7)
+      : fallbackDepartDate.substring(0, 7)
 
-    // Use the top candidate's API dates for validation if available, else fallback
-    const topCandidate = rankedCandidates[0]
-    const validationDepartDate = topCandidate?.startDate || fallbackDepartDate
-    const validationReturnDate = topCandidate?.endDate || fallbackReturnDate
-
-    const validation = await validateCandidatesWithSerpApi({
-      origins: originCodes,
-      candidates: validationCandidates,
-      departDate: validationDepartDate,
-      returnDate: validationReturnDate,
-      maxValidations: 3,
-      priceToleranceRatio: 2.5, // Accept if live price <= 2.5x TP estimate (TP prices can be stale/one-way)
-      maxBudget: maxFlightPrice,
-    })
-
-    // Use validated winner, or fall back to AI/score top pick
-    // ALWAYS prefer live round-trip prices over TP estimates
-    const winner = validation.validated
-    const picked = winner
-      ? rankedCandidates.find(d => d.destination === winner.destination) || rankedCandidates[0]
-      : rankedCandidates[0]
-
-    // If no winner but we have any candidate with a live price, use that
-    // (even rejected candidates have accurate live pricing)
-    const bestLiveCandidate = !winner
-      ? validation.all.find(v => v.isLive && v.livePrice && v.livePrice > 0)
-      : null
-
-    let validatedPrice = winner?.livePrice ?? bestLiveCandidate?.livePrice ?? picked.price
-    let validatedAirlines: string[] = winner?.airlines ?? bestLiveCandidate?.airlines ?? (picked.airline ? [picked.airline] : [])
-    let validatedStops: number | undefined = winner?.stops ?? bestLiveCandidate?.stops ?? picked.stops
-    let validatedPriceIsLive = winner?.isLive ?? bestLiveCandidate?.isLive ?? false
-    // Use the specific origin airport from the winning candidate
-    let bestOrigin = winner?.validatedOrigin || bestLiveCandidate?.validatedOrigin || winner?.originAirport || (picked as any).originAirport || primaryOrigin
-
-    console.log(`[Quick] Validation result: winner=${winner ? `${winner.city}@$${winner.livePrice}(${winner.status})` : 'null'}, bestLive=${bestLiveCandidate ? `${bestLiveCandidate.city}@$${bestLiveCandidate.livePrice}` : 'null'}, fallback=${picked.city || picked.destination}@$${picked.price}, displayPrice=$${validatedPrice}, isLive=${validatedPriceIsLive}`)
-
-    if (validatedPriceIsLive) {
-      priceIsEstimate = false
-      priceIsLive = true
-    } else if (!winner) {
-      priceIsEstimate = true
-      console.log(`[Quick] No candidate passed validation, using TP estimate for ${picked.city || picked.destination}`)
+    interface DateCombo {
+      destination: string
+      city: string
+      country: string
+      date: string
+      matrixPrice: number
+      originAirport: string
+      hotelPrice?: number | null
+      score: number
     }
 
-    // Build runner-up alternatives from validated candidates
-    const alternativeCandidates = validation.all
-      .filter(v => v.destination !== picked.destination && v.status !== 'rejected')
+    let dateCombos: DateCombo[] = []
+
+    if (TOKEN) {
+      const matrixResults = await Promise.allSettled(
+        top5.map(async d => {
+          const url = `${API_BASE}/v2/prices/month-matrix?origin=${(d as any).originAirport || primaryOrigin}&destination=${d.destination}&month=${searchMonth}&currency=usd&one_way=false&token=${TOKEN}`
+          const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
+          if (!res.ok) return []
+          const data = await res.json()
+          return (data.data || [])
+            .filter((entry: any) => entry.depart_date && entry.value > 0)
+            .map((entry: any) => ({
+              destination: d.destination,
+              city: d.city || d.destination,
+              country: d.country || '',
+              date: entry.depart_date as string,
+              matrixPrice: entry.value as number,
+              originAirport: (d as any).originAirport || primaryOrigin,
+              hotelPrice: d.hotelPrice,
+              score: d.score || 0,
+            }))
+        })
+      )
+
+      for (const r of matrixResults) {
+        if (r.status === 'fulfilled') dateCombos.push(...r.value)
+      }
+      console.log(`[Quick] Month-matrix: ${dateCombos.length} total date combos from ${top5.length} destinations`)
+    }
+
+    // Filter combos: preferred day, date range, budget
+    const minDate = flexRange?.dateFrom || fallbackDepartDate
+    const maxDate = flexRange?.dateTo || undefined
+    dateCombos = dateCombos.filter(c => {
+      if (c.matrixPrice > maxFlightPrice) return false
+      if (c.date < minDate) return false
+      if (maxDate && c.date > maxDate) return false
+      if (preferredDay !== null) {
+        const dow = new Date(c.date + 'T00:00:00').getDay()
+        if (dow !== preferredDay) return false
+      }
+      return true
+    }).sort((a, b) => a.matrixPrice - b.matrixPrice)
+
+    console.log(`[Quick] After filtering: ${dateCombos.length} combos within budget + preferred day`)
+
+    // If no combos from matrix (no TP token, empty results, etc.), build fallback combos
+    if (dateCombos.length === 0) {
+      dateCombos = top5.map(d => ({
+        destination: d.destination,
+        city: d.city || d.destination,
+        country: d.country || '',
+        date: d.startDate || fallbackDepartDate,
+        matrixPrice: d.price,
+        originAirport: (d as any).originAirport || primaryOrigin,
+        hotelPrice: d.hotelPrice,
+        score: d.score || 0,
+      }))
+    }
+
+    // Pick randomly from top 5 cheapest combos
+    const topCombos = dateCombos.slice(0, Math.min(5, dateCombos.length))
+
+    // 8. Validate combos with SerpApi — try up to 3 until one has an accurate price
+    let picked = rankedCandidates[0] // fallback
+    let validatedPrice = picked.price
+    let validatedAirlines: string[] = picked.airline ? [picked.airline] : []
+    let validatedStops: number | undefined = picked.stops
+    let validatedPriceIsLive = false
+    let bestOrigin = (picked as any).originAirport || primaryOrigin
+    let effectiveDepartDate = picked.startDate || fallbackDepartDate
+    let effectiveReturnDate = picked.endDate || computeReturnDate(effectiveDepartDate, tripDuration)
+
+    const shuffledCombos = [...topCombos].sort(() => Math.random() - 0.5)
+    let serpCallsUsed = 0
+
+    for (const combo of shuffledCombos) {
+      if (serpCallsUsed >= 3) break
+
+      const comboReturnDate = computeReturnDate(combo.date, tripDuration)
+      serpCallsUsed++
+
+      try {
+        const flightResult = await searchFlight({
+          origin: combo.originAirport,
+          destination: combo.destination,
+          departDate: combo.date,
+          returnDate: comboReturnDate,
+        })
+
+        if (flightResult.price !== null) {
+          // Check if live price is roughly accurate vs matrix (within 2x)
+          const ratio = flightResult.price / combo.matrixPrice
+          console.log(`[Quick] SerpApi ${combo.city} ${combo.date}: matrix=$${combo.matrixPrice}, live=$${flightResult.price}, ratio=${ratio.toFixed(1)}`)
+
+          if (ratio <= 2.0 && flightResult.price <= maxFlightPrice) {
+            // Found an accurate, in-budget option
+            picked = rankedCandidates.find(d => d.destination === combo.destination) || rankedCandidates[0]
+            validatedPrice = flightResult.price
+            validatedAirlines = flightResult.airlines || []
+            validatedStops = flightResult.stops ?? undefined
+            validatedPriceIsLive = flightResult.confidence === 'live'
+            bestOrigin = combo.originAirport
+            effectiveDepartDate = combo.date
+            effectiveReturnDate = comboReturnDate
+            priceIsEstimate = false
+            priceIsLive = validatedPriceIsLive
+            console.log(`[Quick] Validated: ${combo.city} on ${combo.date} at $${flightResult.price} (${flightResult.source}) — ${serpCallsUsed} SerpApi calls`)
+            break
+          } else {
+            console.log(`[Quick] Rejected ${combo.city} ${combo.date}: ratio ${ratio.toFixed(1)}x or over budget — trying next`)
+          }
+        }
+      } catch {
+        console.warn(`[Quick] SerpApi validation failed for ${combo.city} ${combo.date}`)
+      }
+    }
+
+    // If no combo was validated, use the cheapest matrix combo as estimate
+    if (!priceIsLive && topCombos.length > 0) {
+      const best = topCombos[0]
+      picked = rankedCandidates.find(d => d.destination === best.destination) || rankedCandidates[0]
+      validatedPrice = best.matrixPrice
+      bestOrigin = best.originAirport
+      effectiveDepartDate = best.date
+      effectiveReturnDate = computeReturnDate(best.date, tripDuration)
+      priceIsEstimate = true
+      console.log(`[Quick] No SerpApi validation passed — using matrix price: ${best.city} ${best.date} $${best.matrixPrice}`)
+    }
+
+    console.log(`[Quick] Final pick: ${picked.city || picked.destination} (${picked.destination}) on ${effectiveDepartDate}, $${validatedPrice}, live=${priceIsLive}, calls=${serpCallsUsed}`)
+
+    // Build runner-up alternatives from the other top combos
+    const alternativeCandidates = topCombos
+      .filter(c => c.destination !== picked.destination)
       .slice(0, 3)
-      .map(v => ({
-        destination: v.destination,
-        city: v.city || v.destination,
-        country: v.country || '',
-        price: v.livePrice ?? v.tpPrice,
+      .map(c => ({
+        destination: c.destination,
+        city: c.city,
+        country: c.country,
+        price: c.matrixPrice,
       }))
 
-    // If no alternatives from validation, fall back to diverse list
+    // If no alternatives from combos, fall back to diverse list
     if (alternativeCandidates.length === 0) {
       diverse
         .filter(d => d.destination !== picked.destination)
@@ -668,60 +765,6 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       hotelEstimate = picked.hotelPrice
     } else if (costData) {
       hotelEstimate = costData.dailyCosts[costTier].hotel
-    }
-
-    // ── Pick the best departure date ──
-    // If user has a preferred day (e.g. Thursday), fetch the month-matrix
-    // for the winning destination (free TP call) and pick randomly from
-    // the top 3 cheapest dates that fall on that weekday.
-    const preferredDay = parsePreferredDay(dates)
-    let effectiveDepartDate = picked.startDate || fallbackDepartDate
-    let effectiveReturnDate = picked.endDate || computeReturnDate(effectiveDepartDate, tripDuration)
-
-    if (preferredDay !== null && TOKEN) {
-      try {
-        // Determine month range to search
-        const isFlexible = dates.startsWith('flexible:')
-        const timeframe = isFlexible ? dates.replace('flexible:', '').split(' ')[0] : null
-        const range = timeframe ? calculateFlexibleDateRange(timeframe) : null
-        const searchMonth = range
-          ? range.dateFrom.substring(0, 7) // YYYY-MM
-          : effectiveDepartDate.substring(0, 7)
-
-        const matrixUrl = `${API_BASE}/v2/prices/month-matrix?origin=${primaryOrigin}&destination=${picked.destination}&month=${searchMonth}&currency=usd&one_way=false&token=${TOKEN}`
-        const matrixRes = await fetch(matrixUrl, { signal: AbortSignal.timeout(6000) })
-
-        if (matrixRes.ok) {
-          const matrixData = await matrixRes.json()
-          const allDays: { date: string; price: number }[] = (matrixData.data || [])
-            .filter((d: any) => d.depart_date && d.value > 0)
-            .map((d: any) => ({ date: d.depart_date, price: d.value }))
-
-          // Filter to preferred weekday within the flexible range
-          const minDate = range?.dateFrom || effectiveDepartDate
-          const maxDate = range?.dateTo || undefined
-          const matchingDays = allDays.filter(d => {
-            const dow = new Date(d.date + 'T00:00:00').getDay()
-            if (dow !== preferredDay) return false
-            if (d.date < minDate) return false
-            if (maxDate && d.date > maxDate) return false
-            return true
-          }).sort((a, b) => a.price - b.price)
-
-          if (matchingDays.length > 0) {
-            // Pick randomly from top 3 cheapest matching dates
-            const topN = matchingDays.slice(0, Math.min(3, matchingDays.length))
-            const chosen = topN[Math.floor(Math.random() * topN.length)]
-            effectiveDepartDate = chosen.date
-            effectiveReturnDate = computeReturnDate(effectiveDepartDate, tripDuration)
-            validatedPrice = chosen.price
-            console.log(`[Quick] Preferred day: picked ${chosen.date} ($${chosen.price}) from ${matchingDays.length} matching days (top ${topN.length})`)
-          }
-        }
-      } catch (err) {
-        console.warn('[Quick] Month-matrix for preferred day failed:', err instanceof Error ? err.message : err)
-        // Fall through to use existing dates
-      }
     }
 
     // Ensure city/country are resolved — TravelPayouts only returns IATA codes
