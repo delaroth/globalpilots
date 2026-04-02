@@ -123,7 +123,7 @@ function LivePreviewCard({
     <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4 text-sm text-white/80 backdrop-blur-sm">
       <p className="font-semibold text-white/90 mb-2">Your Trip</p>
       <p className="mb-1">
-        {tripDuration} day{tripDuration !== 1 ? 's' : ''} from {originDisplay || '...'}
+        {tripDuration === 0 ? 'Best duration for budget' : `${tripDuration} day${tripDuration !== 1 ? 's' : ''}`} from {originDisplay || '...'}
       </p>
       <p className="mb-1">
         Budget: {budget ? `${currencySymbol}${budget}` : '...'}{selectedVibes.length > 0 ? ` \u00B7 ${vibeLabel}` : ''}
