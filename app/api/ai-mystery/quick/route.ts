@@ -13,7 +13,7 @@ import { checkVisaRequirement } from '@/lib/enrichment/visa'
 import { callAI } from '@/lib/ai'
 import { lookupAirportByCode } from '@/lib/geolocation'
 import { withRetry } from '@/lib/retry'
-import { pickDepartureDate, computeReturnDate, parsePreferredDay, snapToPreferredDay } from '@/lib/date-utils'
+import { pickDepartureDate, computeReturnDate, parsePreferredDay } from '@/lib/date-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -670,19 +670,59 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       hotelEstimate = costData.dailyCosts[costTier].hotel
     }
 
-    // Use the picked destination's best-price dates from the API when available,
-    // otherwise fall back to computed dates from the flexible range.
-    // If user has a preferred day (e.g. Thursday), snap the API's best-price
-    // date to the nearest matching weekday — this varies across the whole
-    // timeframe since the API's suggested date can be any date in the range.
+    // ── Pick the best departure date ──
+    // If user has a preferred day (e.g. Thursday), fetch the month-matrix
+    // for the winning destination (free TP call) and pick randomly from
+    // the top 3 cheapest dates that fall on that weekday.
     const preferredDay = parsePreferredDay(dates)
     let effectiveDepartDate = picked.startDate || fallbackDepartDate
-    if (preferredDay !== null) {
-      effectiveDepartDate = snapToPreferredDay(effectiveDepartDate, preferredDay)
+    let effectiveReturnDate = picked.endDate || computeReturnDate(effectiveDepartDate, tripDuration)
+
+    if (preferredDay !== null && TOKEN) {
+      try {
+        // Determine month range to search
+        const isFlexible = dates.startsWith('flexible:')
+        const timeframe = isFlexible ? dates.replace('flexible:', '').split(' ')[0] : null
+        const range = timeframe ? calculateFlexibleDateRange(timeframe) : null
+        const searchMonth = range
+          ? range.dateFrom.substring(0, 7) // YYYY-MM
+          : effectiveDepartDate.substring(0, 7)
+
+        const matrixUrl = `${API_BASE}/v2/prices/month-matrix?origin=${primaryOrigin}&destination=${picked.destination}&month=${searchMonth}&currency=usd&one_way=false&token=${TOKEN}`
+        const matrixRes = await fetch(matrixUrl, { signal: AbortSignal.timeout(6000) })
+
+        if (matrixRes.ok) {
+          const matrixData = await matrixRes.json()
+          const allDays: { date: string; price: number }[] = (matrixData.data || [])
+            .filter((d: any) => d.depart_date && d.value > 0)
+            .map((d: any) => ({ date: d.depart_date, price: d.value }))
+
+          // Filter to preferred weekday within the flexible range
+          const minDate = range?.dateFrom || effectiveDepartDate
+          const maxDate = range?.dateTo || undefined
+          const matchingDays = allDays.filter(d => {
+            const dow = new Date(d.date + 'T00:00:00').getDay()
+            if (dow !== preferredDay) return false
+            if (d.date < minDate) return false
+            if (maxDate && d.date > maxDate) return false
+            return true
+          }).sort((a, b) => a.price - b.price)
+
+          if (matchingDays.length > 0) {
+            // Pick randomly from top 3 cheapest matching dates
+            const topN = matchingDays.slice(0, Math.min(3, matchingDays.length))
+            const chosen = topN[Math.floor(Math.random() * topN.length)]
+            effectiveDepartDate = chosen.date
+            effectiveReturnDate = computeReturnDate(effectiveDepartDate, tripDuration)
+            validatedPrice = chosen.price
+            console.log(`[Quick] Preferred day: picked ${chosen.date} ($${chosen.price}) from ${matchingDays.length} matching days (top ${topN.length})`)
+          }
+        }
+      } catch (err) {
+        console.warn('[Quick] Month-matrix for preferred day failed:', err instanceof Error ? err.message : err)
+        // Fall through to use existing dates
+      }
     }
-    const effectiveReturnDate = preferredDay !== null
-      ? computeReturnDate(effectiveDepartDate, tripDuration)
-      : (picked.endDate || computeReturnDate(effectiveDepartDate, tripDuration))
 
     // Ensure city/country are resolved — TravelPayouts only returns IATA codes
     const resolvedAirport = (!picked.city || !picked.country)
