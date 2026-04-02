@@ -243,7 +243,7 @@ export function buildFlightLinkForSource(
   }
   // Kiwi affiliate
   if (source === 'kiwi' && isAffiliateActive('kiwi')) {
-    return buildKiwiFlightLink(origin, dest, date)
+    return buildKiwiFlightLink(origin, dest, date, returnDate)
   }
   // WayAway affiliate (if approved — offers cashback)
   if (isAffiliateActive('wayaway') && process.env.WAYAWAY_PARTNER_ID) {
@@ -309,7 +309,7 @@ export function buildGoogleFlightsLink(origin: string, dest: string, date: strin
 }
 
 /**
- * Build Agoda hotel deep link
+ * Build Booking.com hotel deep link
  * STEALTH: No affiliate cid appended — clean search URL only
  *
  * Optional budget constraints align the hotel search with the Side Quest
@@ -341,9 +341,9 @@ export function buildHotelLink(
 
   let url = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(searchText)}&checkin=${formatDate(checkInDate)}&checkout=${formatDate(checkOutDate)}&group_adults=1&no_rooms=1`
 
-  // Budget constraints
+  // Budget constraints (Booking.com price filter)
   if (options?.maxPricePerNight) {
-    url += `&nflt=price%3DUSD-min-${options.maxPricePerNight}-1`
+    url += `&nflt=price%3DUSD-0-${options.maxPricePerNight}-1`
   }
   if (options?.sortByPrice) {
     url += `&order=price`
@@ -371,18 +371,19 @@ export function buildActivitiesLink(cityName: string): string {
  * Build Kiwi flight deep link
  * STEALTH: Falls back to raw Aviasales search (no affiliate wrapper)
  */
-export function buildKiwiFlightLink(origin: string, dest: string, date: string): string {
+export function buildKiwiFlightLink(origin: string, dest: string, date: string, returnDate?: string): string {
   if (isAffiliateActive('kiwi') && process.env.KIWI_API_KEY) {
     const formatDate = (dateStr: string) => {
-      const d = new Date(dateStr)
+      const d = new Date(dateStr + 'T00:00:00')
       const day = String(d.getDate()).padStart(2, '0')
       const month = String(d.getMonth() + 1).padStart(2, '0')
       const year = d.getFullYear()
       return `${day}/${month}/${year}`
     }
-    return `https://www.kiwi.com/en/search/results/${origin}/${dest}/${formatDate(date)}`
+    const returnPart = returnDate ? `/${formatDate(returnDate)}` : ''
+    return `https://www.kiwi.com/en/search/results/${origin}/${dest}/${formatDate(date)}${returnPart}`
   }
-  return buildFlightLink(origin, dest, date)
+  return buildFlightLink(origin, dest, date, returnDate)
 }
 
 /**
@@ -441,11 +442,11 @@ export function buildBookingBundle(params: {
   const returnDate = params.returnDate || (() => {
     const d = new Date(departDate + 'T00:00:00')
     d.setDate(d.getDate() + nights)
-    return d.toISOString().split('T')[0]
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })()
 
   const flightUrl = isAffiliateActive('kiwi')
-    ? buildKiwiFlightLink(origin, destination, departDate)
+    ? buildKiwiFlightLink(origin, destination, departDate, returnDate)
     : buildFlightLink(origin, destination, departDate, returnDate)
 
   const hotelUrl = buildHotelLink(cityName, departDate, nights, {

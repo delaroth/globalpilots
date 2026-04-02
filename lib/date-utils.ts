@@ -1,7 +1,16 @@
 /**
  * Date utilities for flight search — centralizes date computation
  * that was previously scattered across multiple route files.
+ *
+ * IMPORTANT: Never use toISOString().split('T')[0] for date formatting —
+ * it converts to UTC which shifts dates backward for users in UTC+ timezones.
+ * Always use localDateStr() instead.
  */
+
+/** Format a Date as YYYY-MM-DD using local timezone (not UTC). */
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 /**
  * Given a raw dates string from the mystery planner, compute a concrete
@@ -18,17 +27,19 @@ export function pickDepartureDate(dates: string, fallbackDaysOut: number = 14): 
   if (dates.startsWith('flexible:')) {
     const timeframe = dates.replace('flexible:', '').split(' ')[0]
     const range = calculateFlexibleDateRange(timeframe)
-    const start = new Date(range.dateFrom)
-    const end = new Date(range.dateTo)
+    const start = new Date(range.dateFrom + 'T00:00:00')
+    const end = new Date(range.dateTo + 'T00:00:00')
     // Sweet spot ~10 days in, with ±3 days of randomness for variety
     const baseOffset = Math.min(10 * 86400000, (end.getTime() - start.getTime()) / 2)
     const jitter = (Math.random() - 0.5) * 6 * 86400000 // ±3 days
     const picked = new Date(Math.max(start.getTime(), Math.min(end.getTime(), start.getTime() + baseOffset + jitter)))
-    return picked.toISOString().split('T')[0]
+    return localDateStr(picked)
   }
 
   // Fallback
-  return new Date(Date.now() + fallbackDaysOut * 86400000).toISOString().split('T')[0]
+  const d = new Date()
+  d.setDate(d.getDate() + fallbackDaysOut)
+  return localDateStr(d)
 }
 
 /**
@@ -37,7 +48,7 @@ export function pickDepartureDate(dates: string, fallbackDaysOut: number = 14): 
 export function computeReturnDate(departDate: string, tripDuration: number): string {
   const d = new Date(departDate + 'T00:00:00')
   d.setDate(d.getDate() + tripDuration)
-  return d.toISOString().split('T')[0]
+  return localDateStr(d)
 }
 
 /**
@@ -49,35 +60,34 @@ export function calculateFlexibleDateRange(timeframe: string): { dateFrom: strin
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   // Flights departing within 7 days are often unavailable or expensive
   const earliest = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7)
-  const formatDate = (d: Date) => d.toISOString().split('T')[0]
 
   switch (timeframe) {
     case 'this-month': {
       const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
       if (endOfMonth.getTime() - earliest.getTime() < 3 * 86400000) {
         const endOfNext = new Date(today.getFullYear(), today.getMonth() + 2, 0)
-        return { dateFrom: formatDate(earliest), dateTo: formatDate(endOfNext) }
+        return { dateFrom: localDateStr(earliest), dateTo: localDateStr(endOfNext) }
       }
-      return { dateFrom: formatDate(earliest), dateTo: formatDate(endOfMonth) }
+      return { dateFrom: localDateStr(earliest), dateTo: localDateStr(endOfMonth) }
     }
     case 'next-month': {
       const firstOfNext = new Date(today.getFullYear(), today.getMonth() + 1, 1)
       const endOfNext = new Date(today.getFullYear(), today.getMonth() + 2, 0)
       const startDate = firstOfNext > earliest ? firstOfNext : earliest
-      return { dateFrom: formatDate(startDate), dateTo: formatDate(endOfNext) }
+      return { dateFrom: localDateStr(startDate), dateTo: localDateStr(endOfNext) }
     }
     case 'next-3-months': {
       const threeMonths = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate())
-      return { dateFrom: formatDate(earliest), dateTo: formatDate(threeMonths) }
+      return { dateFrom: localDateStr(earliest), dateTo: localDateStr(threeMonths) }
     }
     case 'next-6-months': {
       const sixMonths = new Date(today.getFullYear(), today.getMonth() + 6, today.getDate())
-      return { dateFrom: formatDate(earliest), dateTo: formatDate(sixMonths) }
+      return { dateFrom: localDateStr(earliest), dateTo: localDateStr(sixMonths) }
     }
     case 'anytime':
     default: {
       const oneYear = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate())
-      return { dateFrom: formatDate(earliest), dateTo: formatDate(oneYear) }
+      return { dateFrom: localDateStr(earliest), dateTo: localDateStr(oneYear) }
     }
   }
 }

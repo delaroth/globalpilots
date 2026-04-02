@@ -42,7 +42,7 @@ export default function BookingLinks({
         >
           Find Hotels
           <span className="block text-sm font-normal mt-1 opacity-90">
-            {maxHotelPerNight ? `Under $${maxHotelPerNight}/night` : `${nights} nights`} on Agoda
+            {maxHotelPerNight ? `Under $${maxHotelPerNight}/night` : `${nights} nights`} on Booking.com
           </span>
         </a>
         <a

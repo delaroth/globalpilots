@@ -293,7 +293,7 @@ export default function MysteryReveal({
     if (destination.suggestedReturnDate) return destination.suggestedReturnDate
     const d = new Date(effectiveDepartDate + 'T00:00:00')
     d.setDate(d.getDate() + tripDuration)
-    return d.toISOString().split('T')[0]
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })()
 
   const formatDate = (dateStr: string) => {
@@ -784,7 +784,7 @@ export default function MysteryReveal({
                           {destination.googleFlightsAirlines && destination.googleFlightsAirlines.length > 0 && (
                             <p className="text-xs text-white/50 mt-0.5 flex items-center justify-center gap-1 flex-wrap">
                               {destination.googleFlightsAirlineLogos && destination.googleFlightsAirlineLogos.map((logo, i) => (
-                                <img key={i} src={logo} alt="" width={16} height={16} className="inline-block rounded-sm" />
+                                <img key={i} src={logo} alt={destination.googleFlightsAirlines?.[i] || 'Airline'} width={16} height={16} className="inline-block rounded-sm" />
                               ))}
                               <span>{destination.googleFlightsAirlines.join(', ')} · {destination.googleFlightsStops === 0 ? 'Nonstop' : `${destination.googleFlightsStops} stop${destination.googleFlightsStops === 1 ? '' : 's'}`}</span>
                             </p>
