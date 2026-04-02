@@ -515,8 +515,8 @@ export async function POST(request: NextRequest) {
         score += 2 // Good budget fit — not too cheap, not maxed out
       }
 
-      // Random factor for variety — large enough to shuffle top contenders
-      score += Math.random() * 8
+      // Slight randomness to shuffle similarly-scored destinations
+      score += Math.random() * 3
 
       return { ...d, score }
     }).sort((a, b) => b.score - a.score)
@@ -531,9 +531,10 @@ export async function POST(request: NextRequest) {
     // Instead of picking one destination then validating, validate the
     // top 3-5 candidates in parallel and pick the best that passes.
 
-    // Compute the user's actual departure/return dates
-    const computedDepartDate = pickDepartureDate(dates)
-    const computedReturnDate = computeReturnDate(computedDepartDate, tripDuration)
+    // Compute departure/return dates — prefer the API's best-price dates for the
+    // winning destination, fall back to pickDepartureDate for flexible ranges
+    const fallbackDepartDate = pickDepartureDate(dates)
+    const fallbackReturnDate = computeReturnDate(fallbackDepartDate, tripDuration)
 
     // 6. AI ranks the top candidates (optional — improves pick quality)
     let rankedCandidates = candidates.slice(0, 8)
@@ -582,11 +583,16 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       originAirport: (d as any).originAirport || primaryOrigin,
     }))
 
+    // Use the top candidate's API dates for validation if available, else fallback
+    const topCandidate = rankedCandidates[0]
+    const validationDepartDate = topCandidate?.startDate || fallbackDepartDate
+    const validationReturnDate = topCandidate?.endDate || fallbackReturnDate
+
     const validation = await validateCandidatesWithSerpApi({
       origins: originCodes,
       candidates: validationCandidates,
-      departDate: computedDepartDate,
-      returnDate: computedReturnDate,
+      departDate: validationDepartDate,
+      returnDate: validationReturnDate,
       maxValidations: 3,
       priceToleranceRatio: 1.3, // Accept if live price <= 1.3x TP estimate
       maxBudget: maxFlightPrice,
@@ -657,9 +663,10 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       hotelEstimate = costData.dailyCosts[costTier].hotel
     }
 
-    // Dates already computed above via pickDepartureDate/computeReturnDate
-    const effectiveDepartDate = computedDepartDate
-    const effectiveReturnDate = computedReturnDate
+    // Use the picked destination's best-price dates from the API when available,
+    // otherwise fall back to computed dates from the flexible range
+    const effectiveDepartDate = picked.startDate || fallbackDepartDate
+    const effectiveReturnDate = picked.endDate || computeReturnDate(effectiveDepartDate, tripDuration)
 
     // Ensure city/country are resolved — TravelPayouts only returns IATA codes
     const resolvedAirport = (!picked.city || !picked.country)
