@@ -8,6 +8,7 @@ import MysteryPopup from '@/components/MysteryPopup'
 import { ToastProvider } from '@/components/Toast'
 import CookieConsent from '@/components/CookieConsent'
 import FeedbackButton from '@/components/FeedbackButton'
+import FeatureFlagValues from '@/components/FeatureFlagValues'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -108,6 +109,7 @@ export default function RootLayout({
         </Providers>
         <Analytics />
         <SpeedInsights />
+        <FeatureFlagValues />
         <CookieConsent />
         <script
           dangerouslySetInnerHTML={{
