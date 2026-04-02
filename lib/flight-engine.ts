@@ -712,15 +712,24 @@ export async function searchFlight(opts: FlightSearchOptions): Promise<FlightSea
   }
 
   // ── Pick winner ──
+  // Always prefer live prices (SerpApi/FlightAPI) over stale TravelPayouts cache.
+  // TP prices are often days/weeks old and can be wildly inaccurate.
   const allPrices = { travelpayouts: tpPrice, serpapi: serpPrice, flightapi: faPrice }
-  const validPrices: { price: number; source: FlightSearchResult['source']; confidence: FlightSearchResult['confidence'] }[] = []
+  let winner: { price: number; source: FlightSearchResult['source']; confidence: FlightSearchResult['confidence'] } | null = null
 
-  if (tpPrice !== null) validPrices.push({ price: tpPrice, source: 'travelpayouts', confidence: 'cached' })
-  if (serpPrice !== null) validPrices.push({ price: serpPrice, source: 'serpapi', confidence: 'live' })
-  if (faPrice !== null) validPrices.push({ price: faPrice, source: 'flightapi', confidence: 'live' })
-
-  validPrices.sort((a, b) => a.price - b.price)
-  const winner = validPrices[0] ?? null
+  if (serpPrice !== null && faPrice !== null) {
+    // Both live sources — pick cheaper
+    winner = serpPrice <= faPrice
+      ? { price: serpPrice, source: 'serpapi', confidence: 'live' }
+      : { price: faPrice, source: 'flightapi', confidence: 'live' }
+  } else if (serpPrice !== null) {
+    winner = { price: serpPrice, source: 'serpapi', confidence: 'live' }
+  } else if (faPrice !== null) {
+    winner = { price: faPrice, source: 'flightapi', confidence: 'live' }
+  } else if (tpPrice !== null) {
+    // No live data — fall back to TP cache
+    winner = { price: tpPrice, source: 'travelpayouts', confidence: 'cached' }
+  }
 
   const result: FlightSearchResult = {
     price: winner?.price ?? null,
