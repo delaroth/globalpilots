@@ -81,7 +81,7 @@ const travelStyles = [
   },
 ]
 
-const durationOptions = Array.from({ length: 20 }, (_, i) => i + 2) // 2-21
+const durationOptions = Array.from({ length: 21 }, (_, i) => i + 1) // 1-21
 
 // ── Budget context helper ────────────────────────────────────────────────────
 
@@ -956,7 +956,7 @@ function MysteryPageContent() {
                       >
                         <option value={0}>Best for my budget</option>
                         {durationOptions.map(d => (
-                          <option key={d} value={d}>{d} days</option>
+                          <option key={d} value={d}>{d} {d === 1 ? 'day' : 'days'}</option>
                         ))}
                       </select>
                     </div>
