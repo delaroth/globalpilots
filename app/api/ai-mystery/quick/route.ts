@@ -293,6 +293,9 @@ export async function POST(request: NextRequest) {
     })
 
     const maxFlightPrice = allocation.flight
+    // For validation, allow flights up to 60% of total budget — the allocation
+    // is a guideline, but cheap hotels can compensate for pricier flights
+    const maxFlightValidation = Math.max(maxFlightPrice, budget * 0.6)
 
     // Derive Explore params
     const isFlexible = dates.startsWith('flexible:')
@@ -699,7 +702,7 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
           returnDate: comboReturnDate,
         })
 
-        if (flightResult.price !== null && flightResult.price <= maxFlightPrice) {
+        if (flightResult.price !== null && flightResult.price <= maxFlightValidation) {
           const entry: ValidatedCombo = {
             combo,
             livePrice: flightResult.price,
@@ -720,7 +723,7 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
             console.log(`[Quick] Accepted (within 20%): ${combo.city} ${combo.date} $${flightResult.price} — ${serpCallsUsed} SerpApi call(s)`)
           }
         } else if (flightResult.price !== null) {
-          console.log(`[Quick] Over budget: ${combo.city} ${combo.date} $${flightResult.price} > $${maxFlightPrice}`)
+          console.log(`[Quick] Over budget: ${combo.city} ${combo.date} $${flightResult.price} > $${maxFlightValidation}`)
         }
       } catch {
         console.warn(`[Quick] SerpApi validation failed for ${combo.city} ${combo.date}`)
