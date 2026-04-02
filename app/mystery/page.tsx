@@ -202,7 +202,7 @@ function MysteryPageContent() {
 
   // When & how long
   const [timeframe, setTimeframe] = useState('anytime')
-  const [tripDuration, setTripDuration] = useState(5)
+  const [tripDuration, setTripDuration] = useState(0)
   const [showSpecificDates, setShowSpecificDates] = useState(false)
   const [departDate, setDepartDate] = useState(getTwoWeeksFromNow())
   const [flexibleDates, setFlexibleDates] = useState(false)

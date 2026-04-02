@@ -338,7 +338,7 @@ export default function ItineraryDetail({
                       {hotel_recommendations.map((hotel, idx) => (
                         <a
                           key={idx}
-                          href={hotel.link || `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.name + ', ' + destination + ', ' + country)}`}
+                          href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.name + ', ' + destination + ', ' + country)}${departDate ? `&checkin=${departDate}` : ''}${returnDate ? `&checkout=${returnDate}` : ''}&group_adults=1&no_rooms=1`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="block bg-white/[0.04] rounded-lg p-4 border border-white/10 hover:bg-white/[0.08] transition group"
