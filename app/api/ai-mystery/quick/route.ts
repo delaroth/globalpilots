@@ -13,7 +13,7 @@ import { checkVisaRequirement } from '@/lib/enrichment/visa'
 import { callAI } from '@/lib/ai'
 import { lookupAirportByCode } from '@/lib/geolocation'
 import { withRetry } from '@/lib/retry'
-import { pickDepartureDate, computeReturnDate } from '@/lib/date-utils'
+import { pickDepartureDate, computeReturnDate, parsePreferredDay, snapToPreferredDay } from '@/lib/date-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -671,9 +671,18 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
     }
 
     // Use the picked destination's best-price dates from the API when available,
-    // otherwise fall back to computed dates from the flexible range
-    const effectiveDepartDate = picked.startDate || fallbackDepartDate
-    const effectiveReturnDate = picked.endDate || computeReturnDate(effectiveDepartDate, tripDuration)
+    // otherwise fall back to computed dates from the flexible range.
+    // If user has a preferred day (e.g. Thursday), snap the API's best-price
+    // date to the nearest matching weekday — this varies across the whole
+    // timeframe since the API's suggested date can be any date in the range.
+    const preferredDay = parsePreferredDay(dates)
+    let effectiveDepartDate = picked.startDate || fallbackDepartDate
+    if (preferredDay !== null) {
+      effectiveDepartDate = snapToPreferredDay(effectiveDepartDate, preferredDay)
+    }
+    const effectiveReturnDate = preferredDay !== null
+      ? computeReturnDate(effectiveDepartDate, tripDuration)
+      : (picked.endDate || computeReturnDate(effectiveDepartDate, tripDuration))
 
     // Ensure city/country are resolved — TravelPayouts only returns IATA codes
     const resolvedAirport = (!picked.city || !picked.country)
