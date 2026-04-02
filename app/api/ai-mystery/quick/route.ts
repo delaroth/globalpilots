@@ -713,8 +713,9 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
           const ratio = flightResult.price / combo.matrixPrice
           console.log(`[Quick] Validated: ${combo.city} ${combo.date} matrix=$${combo.matrixPrice} live=$${flightResult.price} ratio=${ratio.toFixed(2)} (${flightResult.source})`)
 
-          // If live is within 20% of matrix, accept immediately (1 SerpApi call)
-          if (ratio <= 1.20 && ratio >= 0.5) {
+          // If live is within 20% or $20 of matrix, accept immediately (1 SerpApi call)
+          const priceDiff = Math.abs(flightResult.price - combo.matrixPrice)
+          if ((ratio <= 1.20 || priceDiff <= 20) && ratio >= 0.5) {
             earlyWinner = entry
             console.log(`[Quick] Accepted (within 20%): ${combo.city} ${combo.date} $${flightResult.price} — ${serpCallsUsed} SerpApi call(s)`)
           }
