@@ -18,11 +18,13 @@ export function pickDepartureDate(dates: string, fallbackDaysOut: number = 14): 
   if (dates.startsWith('flexible:')) {
     const timeframe = dates.replace('flexible:', '').split(' ')[0]
     const range = calculateFlexibleDateRange(timeframe)
-    // Pick a date ~10 days into the range (sweet spot for price + availability)
     const start = new Date(range.dateFrom)
     const end = new Date(range.dateTo)
-    const midpoint = new Date(start.getTime() + Math.min(10 * 86400000, (end.getTime() - start.getTime()) / 2))
-    return midpoint.toISOString().split('T')[0]
+    // Pick a random date within the range (at least 7 days out, capped at range end)
+    const rangeMs = end.getTime() - start.getTime()
+    const randomOffset = Math.floor(Math.random() * rangeMs)
+    const picked = new Date(start.getTime() + randomOffset)
+    return picked.toISOString().split('T')[0]
   }
 
   // Fallback

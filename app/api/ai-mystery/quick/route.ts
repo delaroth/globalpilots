@@ -515,8 +515,8 @@ export async function POST(request: NextRequest) {
         score += 2 // Good budget fit — not too cheap, not maxed out
       }
 
-      // Small random factor for variety (0-2 points)
-      score += Math.random() * 2
+      // Random factor for variety — large enough to shuffle top contenders
+      score += Math.random() * 8
 
       return { ...d, score }
     }).sort((a, b) => b.score - a.score)
