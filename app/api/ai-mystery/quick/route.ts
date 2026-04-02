@@ -192,6 +192,7 @@ function vibeScore(cityName: string, country: string, vibes: string[]): number {
   // Use real destination cost data for scoring when available
   const costData = getDestinationCost(cityName)
   const text = `${cityName} ${country}`.toLowerCase()
+  const city = cityName.toLowerCase()
 
   // Country-level vibe associations (geographic, not hardcoded city names)
   const vibeCountries: Record<string, string[]> = {
@@ -205,8 +206,19 @@ function vibeScore(cityName: string, country: string, vibes: string[]): number {
     relaxing: ['maldives', 'sri lanka', 'bali', 'portugal', 'greece', 'croatia', 'mauritius', 'fiji'],
   }
 
+  // City-level vibe exclusions — inland/mountain cities that don't match certain vibes
+  // even though their country does (e.g. Chiang Mai is NOT a beach destination)
+  const vibeExclusions: Record<string, string[]> = {
+    beach: ['chiang mai', 'chiang rai', 'bangkok', 'hanoi', 'delhi', 'kathmandu', 'bogota', 'medellin', 'cusco', 'ubud', 'yogyakarta', 'luang prabang', 'siem reap', 'kuala lumpur'],
+  }
+
   let score = 0
   for (const vibe of vibes) {
+    const excluded = vibeExclusions[vibe.toLowerCase()] || []
+    if (excluded.some(e => city.includes(e))) {
+      score -= 3 // strong penalty for mismatched vibe
+      continue
+    }
     const countries = vibeCountries[vibe.toLowerCase()] || []
     if (countries.some(c => text.includes(c))) score += 1
   }
@@ -684,12 +696,11 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
         })
 
         if (flightResult.price !== null) {
-          // Check if live price is roughly accurate vs matrix (within 2x)
-          const ratio = flightResult.price / combo.matrixPrice
-          console.log(`[Quick] SerpApi ${combo.city} ${combo.date}: matrix=$${combo.matrixPrice}, live=$${flightResult.price}, ratio=${ratio.toFixed(1)}`)
+          console.log(`[Quick] SerpApi ${combo.city} ${combo.date}: matrix=$${combo.matrixPrice}, live=$${flightResult.price}, source=${flightResult.source}`)
 
-          if (ratio <= 2.0 && flightResult.price <= maxFlightPrice) {
-            // Found an accurate, in-budget option
+          // Accept if live price is within the user's flight budget
+          // (don't reject based on matrix ratio — TP prices are often stale)
+          if (flightResult.price <= maxFlightPrice) {
             picked = rankedCandidates.find(d => d.destination === combo.destination) || rankedCandidates[0]
             validatedPrice = flightResult.price
             validatedAirlines = flightResult.airlines || []
@@ -703,7 +714,7 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
             console.log(`[Quick] Validated: ${combo.city} on ${combo.date} at $${flightResult.price} (${flightResult.source}) — ${serpCallsUsed} SerpApi calls`)
             break
           } else {
-            console.log(`[Quick] Rejected ${combo.city} ${combo.date}: ratio ${ratio.toFixed(1)}x or over budget — trying next`)
+            console.log(`[Quick] Over budget: ${combo.city} ${combo.date} $${flightResult.price} > $${maxFlightPrice} — trying next`)
           }
         }
       } catch {
