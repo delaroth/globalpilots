@@ -264,7 +264,7 @@ async function getTravelPayoutsPrice(
   if (!TP_TOKEN) return null
   try {
     const res = await fetch(
-      `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&limit=1&token=${TP_TOKEN}`,
+      `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&one_way=false&limit=1&token=${TP_TOKEN}`,
       { signal: AbortSignal.timeout(5000) },
     )
     if (!res.ok) return null
@@ -284,7 +284,7 @@ async function getTravelPayoutsBatch(
   if (!TP_TOKEN) return []
   try {
     const res = await fetch(
-      `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&currency=usd&limit=${limit}&token=${TP_TOKEN}`,
+      `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&currency=usd&one_way=false&limit=${limit}&token=${TP_TOKEN}`,
       { signal: AbortSignal.timeout(8000) },
     )
     if (!res.ok) return []

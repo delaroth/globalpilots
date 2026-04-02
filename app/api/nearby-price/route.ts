@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url = `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&token=${token}&limit=1`
+    const url = `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&one_way=false&token=${token}&limit=1`
     const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
 
     if (!res.ok) {

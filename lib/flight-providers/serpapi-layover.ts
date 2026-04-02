@@ -40,7 +40,7 @@ async function getTravelPayoutsPrice(origin: string, destination: string): Promi
   if (!TP_TOKEN) return null
   try {
     const res = await fetch(
-      `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&limit=1&token=${TP_TOKEN}`,
+      `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&one_way=false&limit=1&token=${TP_TOKEN}`,
       { signal: AbortSignal.timeout(5000) }
     )
     if (!res.ok) return null

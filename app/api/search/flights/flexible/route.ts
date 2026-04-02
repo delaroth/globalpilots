@@ -422,7 +422,7 @@ async function fallbackToTravelPayoutsAnytime(origin: string, destination: strin
   }
 
   try {
-    const url = `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&limit=30&token=${tpToken}`
+    const url = `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&one_way=false&limit=30&token=${tpToken}`
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
 

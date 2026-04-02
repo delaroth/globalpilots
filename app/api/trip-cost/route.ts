@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
   if (origin && TRAVELPAYOUTS_TOKEN) {
     try {
-      let url = `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&token=${TRAVELPAYOUTS_TOKEN}&limit=5`
+      let url = `https://api.travelpayouts.com/v2/prices/latest?origin=${origin}&destination=${destination}&currency=usd&one_way=false&token=${TRAVELPAYOUTS_TOKEN}&limit=5`
       if (departDate) {
         url += `&depart_date=${departDate}`
       }
