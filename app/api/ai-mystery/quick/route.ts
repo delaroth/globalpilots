@@ -594,26 +594,33 @@ Respond with ONLY 5 IATA codes separated by commas, best first. Example: BKK,SGN
       departDate: validationDepartDate,
       returnDate: validationReturnDate,
       maxValidations: 3,
-      priceToleranceRatio: 1.3, // Accept if live price <= 1.3x TP estimate
+      priceToleranceRatio: 2.5, // Accept if live price <= 2.5x TP estimate (TP prices can be stale/one-way)
       maxBudget: maxFlightPrice,
     })
 
-    // Use validated winner, or fall back to AI/score top pick with TP estimate
+    // Use validated winner, or fall back to AI/score top pick
+    // ALWAYS prefer live round-trip prices over TP estimates
     const winner = validation.validated
     const picked = winner
       ? rankedCandidates.find(d => d.destination === winner.destination) || rankedCandidates[0]
       : rankedCandidates[0]
 
-    let validatedPrice = winner?.livePrice ?? picked.price
-    let validatedAirlines: string[] = winner?.airlines ?? (picked.airline ? [picked.airline] : [])
-    let validatedStops: number | undefined = winner?.stops ?? picked.stops
-    let validatedPriceIsLive = winner?.isLive ?? false
+    // If no winner but we have any candidate with a live price, use that
+    // (even rejected candidates have accurate live pricing)
+    const bestLiveCandidate = !winner
+      ? validation.all.find(v => v.isLive && v.livePrice && v.livePrice > 0)
+      : null
+
+    let validatedPrice = winner?.livePrice ?? bestLiveCandidate?.livePrice ?? picked.price
+    let validatedAirlines: string[] = winner?.airlines ?? bestLiveCandidate?.airlines ?? (picked.airline ? [picked.airline] : [])
+    let validatedStops: number | undefined = winner?.stops ?? bestLiveCandidate?.stops ?? picked.stops
+    let validatedPriceIsLive = winner?.isLive ?? bestLiveCandidate?.isLive ?? false
     // Use the specific origin airport from the winning candidate
-    let bestOrigin = winner?.validatedOrigin || winner?.originAirport || (picked as any).originAirport || primaryOrigin
+    let bestOrigin = winner?.validatedOrigin || bestLiveCandidate?.validatedOrigin || winner?.originAirport || (picked as any).originAirport || primaryOrigin
 
-    console.log(`[Quick] Validation result: winner=${winner ? `${winner.city}@$${winner.livePrice}(${winner.status})` : 'null'}, fallback=${picked.city || picked.destination}@$${picked.price}, displayPrice=$${validatedPrice}, isLive=${validatedPriceIsLive}`)
+    console.log(`[Quick] Validation result: winner=${winner ? `${winner.city}@$${winner.livePrice}(${winner.status})` : 'null'}, bestLive=${bestLiveCandidate ? `${bestLiveCandidate.city}@$${bestLiveCandidate.livePrice}` : 'null'}, fallback=${picked.city || picked.destination}@$${picked.price}, displayPrice=$${validatedPrice}, isLive=${validatedPriceIsLive}`)
 
-    if (winner?.isLive) {
+    if (validatedPriceIsLive) {
       priceIsEstimate = false
       priceIsLive = true
     } else if (!winner) {
