@@ -1,3 +1,4 @@
+import { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import Navigation from '@/components/Navigation'
@@ -9,10 +10,7 @@ import {
   type DailyCosts,
 } from '@/lib/destination-costs'
 import { getClimateData, type ClimateData } from '@/lib/enrichment/climate'
-
-function slugify(city: string): string {
-  return city.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-}
+import { slugify, isTopDestination, NOINDEX_ROBOTS } from '@/lib/seo-config'
 
 function unslugify(slug: string): DestinationCost | undefined {
   const all = getAllDestinations()
@@ -79,6 +77,35 @@ export async function generateStaticParams() {
   return destinations.map((d) => ({
     destination: slugify(d.city),
   }))
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ destination: string }>
+}): Promise<Metadata> {
+  const { destination } = await params
+  const dest = unslugify(destination)
+  if (!dest) return { title: 'Not Found' }
+
+  const bestMonthNames = dest.bestMonths.map((m) => monthNames[m - 1])
+  const title = `Best Time to Visit ${dest.city} — Weather, Prices & Crowds | GlobePilot`
+  const description = `When to visit ${dest.city}, ${dest.country}: best months (${bestMonthNames.slice(0, 3).join(', ')}), month-by-month weather, flight price trends, and shoulder-season savings.`
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `https://globepilots.com/best-time/${destination}`,
+    },
+    ...(isTopDestination(dest) ? {} : { robots: NOINDEX_ROBOTS }),
+    openGraph: {
+      title,
+      description,
+      url: `https://globepilots.com/best-time/${destination}`,
+      type: 'article',
+    },
+  }
 }
 
 export default async function BestTimePage({
@@ -293,6 +320,26 @@ export default async function BestTimePage({
         </div>
       </section>
 
+      {/* Inline CTA Banner */}
+      <section className="px-6 py-12">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-gradient-to-r from-sky-500/20 via-sky-600/10 to-cyan-500/20 border border-sky-500/30 rounded-2xl p-8 text-center">
+            <h3 className="text-2xl font-bold text-white mb-2">
+              Ready to go? Let AI plan your {dest.city} trip
+            </h3>
+            <p className="text-white/60 mb-6 max-w-lg mx-auto">
+              Tell us your budget and dates — our AI builds a complete itinerary with flights, hotels, and activities.
+            </p>
+            <Link
+              href={`/mystery?destination=${dest.code}`}
+              className="inline-block bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-xl px-8 py-3.5 text-lg transition transform hover:scale-105 shadow-lg shadow-sky-500/25"
+            >
+              Plan My {dest.city} Trip
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Recommended Months Detail */}
       <section className="px-6 py-16">
         <div className="max-w-5xl mx-auto">
@@ -464,7 +511,7 @@ export default async function BestTimePage({
               Search Flights to {dest.city}
             </Link>
             <Link
-              href="/mystery"
+              href={`/mystery?destination=${dest.code}`}
               className="border-2 border-sky-400 text-sky-400 font-bold py-3 px-8 rounded-full hover:bg-sky-500/10 transition transform hover:scale-105"
             >
               Plan a Mystery Trip
@@ -482,10 +529,13 @@ export default async function BestTimePage({
               <Link href={`/cheap-flights/${destination}`} className="text-sm text-sky-400 hover:text-sky-300 transition">
                 Cheap flights →
               </Link>
+              <Link href={`/budget-travel/${slugify(dest.region)}`} className="text-sm text-sky-400 hover:text-sky-300 transition">
+                Budget travel in {dest.region} →
+              </Link>
               <Link href={`/trip-cost?destination=${dest.code}`} className="text-sm text-sky-400 hover:text-sky-300 transition">
                 Daily costs →
               </Link>
-              <Link href="/mystery" className="text-sm text-sky-400 hover:text-sky-300 transition">
+              <Link href={`/mystery?destination=${dest.code}`} className="text-sm text-sky-400 hover:text-sky-300 transition">
                 Plan a mystery trip →
               </Link>
             </div>

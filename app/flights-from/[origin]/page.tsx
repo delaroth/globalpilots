@@ -9,10 +9,7 @@ import {
   type DailyCosts,
 } from '@/lib/destination-costs'
 import { majorAirports } from '@/lib/geolocation'
-
-function slugify(city: string): string {
-  return city.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-}
+import { slugify, TOP_ORIGIN_CODES } from '@/lib/seo-config'
 
 function destSlugify(city: string): string {
   return city.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
@@ -43,19 +40,7 @@ const regionProximity: Record<string, string[]> = {
 }
 
 // Major origin airports for static generation (top 40 busiest airports with good coverage)
-const originAirports = majorAirports
-  .filter((a) =>
-    [
-      'ATL', 'JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'SFO', 'SEA', 'MIA', 'BOS',
-      'LHR', 'CDG', 'AMS', 'FRA', 'BCN', 'MAD', 'FCO', 'LIS',
-      'BKK', 'SIN', 'HKG', 'NRT', 'ICN', 'TPE', 'KUL', 'CGK',
-      'DXB', 'DOH', 'IST',
-      'SYD', 'MEL',
-      'DEL', 'BOM',
-      'GRU', 'EZE', 'BOG', 'LIM', 'SCL', 'MEX',
-      'YYZ', 'YVR',
-    ].includes(a.code)
-  )
+const originAirports = majorAirports.filter((a) => TOP_ORIGIN_CODES.includes(a.code))
 
 function findAirportBySlug(slug: string) {
   return majorAirports.find((a) => slugify(a.city) === slug)
@@ -88,6 +73,9 @@ export async function generateMetadata({
       `${airport.city} flight deals`,
       `cheapest destinations from ${airport.city}`,
     ],
+    alternates: {
+      canonical: `https://globepilots.com/flights-from/${origin}`,
+    },
     openGraph: {
       title,
       description,

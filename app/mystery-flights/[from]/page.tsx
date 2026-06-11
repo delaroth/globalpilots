@@ -4,6 +4,7 @@ import { majorAirports } from '@/lib/geolocation'
 import { getAllDestinations } from '@/lib/destination-costs'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
+import { isMysteryOrigin, NOINDEX_ROBOTS } from '@/lib/seo-config'
 
 // ─── Country flag emoji map ───
 const countryFlags: Record<string, string> = {
@@ -80,6 +81,10 @@ export async function generateMetadata({ params }: { params: Promise<{ from: str
   return {
     title: `Mystery Flights from ${city} — Surprise Destinations | GlobePilots`,
     description: `Discover surprise travel destinations from ${city} (${code}). AI-powered mystery vacation planner finds cheap flights and builds your perfect itinerary.`,
+    alternates: {
+      canonical: `https://globepilots.com/mystery-flights/${code}`,
+    },
+    ...(isMysteryOrigin(code) ? {} : { robots: NOINDEX_ROBOTS }),
     openGraph: {
       title: `Mystery Flights from ${city}`,
       description: `Let AI pick your next adventure from ${city}. Budget-friendly surprise destinations with real flight prices.`,

@@ -19,6 +19,14 @@ export const metadata: Metadata = {
   title: 'GlobePilot - Budget in. Adventure out.',
   description: 'AI-powered budget travel planning - Find the best flight deals and plan your perfect adventure',
   metadataBase: new URL('https://globepilots.com'),
+  alternates: {
+    canonical: '/',
+  },
+  // Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION in Vercel env to verify
+  // Google Search Console ownership without a DNS record.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
+    : {}),
   openGraph: {
     title: 'GlobePilot - Budget in. Adventure out.',
     description: 'AI-powered budget travel planning - Find the best flight deals and plan your perfect adventure.',

@@ -83,6 +83,9 @@ export async function generateMetadata({
       `${regionName} travel costs`,
       `cheapest places in ${regionName}`,
     ],
+    alternates: {
+      canonical: `https://globepilots.com/budget-travel/${regionSlug}`,
+    },
     openGraph: {
       title,
       description,

@@ -19,6 +19,19 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
 
+  // www serves identical content to the apex domain — redirect to avoid
+  // duplicate-content indexing across two hosts.
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.globepilots.com' }],
+        destination: 'https://globepilots.com/:path*',
+        permanent: true,
+      },
+    ]
+  },
+
   // Cache headers for static assets and API responses
   async headers() {
     return [

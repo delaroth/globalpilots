@@ -9,10 +9,7 @@ import {
   type DestinationCost,
   type DailyCosts,
 } from '@/lib/destination-costs'
-
-function slugify(city: string): string {
-  return city.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-}
+import { slugify, isTopDestination, NOINDEX_ROBOTS } from '@/lib/seo-config'
 
 function unslugify(slug: string): DestinationCost | undefined {
   const all = getAllDestinations()
@@ -86,6 +83,10 @@ export async function generateMetadata({
       `flights to ${dest.city} ${dest.country}`,
       `${dest.city} vacation cost`,
     ],
+    alternates: {
+      canonical: `https://globepilots.com/cheap-flights/${destination}`,
+    },
+    ...(isTopDestination(dest) ? {} : { robots: NOINDEX_ROBOTS }),
     openGraph: {
       title,
       description,
@@ -144,11 +145,25 @@ export default async function CheapFlightsDestinationPage({
     })),
   }
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://globepilots.com' },
+      { '@type': 'ListItem', position: 2, name: 'Cheap Flights', item: 'https://globepilots.com/cheap-flights' },
+      { '@type': 'ListItem', position: 3, name: dest.city, item: `https://globepilots.com/cheap-flights/${destination}` },
+    ],
+  }
+
   return (
     <main className="min-h-screen flex flex-col">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
       <Navigation />
 
@@ -321,7 +336,7 @@ export default async function CheapFlightsDestinationPage({
             </table>
           </div>
           <p className="text-white/40 text-xs mt-4 text-center">
-            Prices are estimates based on historical trends from major US airports. Actual fares vary.
+            Estimated seasonal averages from major US airports, modeled on regional base fares and peak/off-peak demand — not live quotes. Use the flight search for current prices.
           </p>
         </div>
       </section>
@@ -377,6 +392,9 @@ export default async function CheapFlightsDestinationPage({
             <div className="flex flex-wrap gap-3">
               <Link href={`/best-time/${destination}`} className="text-sm text-sky-400 hover:text-sky-300 transition">
                 Best time to visit →
+              </Link>
+              <Link href={`/budget-travel/${slugify(dest.region)}`} className="text-sm text-sky-400 hover:text-sky-300 transition">
+                Budget travel in {dest.region} →
               </Link>
               <Link href={`/trip-cost?destination=${dest.code}`} className="text-sm text-sky-400 hover:text-sky-300 transition">
                 Daily costs →

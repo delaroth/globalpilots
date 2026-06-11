@@ -1,37 +1,42 @@
 import { MetadataRoute } from 'next'
 import { majorAirports } from '@/lib/geolocation'
-import { getAllDestinations, getAllRegions } from '@/lib/destination-costs'
+import { getAllRegions } from '@/lib/destination-costs'
 import { getAllEditorialPosts } from '@/lib/blog-posts'
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-}
+import {
+  slugify,
+  getTopDestinations,
+  MYSTERY_ORIGIN_CODES,
+  TOP_ORIGIN_CODES,
+} from '@/lib/seo-config'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://globepilots.com'
 
-  // Programmatic SEO: mystery flights from each airport
-  const mysteryFlightPages: MetadataRoute.Sitemap = majorAirports.map((a) => ({
-    url: `${baseUrl}/mystery-flights/${a.code}`,
-    lastModified: new Date(),
-    changeFrequency: 'weekly' as const,
-    priority: 0.6,
-  }))
+  // Only pages worth indexing belong here — long-tail programmatic pages
+  // stay live for users but are noindexed and excluded (see lib/seo-config.ts).
 
-  // Blog posts: editorial + destination guide slugs from destination-costs
-  const editorialSlugs = getAllEditorialPosts().map(p => p.slug)
-  const destinationSlugs = getAllDestinations().map(d => slugify(d.city))
-  const allBlogSlugs = [...new Set([...editorialSlugs, ...destinationSlugs])]
-  const blogPages: MetadataRoute.Sitemap = allBlogSlugs.map(slug => ({
-    url: `${baseUrl}/blog/${slug}`,
+  // Mystery flights: curated English-market hubs only (was: all 487 airports)
+  const mysteryFlightPages: MetadataRoute.Sitemap = majorAirports
+    .filter((a) => MYSTERY_ORIGIN_CODES.includes(a.code))
+    .map((a) => ({
+      url: `${baseUrl}/mystery-flights/${a.code}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.6,
+    }))
+
+  // Blog: editorial posts only. Destination-guide slugs are excluded — the
+  // blog_posts table has no content for them yet and they currently 404.
+  const topDestinations = getTopDestinations()
+  const blogPages: MetadataRoute.Sitemap = getAllEditorialPosts().map(p => ({
+    url: `${baseUrl}/blog/${p.slug}`,
     lastModified: new Date(),
     changeFrequency: 'monthly' as const,
     priority: 0.6,
   }))
 
-  // SEO: cheap flights to each destination
-  const destinations = getAllDestinations()
-  const cheapFlightPages: MetadataRoute.Sitemap = destinations.map((d) => ({
+  // SEO: cheap flights to top destinations only
+  const cheapFlightPages: MetadataRoute.Sitemap = topDestinations.map((d) => ({
     url: `${baseUrl}/cheap-flights/${slugify(d.city)}`,
     lastModified: new Date(),
     changeFrequency: 'weekly' as const,
@@ -39,17 +44,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }))
 
   // SEO: flights from major origins
-  const originAirportCodes = [
-    'ATL', 'JFK', 'LAX', 'ORD', 'DFW', 'DEN', 'SFO', 'SEA', 'MIA', 'BOS',
-    'LHR', 'CDG', 'AMS', 'FRA', 'BCN', 'MAD', 'FCO', 'LIS',
-    'BKK', 'SIN', 'HKG', 'NRT', 'ICN', 'TPE', 'KUL', 'CGK',
-    'DXB', 'DOH', 'IST',
-    'SYD', 'MEL',
-    'DEL', 'BOM',
-    'GRU', 'EZE', 'BOG', 'LIM', 'SCL', 'MEX',
-    'YYZ', 'YVR',
-  ]
-  const originAirports = majorAirports.filter((a) => originAirportCodes.includes(a.code))
+  const originAirports = majorAirports.filter((a) => TOP_ORIGIN_CODES.includes(a.code))
   const flightsFromPages: MetadataRoute.Sitemap = originAirports.map((a) => ({
     url: `${baseUrl}/flights-from/${slugify(a.city)}`,
     lastModified: new Date(),
@@ -57,8 +52,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }))
 
-  // SEO: best time to visit each destination
-  const bestTimePages: MetadataRoute.Sitemap = destinations.map((d) => ({
+  // SEO: best time to visit top destinations only
+  const bestTimePages: MetadataRoute.Sitemap = topDestinations.map((d) => ({
     url: `${baseUrl}/best-time/${slugify(d.city)}`,
     lastModified: new Date(),
     changeFrequency: 'monthly' as const,
