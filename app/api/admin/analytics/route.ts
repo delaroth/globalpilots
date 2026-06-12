@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 import { getSerpApiUsage } from '@/lib/flight-providers/serpapi'
 import { getCacheStats } from '@/lib/cache'
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const now = new Date()
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -61,15 +61,16 @@ export async function GET(request: NextRequest) {
       supabase.from('users').select('*', { count: 'exact', head: true }).eq('email_verified', false),
       // Total saved trips
       supabase.from('saved_trips').select('*', { count: 'exact', head: true }),
-      // Total activity feed entries
-      supabase.from('activity_feed').select('*', { count: 'exact', head: true }),
-      // Activity feed entries today
-      supabase.from('activity_feed').select('*', { count: 'exact', head: true }).gte('created_at', startOfToday),
-      // Most popular destinations (destination_revealed grouped by destination)
+      // Total tracked events (activity_feed is no longer written to — user_events is the live store)
+      supabase.from('user_events').select('*', { count: 'exact', head: true }),
+      // Events today
+      supabase.from('user_events').select('*', { count: 'exact', head: true }).gte('created_at', startOfToday),
+      // Most popular destinations (mystery_revealed conversions grouped by destination)
       supabase
-        .from('activity_feed')
-        .select('data')
-        .eq('activity_type', 'destination_revealed')
+        .from('user_events')
+        .select('event_data')
+        .eq('event_type', 'conversion')
+        .eq('event_data->>conversion_type', 'mystery_revealed')
         .order('created_at', { ascending: false })
         .limit(500),
       // Active price alerts
@@ -82,10 +83,10 @@ export async function GET(request: NextRequest) {
         .select('name, email, created_at, auth_provider')
         .order('created_at', { ascending: false })
         .limit(10),
-      // Recent activity feed (last 10)
+      // Recent events (last 10) — mapped to the activity_feed shape the admin UI expects
       supabase
-        .from('activity_feed')
-        .select('activity_type, data, created_at')
+        .from('user_events')
+        .select('event_type, event_data, created_at')
         .order('created_at', { ascending: false })
         .limit(10),
     ])
@@ -237,11 +238,12 @@ export async function GET(request: NextRequest) {
         .gte('created_at', sevenDaysAgo)
       conversionFunnel.searches = searchCount || 0
 
-      // Destination reveals
-      const { count: revealCount } = await supabase
-        .from('activity_feed')
+      // Destination reveals (mystery_revealed conversions in user_events)
+      const { count: revealCount } = await (supabase
+        .from('user_events') as any)
         .select('*', { count: 'exact', head: true })
-        .eq('activity_type', 'destination_revealed')
+        .eq('event_type', 'conversion')
+        .eq('event_data->>conversion_type', 'mystery_revealed')
         .gte('created_at', sevenDaysAgo)
       conversionFunnel.reveals = revealCount || 0
     } catch (e) {
@@ -365,15 +367,6 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Also count reveals from activity_feed for mystery funnel if conversion events are sparse
-      if (detailedFunnel.mystery.reveals === 0) {
-        const { count: activityReveals } = await supabase
-          .from('activity_feed')
-          .select('*', { count: 'exact', head: true })
-          .eq('activity_type', 'destination_revealed')
-          .gte('created_at', sevenDaysAgo)
-        detailedFunnel.mystery.reveals = activityReveals || 0
-      }
     } catch (e) {
       console.error('[Admin Analytics] detailedFunnel error:', e)
     }
@@ -492,8 +485,8 @@ export async function GET(request: NextRequest) {
     const destinationCounts: Record<string, number> = {}
     const destEntries = (popularDestinationsRes.data || []) as any[]
     for (const entry of destEntries) {
-      const dest = entry.data?.destination || 'Unknown'
-      const country = entry.data?.country || ''
+      const dest = entry.event_data?.destination || 'Unknown'
+      const country = entry.event_data?.country || ''
       const key = country ? `${dest}, ${country}` : dest
       destinationCounts[key] = (destinationCounts[key] || 0) + 1
     }
@@ -536,7 +529,12 @@ export async function GET(request: NextRequest) {
         total: totalActivityRes.count || 0,
         today: activityTodayRes.count || 0,
         popularDestinations,
-        recent: recentActivityRes.data || [],
+        // Map user_events rows to the activity_feed shape the admin UI renders
+        recent: ((recentActivityRes.data || []) as any[]).map((e: any) => ({
+          activity_type: e.event_data?.conversion_type || e.event_data?.feature || e.event_type,
+          data: e.event_data,
+          created_at: e.created_at,
+        })),
       },
       alerts: {
         active: activeAlertsRes.count || 0,

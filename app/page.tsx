@@ -6,6 +6,7 @@ import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import SocialProof from '@/components/SocialProof'
 import { useCurrency } from '@/hooks/useCurrency'
+import { trackClick } from '@/lib/track-client'
 
 // Static fallback destinations
 const staticDestinations = [
@@ -70,6 +71,7 @@ export default function Home() {
           <div className="md:hidden mb-8">
             <Link
               href="/mystery"
+              onClick={() => trackClick('home_cta', 'hero_plan_my_trip')}
               className="inline-block w-full text-center py-4 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-400 text-white font-bold text-lg shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 transition-all"
             >
               Plan My Trip &rarr;
@@ -88,7 +90,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-left">
 
             {/* Card 1: AI Trip Planner */}
-            <Link href="/mystery" className="group relative bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 hover:bg-white/[0.07] hover:border-sky-500/20 transition-all duration-300">
+            <Link href="/mystery" onClick={() => trackClick('home_cta', 'card_mystery')} className="group relative bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 hover:bg-white/[0.07] hover:border-sky-500/20 transition-all duration-300">
               <div className="text-3xl mb-4">✨</div>
               <h2 className="text-xl font-bold text-white mb-2 group-hover:text-sky-400 transition">
                 AI Trip Planner
@@ -102,7 +104,7 @@ export default function Home() {
             </Link>
 
             {/* Card 2: Flight Search */}
-            <Link href="/search" className="group relative bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 hover:bg-white/[0.07] hover:border-sky-500/20 transition-all duration-300">
+            <Link href="/search" onClick={() => trackClick('home_cta', 'card_search')} className="group relative bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 hover:bg-white/[0.07] hover:border-sky-500/20 transition-all duration-300">
               <div className="text-3xl mb-4">🔍</div>
               <h2 className="text-xl font-bold text-white mb-2 group-hover:text-sky-400 transition">
                 Smart Flight Search
@@ -116,7 +118,7 @@ export default function Home() {
             </Link>
 
             {/* Card 3: Deals */}
-            <Link href="/deals" className="group relative bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 hover:bg-white/[0.07] hover:border-sky-500/20 transition-all duration-300">
+            <Link href="/deals" onClick={() => trackClick('home_cta', 'card_deals')} className="group relative bg-white/[0.04] border border-white/[0.08] rounded-2xl p-6 hover:bg-white/[0.07] hover:border-sky-500/20 transition-all duration-300">
               <div className="text-3xl mb-4">🏷️</div>
               <h2 className="text-xl font-bold text-white mb-2 group-hover:text-sky-400 transition">
                 Today&apos;s Deals
@@ -169,6 +171,7 @@ export default function Home() {
                 <Link
                   key={dest.airportCode || dest.name}
                   href={`/mystery?dest=${dest.airportCode || ''}`}
+                  onClick={() => trackClick('home_cta', `trending_${dest.airportCode || dest.name}`)}
                   className="flex-shrink-0 w-44 bg-white/[0.04] border border-white/[0.08] rounded-xl p-4 hover:bg-white/[0.07] hover:border-sky-500/20 transition-all group"
                 >
                   <p className="text-lg mb-1">{dest.flag || '🌍'}</p>
@@ -245,6 +248,7 @@ export default function Home() {
       <div className="fixed bottom-0 left-0 right-0 z-40 p-3 bg-slate-950/95 backdrop-blur border-t border-white/10 lg:hidden">
         <Link
           href="/mystery"
+          onClick={() => trackClick('home_cta', 'sticky_plan_my_trip')}
           className="block w-full text-center py-3 rounded-xl bg-gradient-to-r from-sky-500 to-cyan-400 text-white font-bold text-sm shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 transition-all"
         >
           Plan My Trip →

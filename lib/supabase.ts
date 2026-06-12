@@ -29,6 +29,29 @@ export function getSupabase() {
   return supabaseClient
 }
 
+// Server-only admin client that bypasses RLS using the service role key.
+// Use this ONLY in server-side code (API routes, cron jobs) that needs
+// unrestricted read/write access (e.g. the admin analytics dashboard).
+let supabaseAdminClient: ReturnType<typeof createClient> | null = null
+
+export function getSupabaseAdmin() {
+  if (supabaseAdminClient) return supabaseAdminClient
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.warn(
+      '[Supabase] Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL — falling back to anon client. ' +
+      'Admin queries will be subject to RLS and may return empty results.'
+    )
+    return getSupabase()
+  }
+
+  supabaseAdminClient = createClient(supabaseUrl, serviceRoleKey)
+  return supabaseAdminClient
+}
+
 // For backward compatibility
 export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
   get: (_, prop) => {
