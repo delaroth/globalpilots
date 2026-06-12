@@ -270,12 +270,20 @@ Rules:
       ? callAI(
           `Transport advisor for ${destination}, ${country}. JSON only.`,
           `Suggest airport-to-city transport for ${destination}.
-Return JSON: {"local_transportation":{"airport_to_city":"How to get there","daily_transport":"Best way around","estimated_daily_cost":0}}`,
+estimated_daily_cost must be in US dollars (USD) — NEVER local currency (e.g. a songthaew ride in Thailand is ~$1 USD, not 30 baht).
+Return JSON: {"local_transportation":{"airport_to_city":"How to get there","daily_transport":"Best way around","estimated_daily_cost":N}}`,
           0.9,
           200,
         ).then(res => {
           const parsed = parseAIJSON(res.content, TransportSchema)
-          return parsed?.local_transportation || null
+          const transport = parsed?.local_transportation || null
+          // Guard against local-currency answers (e.g. 300 baht rendered as $300/day —
+          // real user bug report). Daily local transport over $100 is implausible.
+          if (transport && (transport.estimated_daily_cost > 100 || transport.estimated_daily_cost < 0)) {
+            console.warn(`[Details] Implausible transport cost ${transport.estimated_daily_cost} for ${destination} — dropping estimate`)
+            transport.estimated_daily_cost = 0
+          }
+          return transport
         }).catch(err => {
           console.warn('[Details] Transport call failed:', err.message)
           return null
