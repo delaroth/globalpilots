@@ -473,7 +473,7 @@ export async function POST(request: NextRequest) {
       optionalSections.push(`"daily_itinerary": [{"day":N,"activities":[{"time":"HH:MM AM","activity":"Well-known landmark or activity type","estimated_cost":N}],"total_day_cost":N},...]`)
     }
     if (components.includeTransportation) {
-      optionalSections.push(`"local_transportation": {"airport_to_city":"...","daily_transport":"...","estimated_daily_cost":N}`)
+      optionalSections.push(`"local_transportation": {"airport_to_city":"...","daily_transport":"...","estimated_daily_cost":N (USD, never local currency)}`)
     }
     if (flexibleRange || priceIsLive) {
       optionalSections.push(`"suggestedDepartureDate": "YYYY-MM-DD", "suggestedReturnDate": "YYYY-MM-DD"`)
@@ -488,7 +488,7 @@ Package: ${[components.includeFlight && 'Flight', components.includeHotel && 'Ho
 Destinations: ${JSON.stringify(priceInfo)}
 ${notes.length > 0 ? notes.join('\n') : ''}
 RULES: flight<=$${allocation.flight}, hotel/night<=$${allocation.hotel_per_night}, daily activities<=$${Math.floor(allocation.activities / tripDuration)}, total<=$${budget}
-For activities use well-known landmarks/markets/temples — NOT invented places. For food use dish names not restaurant names. All costs are estimates.
+For activities use well-known landmarks/markets/temples — NOT invented places. For food use dish names not restaurant names. All costs are estimates in US dollars (USD) — never local currency.
 
 Pick ONE destination matching vibes. Explain WHY it matches (not just "affordable"). Return JSON:
 {

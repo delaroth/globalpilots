@@ -253,7 +253,7 @@ export default function ItineraryDetail({
                   )}
 
                   {local_transportation && (
-                    <><h2>Getting Around</h2><p><strong>Airport to city:</strong> {local_transportation.airport_to_city}</p><p><strong>Daily transport:</strong> {local_transportation.daily_transport} (~${local_transportation.estimated_daily_cost}/day)</p></>
+                    <><h2>Getting Around</h2><p><strong>Airport to city:</strong> {local_transportation.airport_to_city}</p><p><strong>Daily transport:</strong> {local_transportation.daily_transport}{local_transportation.estimated_daily_cost > 0 ? ` (~$${local_transportation.estimated_daily_cost}/day)` : ''}</p></>
                   )}
                 </div>
 
@@ -368,7 +368,9 @@ export default function ItineraryDetail({
                     <div className="space-y-2 text-sm">
                       <p className="text-white/80"><span className="text-sky-300 font-medium">Airport to city:</span> {local_transportation.airport_to_city}</p>
                       <p className="text-white/80"><span className="text-sky-300 font-medium">Daily transport:</span> {local_transportation.daily_transport}</p>
-                      <p className="text-white/60">Estimated: {fmt(local_transportation.estimated_daily_cost)}/day</p>
+                      {local_transportation.estimated_daily_cost > 0 && (
+                        <p className="text-white/60">Estimated: {fmt(local_transportation.estimated_daily_cost)}/day</p>
+                      )}
                     </div>
                   </div>
                 )}
