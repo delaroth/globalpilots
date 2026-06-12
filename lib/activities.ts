@@ -1,6 +1,7 @@
 // Activities affiliate — deep-links only for now
 
-import { AFFILIATE_FLAGS } from './affiliate'
+import { AFFILIATE_FLAGS, AFFILIATE_IDS } from './affiliate'
+import { canEarnCommissions } from './stealth'
 
 const SE_ASIA_IATA = [
   'BKK', 'HKT', 'KBV', 'CNX', 'USM', 'SIN', 'KUL', 'CGK', 'DPS',
@@ -14,8 +15,8 @@ const SE_ASIA_IATA = [
 export function buildGetYourGuideUrl(cityName: string): string {
   let url = `https://www.getyourguide.com/s/?q=${encodeURIComponent(cityName)}&searchSource=1`
 
-  if (AFFILIATE_FLAGS.getyourguide && process.env.GETYOURGUIDE_PARTNER_ID) {
-    url += `&partner_id=${process.env.GETYOURGUIDE_PARTNER_ID}`
+  if (canEarnCommissions() && AFFILIATE_FLAGS.getyourguide) {
+    url += `&partner_id=${AFFILIATE_IDS.getyourguide}`
   }
 
   return url
@@ -29,8 +30,8 @@ export function buildKlookUrl(cityName: string): string {
   const slug = cityName.toLowerCase().replace(/\s+/g, '-')
   let url = `https://www.klook.com/en-US/search/result/?query=${encodeURIComponent(cityName)}`
 
-  if (AFFILIATE_FLAGS.klook && process.env.KLOOK_AFFILIATE_ID) {
-    url += `&aid=${process.env.KLOOK_AFFILIATE_ID}`
+  if (canEarnCommissions() && AFFILIATE_FLAGS.klook) {
+    url += `&aid=${AFFILIATE_IDS.klook}`
   }
 
   return url

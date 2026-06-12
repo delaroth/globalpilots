@@ -9,16 +9,27 @@ import { STEALTH_MODE, canEarnCommissions, canProcessPayments, logStealthBlock }
 
 export type AffiliateProgram = 'aviasales' | 'agoda' | 'getyourguide' | 'klook' | 'kiwi' | 'wayaway' | 'jetradar'
 
-// ─── Feature Flags ───
-// Flip to true when each program/capability is approved.
-// In STEALTH_MODE, affiliate flags are force-disabled regardless of these values.
+// ─── Affiliate IDs & Feature Flags ───
+// A partner is active as soon as its NEXT_PUBLIC_* ID is set (and stealth is off).
+// NEXT_PUBLIC_ is required: these builders run in client components, and the IDs
+// are public anyway (they appear in the final URLs).
+export const AFFILIATE_IDS = {
+  agoda: process.env.NEXT_PUBLIC_AGODA_CID || '',
+  getyourguide: process.env.NEXT_PUBLIC_GETYOURGUIDE_PARTNER_ID || '',
+  klook: process.env.NEXT_PUBLIC_KLOOK_AID || '',
+  wayaway: process.env.NEXT_PUBLIC_WAYAWAY_PARTNER_ID || '',
+  jetradar: process.env.NEXT_PUBLIC_JETRADAR_MARKER || '',
+}
+
 export const AFFILIATE_FLAGS = {
-  agoda: false,
-  getyourguide: false,
-  klook: false,
-  kiwi: false,
-  wayaway: false,
-  jetradar: false,
+  agoda: !!AFFILIATE_IDS.agoda,
+  getyourguide: !!AFFILIATE_IDS.getyourguide,
+  klook: !!AFFILIATE_IDS.klook,
+  // Kiwi deep links carry no affiliate param yet (needs tp.media wiring) —
+  // keep opt-in so flights keep routing to Aviasales, which does earn.
+  kiwi: process.env.NEXT_PUBLIC_KIWI_AFFILIATE === 'true',
+  wayaway: !!AFFILIATE_IDS.wayaway,
+  jetradar: !!AFFILIATE_IDS.jetradar,
 }
 
 export const BOOKING_FLAGS = {
@@ -37,9 +48,9 @@ function isAffiliateActive(flag: keyof typeof AFFILIATE_FLAGS): boolean {
   return AFFILIATE_FLAGS[flag]
 }
 
-const MARKER = '708764'
-const CAMPAIGN_ID = '100'
-const TRS = '505363'
+const MARKER = process.env.NEXT_PUBLIC_TP_MARKER || '708764'
+const CAMPAIGN_ID = process.env.NEXT_PUBLIC_TP_CAMPAIGN_ID || '100'
+const TRS = process.env.NEXT_PUBLIC_TP_TRS || '505363'
 const SUB_ID = 'GlobePilots'
 
 // ─── BookingAction Abstraction ───
@@ -246,11 +257,11 @@ export function buildFlightLinkForSource(
     return buildKiwiFlightLink(origin, dest, date, returnDate)
   }
   // WayAway affiliate (if approved — offers cashback)
-  if (isAffiliateActive('wayaway') && process.env.WAYAWAY_PARTNER_ID) {
+  if (isAffiliateActive('wayaway')) {
     return buildWayAwayLink(origin, dest, date, returnDate)
   }
   // JetRadar affiliate (alternative to Aviasales, same parent company)
-  if (isAffiliateActive('jetradar') && process.env.JETRADAR_MARKER) {
+  if (isAffiliateActive('jetradar')) {
     return buildJetRadarLink(origin, dest, date, returnDate)
   }
   // Default: Aviasales via TravelPayouts
@@ -309,12 +320,9 @@ export function buildGoogleFlightsLink(origin: string, dest: string, date: strin
 }
 
 /**
- * Build Booking.com hotel deep link
+ * Build Agoda hotel deep link (Booking.com rejected our affiliate application —
+ * Agoda is the hotel strategy; cid appended when NEXT_PUBLIC_AGODA_CID is set).
  * STEALTH: No affiliate cid appended — clean search URL only
- *
- * Optional budget constraints align the hotel search with the Side Quest
- * value calculation — e.g. if our netValue math assumes $50/night,
- * the link pre-filters to hotels under $50.
  */
 export function buildHotelLink(
   cityName: string,
@@ -334,19 +342,22 @@ export function buildHotelLink(
   const formatDate = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-  // Use Booking.com — works with city names in URL (Agoda requires numeric IDs)
   const searchText = options?.country
     ? `${cityName}, ${options.country}`
     : cityName
 
-  let url = `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(searchText)}&checkin=${formatDate(checkInDate)}&checkout=${formatDate(checkOutDate)}&group_adults=1&no_rooms=1`
+  let url = `https://www.agoda.com/search?textToSearch=${encodeURIComponent(searchText)}&checkIn=${formatDate(checkInDate)}&checkOut=${formatDate(checkOutDate)}&adults=1&rooms=1`
 
-  // Budget constraints (Booking.com price filter)
+  // Best-effort filters — Agoda ignores unknown params, so these are harmless if unsupported
   if (options?.maxPricePerNight) {
-    url += `&nflt=price%3DUSD-0-${options.maxPricePerNight}-1`
+    url += `&priceTo=${options.maxPricePerNight}`
   }
   if (options?.sortByPrice) {
-    url += `&order=price`
+    url += `&sort=priceLowToHigh`
+  }
+
+  if (isAffiliateActive('agoda') && AFFILIATE_IDS.agoda) {
+    url += `&cid=${AFFILIATE_IDS.agoda}`
   }
 
   return url
@@ -360,8 +371,8 @@ export function buildActivitiesLink(cityName: string): string {
   let url = `https://www.getyourguide.com/s/?q=${encodeURIComponent(cityName)}&searchSource=1`
 
   // Only append affiliate tracking when commissions are allowed
-  if (isAffiliateActive('getyourguide') && process.env.GETYOURGUIDE_PARTNER_ID) {
-    url += `&partner_id=${process.env.GETYOURGUIDE_PARTNER_ID}`
+  if (isAffiliateActive('getyourguide') && AFFILIATE_IDS.getyourguide) {
+    url += `&partner_id=${AFFILIATE_IDS.getyourguide}`
   }
 
   return url
@@ -390,7 +401,7 @@ export function buildKiwiFlightLink(origin: string, dest: string, date: string, 
  * Build WayAway affiliate link (cashback flight search)
  */
 function buildWayAwayLink(origin: string, dest: string, date: string, returnDate?: string): string {
-  const partnerId = process.env.WAYAWAY_PARTNER_ID || ''
+  const partnerId = AFFILIATE_IDS.wayaway
   let url = `https://www.wayaway.io/flights/${origin}-${dest}/${date}`
   if (returnDate) url += `/${returnDate}`
   url += `?partner_id=${partnerId}`
@@ -401,7 +412,7 @@ function buildWayAwayLink(origin: string, dest: string, date: string, returnDate
  * Build JetRadar affiliate link (alternative meta-search)
  */
 function buildJetRadarLink(origin: string, dest: string, date: string, returnDate?: string): string {
-  const marker = process.env.JETRADAR_MARKER || MARKER
+  const marker = AFFILIATE_IDS.jetradar || MARKER
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr)
     return `${String(d.getDate()).padStart(2, '0')}${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -428,11 +439,12 @@ export function buildBookingBundle(params: {
   // Fallback: if origin/destination/date are missing, use generic search URLs
   if (!origin || !destination || !departDate) {
     const searchText = cityName || destination || 'flights'
+    const agodaCid = isAffiliateActive('agoda') && AFFILIATE_IDS.agoda ? `&cid=${AFFILIATE_IDS.agoda}` : ''
     return {
       flightUrl: `https://www.google.com/travel/flights?q=flights+to+${encodeURIComponent(searchText)}&curr=USD`,
       hotelUrl: cityName
-        ? `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(cityName + (country ? ', ' + country : ''))}&group_adults=1&no_rooms=1`
-        : 'https://www.booking.com',
+        ? `https://www.agoda.com/search?textToSearch=${encodeURIComponent(cityName + (country ? ', ' + country : ''))}&adults=1&rooms=1${agodaCid}`
+        : `https://www.agoda.com${agodaCid ? `?${agodaCid.slice(1)}` : ''}`,
       activitiesUrl: buildActivitiesLink(cityName || 'travel'),
     }
   }
