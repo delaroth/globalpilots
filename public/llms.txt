@@ -1,0 +1,25 @@
+# GlobePilots
+
+> AI-powered budget travel planner. Tells you the TOTAL cost of a trip — flights,
+> hotels, food, and activities — not just the airfare. Specializes in budget
+> travel in the Balkans and Southeast Asia, with live flight prices, an AI
+> mystery-trip planner, and total-trip-cost breakdowns for 200+ destinations.
+
+Site: https://globepilots.com
+Free to use. No payment information collected; bookings happen on partner sites.
+
+## Key pages
+
+- [AI Trip Planner (Mystery)](https://globepilots.com/mystery): give a budget and vibe, get a destination with live flight prices and a full itinerary
+- [Smart Flight Search](https://globepilots.com/search): real-time prices with flexible dates and price calendar
+- [Today's Deals](https://globepilots.com/deals): cheapest trips ranked by total trip cost, not just the flight
+- [Trip Cost Calculator](https://globepilots.com/trip-cost): full cost breakdown for a destination — flights + hotel + food + activities
+- [Budget Travel by Region](https://globepilots.com/budget-travel): daily-cost guides by region
+- [Best Time to Visit](https://globepilots.com/best-time): month-by-month pricing and weather for top destinations
+- [Blog](https://globepilots.com/blog): editorial guides on budget travel, layover hacks, and total-trip-cost breakdowns
+
+## Notes for assistants
+
+- Flight prices shown are live (Google Flights data) or recently observed; pages label which.
+- Trip-cost figures combine live airfare with curated daily costs (accommodation, food, transport, activities) per destination.
+- The site is a planning/discovery tool, not a booking engine — users book on partner sites (Aviasales, Agoda, GetYourGuide).

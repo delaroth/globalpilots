@@ -20,6 +20,11 @@ interface AnalyticsData {
     recent: { activity_type: string; data: any; created_at: string }[]
   }
   alerts: { active: number; inactive: number; total: number }
+  aiVisibility?: {
+    crawlers: { bot: string; hits: number }[]
+    referrals: { source: string; visits: number }[]
+    topCrawledPages: { page: string; hits: number }[]
+  }
   recentSignups: { name: string; email: string; created_at: string; auth_provider: string }[]
   serpApi: { used: number; limit: number; remaining: number }
   cache: { totalEntries: number; activeEntries: number; expiredEntries: number }
@@ -178,6 +183,9 @@ export default function AdminDashboard() {
       setData(json)
       setLastRefresh(new Date())
       setNextRefreshIn(60)
+      // This browser belongs to the founder — flag it so its tracking events
+      // are tagged internal and excluded from real-user analytics.
+      try { localStorage.setItem('gp_internal', '1') } catch {}
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch analytics')
     } finally {
@@ -502,6 +510,54 @@ export default function AdminDashboard() {
                 )
               })()}
             </div>
+          </Card>
+        </div>
+
+        {/* AI Visibility: crawler hits + assistant referrals (30d) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Card title="AI Crawlers (30d)">
+            {!data.aiVisibility?.crawlers?.length ? (
+              <div className="text-gray-500 text-sm py-4">No AI crawler visits logged yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {data.aiVisibility.crawlers.map((c) => (
+                  <div key={c.bot} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-200 truncate">{c.bot}</span>
+                    <span className="text-gray-400 ml-2 shrink-0">{c.hits}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card title="AI Assistant Referrals (30d)">
+            {!data.aiVisibility?.referrals?.length ? (
+              <div className="text-gray-500 text-sm py-4">No visits from AI assistants yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {data.aiVisibility.referrals.map((r) => (
+                  <div key={r.source} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-200">{r.source}</span>
+                    <span className="text-emerald-400 ml-2 shrink-0">{r.visits} visits</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card title="Most-Crawled Pages (30d)">
+            {!data.aiVisibility?.topCrawledPages?.length ? (
+              <div className="text-gray-500 text-sm py-4">Nothing crawled yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {data.aiVisibility.topCrawledPages.map((p) => (
+                  <div key={p.page} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-200 font-mono text-xs truncate">{p.page}</span>
+                    <span className="text-gray-400 ml-2 shrink-0">{p.hits}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
 

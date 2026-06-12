@@ -62,12 +62,12 @@ export async function GET(request: NextRequest) {
       // Total saved trips
       supabase.from('saved_trips').select('*', { count: 'exact', head: true }),
       // Total tracked events (activity_feed is no longer written to — user_events is the live store)
-      supabase.from('user_events').select('*', { count: 'exact', head: true }),
+      supabase.from('user_events_public').select('*', { count: 'exact', head: true }),
       // Events today
-      supabase.from('user_events').select('*', { count: 'exact', head: true }).gte('created_at', startOfToday),
+      supabase.from('user_events_public').select('*', { count: 'exact', head: true }).gte('created_at', startOfToday),
       // Most popular destinations (mystery_revealed conversions grouped by destination)
       supabase
-        .from('user_events')
+        .from('user_events_public')
         .select('event_data')
         .eq('event_type', 'conversion')
         .eq('event_data->>conversion_type', 'mystery_revealed')
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
         .limit(10),
       // Recent events (last 10) — mapped to the activity_feed shape the admin UI expects
       supabase
-        .from('user_events')
+        .from('user_events_public')
         .select('event_type, event_data, created_at')
         .order('created_at', { ascending: false })
         .limit(10),
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     let featurePopularity: { event_type: string; count: number }[] = []
     try {
       const { data: eventsRaw } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('event_type')
         .gte('created_at', sevenDaysAgo)
       if (eventsRaw) {
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
     let topOrigins: { origin: string; count: number }[] = []
     try {
       const { data: originRaw } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('event_data')
         .in('event_type', ['mystery_search', 'flight_search', 'stopover_search'])
         .gte('created_at', sevenDaysAgo)
@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
     let topVibes: { vibe: string; count: number }[] = []
     try {
       const { data: vibeRaw } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('event_data')
         .eq('event_type', 'mystery_search')
         .gte('created_at', sevenDaysAgo)
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
     let budgetDistribution = { under_500: 0, range_500_1000: 0, range_1000_2000: 0, over_2000: 0 }
     try {
       const { data: budgetRaw } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('event_data')
         .eq('event_type', 'mystery_search')
       if (budgetRaw) {
@@ -190,7 +190,7 @@ export async function GET(request: NextRequest) {
     let topPages: { page: string; count: number }[] = []
     try {
       const { data: pageRaw } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('event_data')
         .eq('event_type', 'page_view')
         .gte('created_at', twentyFourHoursAgo)
@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
     try {
       // Page views on /mystery
       const { data: funnelPageViews } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('event_data')
         .eq('event_type', 'page_view')
         .gte('created_at', sevenDaysAgo)
@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
 
       // Mystery searches
       const { count: searchCount } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('*', { count: 'exact', head: true })
         .eq('event_type', 'mystery_search')
         .gte('created_at', sevenDaysAgo)
@@ -240,7 +240,7 @@ export async function GET(request: NextRequest) {
 
       // Destination reveals (mystery_revealed conversions in user_events)
       const { count: revealCount } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('*', { count: 'exact', head: true })
         .eq('event_type', 'conversion')
         .eq('event_data->>conversion_type', 'mystery_revealed')
@@ -297,7 +297,7 @@ export async function GET(request: NextRequest) {
     let navHeatmap: { link: string; category: string; count: number }[] = []
     try {
       const { data: navRaw } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('event_data')
         .eq('event_type', 'nav_click')
         .gte('created_at', sevenDaysAgo)
@@ -331,7 +331,7 @@ export async function GET(request: NextRequest) {
     try {
       // Fetch all relevant events in one go for the last 7 days
       const { data: funnelRaw } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('event_type, event_data')
         .gte('created_at', sevenDaysAgo)
         .in('event_type', [
@@ -375,7 +375,7 @@ export async function GET(request: NextRequest) {
     let featureEngagement: { feature: string; avg_duration: number; completed: number; total: number }[] = []
     try {
       const { data: engagementRaw } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('event_data')
         .eq('event_type', 'feature_engagement')
       if (engagementRaw && engagementRaw.length > 0) {
@@ -409,7 +409,7 @@ export async function GET(request: NextRequest) {
     let userRetention = { total_sessions: 0, engaged_sessions: 0, avg_pages_per_session: 0, bounce_rate: 0 }
     try {
       const { data: sessionRaw } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('session_id')
         .eq('event_type', 'page_view')
         .gte('created_at', sevenDaysAgo)
@@ -444,7 +444,7 @@ export async function GET(request: NextRequest) {
     let dropOffPoints: { page: string; exits: number; total_views: number; exit_rate: number }[] = []
     try {
       const { data: dropOffRaw } = await (supabase
-        .from('user_events') as any)
+        .from('user_events_public') as any)
         .select('session_id, event_data, created_at')
         .eq('event_type', 'page_view')
         .gte('created_at', sevenDaysAgo)
@@ -479,6 +479,57 @@ export async function GET(request: NextRequest) {
       }
     } catch (e) {
       console.error('[Admin Analytics] dropOffPoints error:', e)
+    }
+
+    // 15. AI visibility — crawler hits + AI-assistant referrals (last 30 days)
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    let aiVisibility: {
+      crawlers: { bot: string; hits: number }[]
+      referrals: { source: string; visits: number }[]
+      topCrawledPages: { page: string; hits: number }[]
+    } = { crawlers: [], referrals: [], topCrawledPages: [] }
+    try {
+      const { data: crawlerRaw } = await (supabase
+        .from('user_events_public') as any)
+        .select('event_data, page_url')
+        .eq('event_type', 'ai_crawler')
+        .gte('created_at', thirtyDaysAgo)
+      if (crawlerRaw) {
+        const botCounts: Record<string, number> = {}
+        const pageCounts: Record<string, number> = {}
+        for (const row of crawlerRaw as any[]) {
+          const bot = row.event_data?.bot || 'unknown'
+          botCounts[bot] = (botCounts[bot] || 0) + 1
+          const page = row.page_url || 'unknown'
+          pageCounts[page] = (pageCounts[page] || 0) + 1
+        }
+        aiVisibility.crawlers = Object.entries(botCounts)
+          .map(([bot, hits]) => ({ bot, hits }))
+          .sort((a, b) => b.hits - a.hits)
+        aiVisibility.topCrawledPages = Object.entries(pageCounts)
+          .map(([page, hits]) => ({ page, hits }))
+          .sort((a, b) => b.hits - a.hits)
+          .slice(0, 10)
+      }
+
+      const { data: referralRaw } = await (supabase
+        .from('user_events_public') as any)
+        .select('event_data')
+        .eq('event_type', 'page_view')
+        .not('event_data->>ai_source', 'is', null)
+        .gte('created_at', thirtyDaysAgo)
+      if (referralRaw) {
+        const sourceCounts: Record<string, number> = {}
+        for (const row of referralRaw as any[]) {
+          const source = row.event_data?.ai_source
+          if (source) sourceCounts[source] = (sourceCounts[source] || 0) + 1
+        }
+        aiVisibility.referrals = Object.entries(sourceCounts)
+          .map(([source, visits]) => ({ source, visits }))
+          .sort((a, b) => b.visits - a.visits)
+      }
+    } catch (e) {
+      console.error('[Admin Analytics] aiVisibility error:', e)
     }
 
     // Aggregate popular destinations from raw data
@@ -569,6 +620,7 @@ export async function GET(request: NextRequest) {
       featureEngagement,
       userRetention,
       dropOffPoints,
+      aiVisibility,
     })
   } catch (error) {
     console.error('[Admin Analytics] Error:', error)
