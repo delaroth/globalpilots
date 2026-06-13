@@ -712,9 +712,12 @@ export default function MysteryReveal({
                           </div>
                         )}
                         <div>
-                          <p className="text-xs text-white/60">Food</p>
+                          <p className="text-xs text-white/60">Food ({tripDuration} days)</p>
                           <p className="font-semibold text-emerald-400/80">
                             {fmt(destination.budget_breakdown.food_estimate)}
+                          </p>
+                          <p className="text-[10px] text-white/30">
+                            {fmt(Math.round(destination.budget_breakdown.food_estimate / tripDuration))}/day
                           </p>
                         </div>
                         <div>

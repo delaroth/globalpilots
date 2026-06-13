@@ -102,6 +102,17 @@ export function calculateBudgetAllocation(
     }
   }
 
+  // Enforce a minimum food floor of $10/day — realistic even for very cheap destinations.
+  // Take any shortfall from activities (which can flex) to keep the total unchanged.
+  if (components.includeItinerary) {
+    const minFood = tripDuration * 10
+    if (allocation.food_estimate < minFood) {
+      const shortfall = minFood - allocation.food_estimate
+      allocation.food_estimate = minFood
+      allocation.activities = Math.max(0, allocation.activities - shortfall)
+    }
+  }
+
   // If a component is off, redistribute its share proportionally
   if (!components.includeFlight && (components.includeHotel || components.includeItinerary)) {
     const extra = Math.floor(remainingBudget * flightPct)
