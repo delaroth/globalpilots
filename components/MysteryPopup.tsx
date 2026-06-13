@@ -202,7 +202,7 @@ function MysteryPanel() {
           {/* Show MysteryReveal as soon as destination is known — content loads progressively */}
           {(state.status === 'quick-ready' || state.status === 'generic-ready' || state.status === 'ready') && state.destination && state.destination.destination && (state.destination.city_code_IATA || state.destination.iata) && (
             <MysteryReveal
-              destination={state.destination}
+              destination={state.destination as any}
               origin={origin}
               departDate={departDate}
               tripDuration={tripDuration}
