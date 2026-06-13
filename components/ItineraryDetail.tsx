@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { trackHotelClick } from '@/lib/track-client'
+import { buildHotelLink } from '@/lib/affiliate'
 
 interface DailyActivity {
   time: string
@@ -339,12 +340,12 @@ export default function ItineraryDetail({
                       {hotel_recommendations.map((hotel, idx) => (
                         <a
                           key={idx}
-                          href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.name + ', ' + destination + ', ' + country)}${departDate ? `&checkin=${departDate}` : ''}${returnDate ? `&checkout=${returnDate}` : ''}&group_adults=1&no_rooms=1`}
+                          href={buildHotelLink(hotel.name, departDate, tripDuration, { country })}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => trackHotelClick({ hotel: hotel.name, destination, pricePerNight: hotel.estimated_price_per_night })}
                           className="block bg-white/[0.04] rounded-lg p-4 border border-white/10 hover:bg-white/[0.08] transition group"
-                          aria-label={`View ${hotel.name} on Booking.com`}
+                          aria-label={`View ${hotel.name} on Agoda`}
                         >
                           <div className="flex justify-between items-start mb-1">
                             <h4 className="font-semibold text-white group-hover:text-sky-400 transition">{hotel.name}</h4>

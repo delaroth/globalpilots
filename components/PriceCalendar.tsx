@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useCurrency } from '@/hooks/useCurrency'
 
 interface DayPrice {
   date: string
@@ -47,6 +48,7 @@ function tierColors(tier: PriceTier): string {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export default function PriceCalendar({ origin, destination, month, onSelectDate }: PriceCalendarProps) {
+  const { format } = useCurrency()
   const [prices, setPrices] = useState<DayPrice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -139,7 +141,7 @@ export default function PriceCalendar({ origin, destination, month, onSelectDate
         </h3>
         {lowestPrice && (
           <span className="text-emerald-400 text-xs font-medium">
-            Lowest: ${lowestPrice.price}
+            Lowest: {format(lowestPrice.price)}
           </span>
         )}
       </div>
@@ -198,7 +200,7 @@ export default function PriceCalendar({ origin, destination, month, onSelectDate
             >
               <span className="text-[10px] opacity-60">{dayNum}</span>
               {dayPrice ? (
-                <span className="text-[11px] font-semibold">${dayPrice.price}</span>
+                <span className="text-[11px] font-semibold">{format(dayPrice.price)}</span>
               ) : (
                 <span className="text-[10px]">-</span>
               )}

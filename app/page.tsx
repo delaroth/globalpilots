@@ -313,7 +313,7 @@ export default function Home() {
       <Footer />
 
       {/* ── Mobile Sticky CTA ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 p-3 bg-slate-950/95 backdrop-blur border-t border-white/10 lg:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-40 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-slate-950/95 backdrop-blur border-t border-white/10 lg:hidden">
         <Link
           href="/mystery"
           onClick={() => trackClick('home_cta', 'sticky_plan_my_trip')}

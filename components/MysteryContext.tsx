@@ -4,14 +4,27 @@ import { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { useCurrency } from '@/hooks/useCurrency'
 import { trackConversion } from '@/lib/track-client'
 import { calculateBudgetAllocation } from '@/lib/budget-allocation'
+import { lookupAirportByCode } from '@/lib/geolocation'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
+// Core identity fields are required; additional API-enriched fields arrive
+// progressively via spread in the three-phase flow so they are open-ended.
+export interface MysteryDestination {
+  destination: string
+  country: string
+  iata?: string
+  city_code_IATA?: string
+  estimated_flight_cost?: number
+  estimated_hotel_per_night?: number
+  [key: string]: unknown
+}
+
 interface MysteryState {
   status: 'idle' | 'searching' | 'quick-ready' | 'generic-ready' | 'ready' | 'error'
-  destination: any | null
+  destination: MysteryDestination | null
   detailsLoading: boolean
   genericLoading: boolean
   error: string | null
@@ -183,7 +196,7 @@ export function MysteryProvider({ children }: { children: React.ReactNode }) {
     if (params.destination) {
       console.log('[MysteryContext] Pre-selected destination:', params.destination, '-- skipping quick pick')
       const iata = params.destination
-      const airport = (globalThis as any).__majorAirports?.find?.((a: any) => a.code === iata)
+      const airport = lookupAirportByCode(iata)
 
       const partialDest = {
         destination: airport?.city || iata,
