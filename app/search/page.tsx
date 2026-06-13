@@ -1523,7 +1523,9 @@ function SearchPageContent() {
                     <p className="text-center text-xs text-gray-500 mt-3">
                       {exactDateResult.source === 'google-flights'
                         ? 'Opens Google Flights with this route'
-                        : 'Estimated price — verify on booking site'}
+                        : exactDateResult.source === 'kiwi'
+                          ? '⚠️ Virtual interlining — may be separate tickets. Missed connections are your responsibility.'
+                          : 'Estimated price — verify on booking site'}
                     </p>
                     <div className="mt-4 pt-4 border-t border-gray-100">
                       <p className="text-xs text-gray-500 mb-2 font-medium text-center">Plan your stay</p>
