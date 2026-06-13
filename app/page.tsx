@@ -21,20 +21,23 @@ const staticDestinations = [
 export default function Home() {
   const currency = useCurrency()
   const [trending, setTrending] = useState<any[]>([])
+  const [liveDeals, setLiveDeals] = useState<any[]>([])
+  const [dealsOrigin, setDealsOrigin] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Use user's saved origin airport if available, otherwise API defaults to BKK
     const savedOrigin = typeof window !== 'undefined' ? localStorage.getItem('gp_origin') : null
-    let originParam = ''
+    let originCode = ''
     if (savedOrigin) {
       try {
         const parsed = JSON.parse(savedOrigin)
-        if (parsed?.code) originParam = `?origin=${parsed.code}`
+        if (parsed?.code) originCode = parsed.code
       } catch {
-        if (/^[A-Z]{3}$/.test(savedOrigin)) originParam = `?origin=${savedOrigin}`
+        if (/^[A-Z]{3}$/.test(savedOrigin)) originCode = savedOrigin
       }
     }
+    const originParam = originCode ? `?origin=${originCode}` : ''
 
     fetch(`/api/inspire${originParam}`)
       .then(res => res.ok ? res.json() : null)
@@ -43,6 +46,18 @@ export default function Home() {
         else setTrending(staticDestinations as any[])
       })
       .catch(() => setTrending(staticDestinations as any[]))
+
+    // Live proof: real deals with total trip cost, shown before any form
+    fetch(`/api/deals${originParam}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        const withPrices = (data?.deals || []).filter((d: any) => d.flightPrice > 0)
+        if (withPrices.length > 0) {
+          setLiveDeals(withPrices.slice(0, 4).map((d: any) => ({ ...d, source: data.source })))
+          setDealsOrigin(data.origin || originCode)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   return (
@@ -55,13 +70,16 @@ export default function Home() {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90vw] h-[50vh] md:w-[800px] md:h-[600px] rounded-full blur-3xl bg-sky-600/[0.06]" />
 
         <div className="relative max-w-5xl mx-auto px-6 pt-12 pb-16 md:pt-20 md:pb-24 text-center">
-          <h1 className="text-5xl md:text-7xl font-bold mb-5">
+          <p className="text-sm font-semibold tracking-wide text-sky-400/80 uppercase mb-4">
+            Budget In. Adventure Out.
+          </p>
+          <h1 className="text-4xl md:text-6xl font-bold mb-5">
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-400 via-cyan-300 to-blue-400">
-              Budget In. Adventure Out.
+              Know what the whole trip costs.
             </span>
           </h1>
           <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-4">
-            AI-powered trip planning with live flight prices, total cost breakdowns, and destinations you&apos;d never think of.
+            Google Flights tells you the flight price. We tell you the real total — flights + hotel + food + activities — and find destinations that fit your budget.
           </p>
           <p className="text-sm text-slate-500 mb-6 md:mb-12">
             200+ destinations · 30 currencies · Live Google Flights data
@@ -133,6 +151,56 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── Live proof: real deals, total trip cost, no form needed ── */}
+      {liveDeals.length > 0 && (
+        <section className="max-w-5xl mx-auto px-6 pb-16 w-full">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-2xl font-bold text-white">
+              Right now from {dealsOrigin}
+            </h2>
+            <Link
+              href="/deals"
+              onClick={() => trackClick('home_cta', 'live_deals_see_all')}
+              className="text-sm text-sky-400 hover:text-sky-300 transition"
+            >
+              All deals →
+            </Link>
+          </div>
+          <p className="text-sm text-slate-500 mb-6">
+            Full 4-day trip estimate: flight + hotel + food + activities.
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {liveDeals.map((deal) => {
+              const tripTotal = deal.dailyCost
+                ? deal.flightPrice + deal.dailyCost * 4
+                : null
+              return (
+                <Link
+                  key={deal.airportCode}
+                  href={`/trip-cost?destination=${deal.airportCode}${dealsOrigin ? `&origin=${dealsOrigin}` : ''}`}
+                  onClick={() => trackClick('home_cta', `live_deal_${deal.airportCode}`)}
+                  className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-4 hover:bg-white/[0.07] hover:border-sky-500/20 transition-all group"
+                >
+                  <p className="text-white font-semibold group-hover:text-sky-400 transition">{deal.name}</p>
+                  <p className="text-slate-500 text-xs mb-3">{deal.country}</p>
+                  <p className="text-sm text-slate-400">
+                    Flight <span className="text-sky-400 font-semibold">{currency.format(deal.flightPrice)}</span>
+                  </p>
+                  {tripTotal && (
+                    <p className="text-sm text-slate-400">
+                      Whole trip <span className="text-emerald-400 font-bold">~{currency.format(tripTotal)}</span>
+                    </p>
+                  )}
+                  <p className="text-[10px] mt-2 text-slate-600">
+                    {deal.source === 'live' ? '● live prices' : '~ recent estimate — confirm before booking'}
+                  </p>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── How It Works ── */}
       <section className="max-w-5xl mx-auto px-6 pb-16 w-full">

@@ -47,7 +47,12 @@ Solo founder project. Prefer the shortest fix that holds up long-term over cleve
   Use only where commission doesn't matter.
 - Hotels: Booking.com rejected us. Current play: Agoda deep-links (no commission yet),
   applying to Agoda affiliate directly. Don't add Booking.com links.
-- Activities: Klook and GetYourGuide are the affiliate targets for SE Asia.
+- Activities: GetYourGuide (Europe/worldwide), Klook (SE Asia legacy).
+- NICHE PIVOT (June 2026): primary specialization is the BALKANS (founder lives in
+  Bulgaria) — local partnerships/affiliates + Balkan content depth are the moat,
+  not SE Asia. Daily price-history cron tracks 8 EU origins × 15 Balkan
+  destinations (lib/tracked-routes.ts) — this dataset is the long-term moat;
+  never break the cron silently.
 
 ## Known fragile areas
 

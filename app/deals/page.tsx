@@ -199,7 +199,7 @@ export default function DealsPage() {
             transition={{ duration: 0.5 }}
             className="text-4xl sm:text-5xl font-bold text-white mb-3"
           >
-            Seasonal Deals
+            Today&apos;s Best-Value Trips
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -207,7 +207,7 @@ export default function DealsPage() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-white/60 text-lg max-w-2xl mx-auto"
           >
-            Find the cheapest flights by month. The best time to fly, at the best price.
+            The cheapest flights from your airport — ranked by what the whole trip costs, not just the fare.
           </motion.p>
         </div>
 

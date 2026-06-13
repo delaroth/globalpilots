@@ -20,34 +20,38 @@ interface NavCategory {
   items: NavLink[]
 }
 
+// Three primary jobs + everything else under More Tools.
+// First-time visitors should instantly see what the site does.
 const navCategories: NavCategory[] = [
   {
-    label: 'AI Trip Planner',
+    label: 'Plan My Trip',
     gradient: true,
-    items: [
-      { href: '/mystery', label: 'Mystery Trip Planner', description: 'AI picks your destination and plans everything' },
-      { href: '/day-trip', label: 'Day Trip Planner', description: 'AI itinerary for any city — no flights needed' },
-    ],
+    directLink: '/mystery',
+    items: [],
   },
   {
-    label: 'Find Flights',
+    label: 'Flights',
     directLink: '/search',
     items: [],
   },
   {
-    label: 'Plan',
+    label: 'Deals',
+    directLink: '/deals',
+    items: [],
+  },
+  {
+    label: 'More Tools',
     items: [
-      { href: '/trip-cost', label: 'Trip Costs', description: 'Know the real price before you go' },
+      { href: '/trip-cost', label: 'Trip Cost Calculator', description: 'Know the real total price before you go' },
+      { href: '/day-trip', label: 'Day Trip Planner', description: 'AI itinerary for any city — no flights needed' },
+      { href: '/layover', label: 'Layover Hack', description: 'Turn a stopover into a free second destination' },
+      { href: '/multi-city', label: 'Multi-City Optimizer', description: 'Cheapest order to visit several cities' },
+      { href: '/calendar', label: 'Price Calendar', description: 'Cheapest days to fly, at a glance' },
       { href: '/whats-happening', label: 'Festival Calendar', description: 'Events and festivals worldwide' },
       { href: '/inspire', label: 'Inspire Me', description: 'Explore trending destinations' },
       { href: '/quiz', label: 'Destination Quiz', description: 'Find your perfect match' },
-    ],
-  },
-  {
-    label: 'Deals',
-    items: [
-      { href: '/deals', label: "This Month's Deals", description: 'Cheapest flights from your airport' },
       { href: '/leaderboard', label: 'Leaderboard', description: 'Top destinations by popularity' },
+      { href: '/blog', label: 'Blog', description: 'Budget travel guides and total-cost breakdowns' },
     ],
   },
 ]

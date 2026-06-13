@@ -160,7 +160,7 @@ function TripCostContent() {
             Trip Cost Calculator
           </h1>
           <p className="text-sky-300 text-lg max-w-2xl mx-auto">
-            Estimate your total trip cost for 60+ destinations. Real daily cost data for hotels, food, transport, and activities.
+            Find out what a trip will actually cost you — flight, hotel, food, and activities — before you book anything.
           </p>
         </div>
 
@@ -535,42 +535,66 @@ function TripCostContent() {
               </div>
             )}
 
-            {/* Booking Buttons */}
+            {/* AI Trip Planning — Primary CTA */}
+            <div className="bg-gradient-to-r from-sky-500/20 via-sky-600/10 to-cyan-500/20 border border-sky-500/30 rounded-2xl p-8 text-center">
+              <h3 className="text-2xl font-bold text-white mb-2">
+                Plan this trip with AI
+              </h3>
+              <p className="text-white/60 mb-6 max-w-lg mx-auto">
+                Got your budget figured out? Let our AI build a complete {result.destination.city} itinerary — flights, hotels, and day-by-day activities.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  href={`/mystery?destination=${result.destination.code}`}
+                  className="inline-block bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-xl px-8 py-3.5 text-lg transition transform hover:scale-105 shadow-lg shadow-sky-500/25"
+                >
+                  Plan My {result.destination.city} Trip
+                </Link>
+                <Link
+                  href={`/search?destination=${encodeURIComponent(result.destination.code)}${origin ? `&origin=${encodeURIComponent(origin)}` : ''}`}
+                  className="inline-block border-2 border-sky-400 text-sky-400 font-semibold rounded-xl px-8 py-3.5 text-lg hover:bg-sky-500/10 transition transform hover:scale-105"
+                >
+                  Search Flights
+                </Link>
+              </div>
+            </div>
+
+            {/* Booking Buttons — Secondary */}
             {bookingBundle && (
               <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-white mb-4">Ready to Book?</h3>
+                <p className="text-sm text-white/40 text-center mb-4 font-medium uppercase tracking-wide">Or book directly</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <a
                     href={bookingBundle.flightUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl text-center"
+                    className="block bg-white/[0.06] hover:bg-white/[0.1] text-white font-semibold py-3 px-6 rounded-xl transition text-center border border-white/[0.08]"
                   >
-                    Book Flights
-                    <span className="block text-sm font-normal mt-1 opacity-90">
-                      {AFFILIATE_FLAGS.kiwi ? 'Search on Kiwi' : 'Search on Aviasales'}
+                    Flights
+                    <span className="block text-xs font-normal mt-0.5 text-white/50">
+                      {AFFILIATE_FLAGS.kiwi ? 'Kiwi' : 'Aviasales'}
                     </span>
                   </a>
                   <a
                     href={bookingBundle.hotelUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl text-center"
+                    className="block bg-white/[0.06] hover:bg-white/[0.1] text-white font-semibold py-3 px-6 rounded-xl transition text-center border border-white/[0.08]"
                   >
-                    Find Hotels
-                    <span className="block text-sm font-normal mt-1 opacity-90">
-                      Search on Agoda
+                    Hotels
+                    <span className="block text-xs font-normal mt-0.5 text-white/50">
+                      Agoda
                     </span>
                   </a>
                   <a
                     href={bookingBundle.activitiesUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 px-6 rounded-xl transition shadow-lg hover:shadow-xl text-center"
+                    className="block bg-white/[0.06] hover:bg-white/[0.1] text-white font-semibold py-3 px-6 rounded-xl transition text-center border border-white/[0.08]"
                   >
-                    Book Activities
-                    <span className="block text-sm font-normal mt-1 opacity-90">
-                      Browse on GetYourGuide
+                    Activities
+                    <span className="block text-xs font-normal mt-0.5 text-white/50">
+                      GetYourGuide
                     </span>
                   </a>
                 </div>
@@ -599,13 +623,13 @@ function TripCostContent() {
                   </Link>
                 )}
                 <Link
-                  href="/mystery"
+                  href={`/mystery?destination=${encodeURIComponent(result.destination.code)}`}
                   className="text-sm text-sky-300/70 hover:text-sky-400 transition"
                 >
                   Plan a multi-city trip
                 </Link>
                 <Link
-                  href="/mystery"
+                  href={`/mystery?destination=${encodeURIComponent(result.destination.code)}`}
                   className="text-sm text-sky-300/70 hover:text-sky-400 transition"
                 >
                   Mystery destination

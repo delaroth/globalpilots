@@ -21,6 +21,30 @@ import PassportSelector from '@/components/PassportSelector'
 import Breadcrumb from '@/components/Breadcrumb'
 import { trackMysterySearch } from '@/lib/track-client'
 
+// ── Searching narration ──────────────────────────────────────────────────────
+// The mystery search takes 15-30s (AI + live price validation). Narrated
+// stages make the wait feel purposeful and show the work behind the price.
+
+const SEARCH_STAGES: { afterSeconds: number; message: string }[] = [
+  { afterSeconds: 0, message: 'Scanning destinations within your budget...' },
+  { afterSeconds: 5, message: 'Matching your vibe against 200+ cities...' },
+  { afterSeconds: 11, message: 'Checking live flight prices...' },
+  { afterSeconds: 18, message: 'Validating dates against real fares...' },
+  { afterSeconds: 26, message: 'Almost there — building your trip...' },
+]
+
+function SearchingNarration() {
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => setElapsed(e => e + 1), 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const stage = [...SEARCH_STAGES].reverse().find(s => elapsed >= s.afterSeconds) || SEARCH_STAGES[0]
+  return <>{stage.message}</>
+}
+
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const vibeOptions = [
@@ -1261,7 +1285,7 @@ function MysteryPageContent() {
                 <span>&#x26A0;&#xFE0F;</span>
               )}
               <span className="text-sm font-medium">
-                {mystery.state.status === 'searching' && 'Finding your destination...'}
+                {mystery.state.status === 'searching' && <SearchingNarration />}
                 {mystery.state.status === 'quick-ready' && `${mystery.state.destination?.destination || 'Destination'} found! Loading details...`}
                 {mystery.state.status === 'generic-ready' && `${mystery.state.destination?.destination || 'Destination'} — finalizing itinerary...`}
                 {mystery.state.status === 'ready' && 'Your mystery trip is ready! Click to view'}
