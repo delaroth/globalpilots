@@ -51,7 +51,7 @@ interface HotelRecommendation {
   is_real_data?: boolean
 }
 
-interface Destination {
+export interface Destination {
   destination: string
   country: string
   city_code_IATA: string

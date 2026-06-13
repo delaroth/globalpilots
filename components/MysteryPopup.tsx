@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useMystery } from '@/components/MysteryContext'
 import { useCurrency } from '@/hooks/useCurrency'
 import dynamic from 'next/dynamic'
+import type { Destination } from '@/components/MysteryReveal'
 
 const MysteryReveal = dynamic(() => import('@/components/MysteryReveal'), {
   loading: () => (
@@ -202,7 +203,7 @@ function MysteryPanel() {
           {/* Show MysteryReveal as soon as destination is known — content loads progressively */}
           {(state.status === 'quick-ready' || state.status === 'generic-ready' || state.status === 'ready') && state.destination && state.destination.destination && (state.destination.city_code_IATA || state.destination.iata) && (
             <MysteryReveal
-              destination={state.destination}
+              destination={state.destination as unknown as Destination}
               origin={origin}
               departDate={departDate}
               tripDuration={tripDuration}

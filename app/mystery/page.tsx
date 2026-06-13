@@ -603,8 +603,11 @@ function MysteryPageContent() {
   // Multi-city results visible
   const hasMultiCityResults = numCities > 1 && multiCityResult && !multiCitySearching
 
-  // Alternatives from quick search
-  const alternatives = mystery.state.destination?.alternatives || null
+  // Alternatives from quick search. MysteryDestination uses an open index
+  // signature (unknown), so narrow to the shape AlternativesBar expects.
+  const alternatives = (mystery.state.destination?.alternatives as
+    | { destination: string; city: string; country: string; price: number }[]
+    | undefined) || null
 
   // ── Submit button text ───────────────────────────────────────────────────
   const submitText = numCities > 1
