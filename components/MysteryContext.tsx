@@ -19,6 +19,7 @@ export interface MysteryDestination {
   city_code_IATA?: string
   estimated_flight_cost?: number
   estimated_hotel_per_night?: number
+  alternatives?: { destination: string; city: string; country: string; price: number }[]
   [key: string]: unknown
 }
 
