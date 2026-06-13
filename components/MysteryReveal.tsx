@@ -727,16 +727,23 @@ export default function MysteryReveal({
                     </div>
                   ) : destination.budgetBreakdown ? (
                     <div className="bg-white/[0.06] border border-emerald-500/20 rounded-xl p-6">
-                      <h3 className="text-xl font-bold text-white mb-4">
-                        Budget Breakdown
+                      <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2 flex-wrap">
+                        Estimated Costs
+                        {isLivePrice ? (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">Live prices</span>
+                        ) : isEstimate ? (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">Estimated</span>
+                        ) : (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400">Cached prices</span>
+                        )}
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="text-center">
                           <p className="text-xs text-white/60">Flights</p>
                           <p className="text-lg font-bold text-emerald-400">
-                            {isEstimate ? '~' : ''}$
-                            {destination.budgetBreakdown.flights}
-                            {isEstimate ? ' est.' : ''}
+                            {isEstimate
+                              ? `~${fmt(destination.budgetBreakdown.flights)} est.`
+                              : fmt(destination.budgetBreakdown.flights)}
                           </p>
                         </div>
                         <div className="text-center">
@@ -844,14 +851,6 @@ export default function MysteryReveal({
                     : isEstimate
                     ? `~${fmt(flightPrice)} est. is an estimated price based on regional averages. Actual price confirmed on booking.`
                     : `~${fmt(flightPrice)} is an indicative cached price. Actual price confirmed on Aviasales.`}
-                </motion.p>
-
-                {/* Urgency signal */}
-                <motion.p
-                  {...staggerChild(5)}
-                  className="text-xs text-amber-400/70 text-center"
-                >
-                  Flights at this price typically sell out within 24-48 hours
                 </motion.p>
 
                 {/* ── View Full Itinerary button (opens detail popup) ── */}

@@ -202,13 +202,14 @@ function MysteryPageContent() {
   const [budgetPriority, setBudgetPriority] = useState('balanced')
 
   // When & how long
-  const [timeframe, setTimeframe] = useState('anytime')
+  const [dateMode, setDateMode] = useState<'anytime' | 'this-month' | 'next-month' | 'next-3-months' | 'next-6-months' | 'exact'>('anytime')
+  const timeframe = dateMode === 'exact' ? 'anytime' : dateMode
+  const showSpecificDates = dateMode === 'exact'
   const [tripDuration, setTripDuration] = useState(0)
-  const [showSpecificDates, setShowSpecificDates] = useState(false)
   const [departDate, setDepartDate] = useState(getTwoWeeksFromNow())
   const [flexibleDates, setFlexibleDates] = useState(false)
-  const [preferredDepartDay, setPreferredDepartDay] = useState<number | null>(null) // 0=Sun..6=Sat
-  const [preferredDepartTime, setPreferredDepartTime] = useState<number | undefined>(undefined) // 0-3
+  const [preferredDepartDay, setPreferredDepartDay] = useState<number | null>(null)
+  const [preferredDepartTime, setPreferredDepartTime] = useState<number | undefined>(undefined)
 
   // Travel style customization
   const [showStyleCustomize, setShowStyleCustomize] = useState(false)
@@ -272,7 +273,7 @@ function MysteryPageContent() {
     if (orig) setOrigin(orig.toUpperCase())
     if (budgetParam) setBudget(budgetParam)
     if (dateParam) {
-      setShowSpecificDates(true)
+      setDateMode('exact')
       setDepartDate(dateParam)
     }
   }, [searchParams])
@@ -613,10 +614,7 @@ function MysteryPageContent() {
         </div>
 
         {/* Form + Live Preview layout */}
-        <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-6">
-
-          {/* ── FORM ────────────────────────────────────────────────────── */}
-          <div className="flex-1 max-w-3xl">
+        <div className="max-w-2xl mx-auto">
             <form onSubmit={handleSubmit} className={`bg-white rounded-2xl shadow-2xl p-6 md:p-8 transition-opacity ${isSearching ? 'opacity-60' : ''}`}>
               <fieldset disabled={isSearching}>
 
@@ -690,6 +688,34 @@ function MysteryPageContent() {
                   )}
                 </div>
 
+                {/* ── Vibes (always visible) ──────────────────────────────── */}
+                <div className="mb-1">
+                  <label className="block text-sm font-medium text-gray-600 mb-2">
+                    What&apos;s your vibe? <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {vibeOptions.map((vibe) => (
+                      <button
+                        key={vibe.value}
+                        type="button"
+                        onClick={() => handleVibeToggle(vibe.value)}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                          selectedVibes.includes(vibe.value)
+                            ? 'bg-sky-500 text-slate-900 shadow-sm ring-1 ring-sky-500/50'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {vibe.label}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedVibes.length === 0 && (
+                    <p className="text-xs text-gray-400 mt-1.5">
+                      None selected — AI chooses based on your budget and availability
+                    </p>
+                  )}
+                </div>
+
               </fieldset>
 
               {/* Error Message */}
@@ -748,7 +774,7 @@ function MysteryPageContent() {
                 className="w-full mt-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 transition flex items-center justify-center gap-1.5"
               >
                 <span className={`transition-transform inline-block ${showCustomize ? 'rotate-90' : ''}`}>&#x25B8;</span>
-                Customize your trip
+                {showCustomize ? 'Fewer options' : 'More options'}
               </button>
 
               {showCustomize && (
@@ -814,34 +840,6 @@ function MysteryPageContent() {
                     </div>
                   )}
 
-                  {/* ── Vibes (optional) ─────────────────────────────────── */}
-                  <div className="mb-5">
-                    <label className="block text-sm font-medium text-gray-600 mb-2">
-                      Vibes <span className="text-gray-400 font-normal">(optional)</span>
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {vibeOptions.map((vibe) => (
-                        <button
-                          key={vibe.value}
-                          type="button"
-                          onClick={() => handleVibeToggle(vibe.value)}
-                          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                            selectedVibes.includes(vibe.value)
-                              ? 'bg-sky-500 text-slate-900 shadow-sm ring-1 ring-sky-500/50'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          {vibe.label}
-                        </button>
-                      ))}
-                    </div>
-                    {selectedVibes.length === 0 && (
-                      <p className="text-xs text-gray-400 mt-1.5">
-                        Select none and AI chooses based on your budget and availability
-                      </p>
-                    )}
-                  </div>
-
                   {/* ── Travel Style ──────────────────────────────────────── */}
                   <div className="mb-5">
                     <label className="block text-sm font-medium text-gray-600 mb-2">
@@ -904,42 +902,40 @@ function MysteryPageContent() {
                     )}
                   </div>
 
-                  {/* ── When & How Long ───────────────────────────────────── */}
+                  {/* ── When & Duration ───────────────────────────────────── */}
                   <div className="mb-5">
                     <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                      When & how long
+                      When &amp; how long
                     </label>
 
-                    {/* Quick flexible option */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTimeframe('anytime')
-                        setTripDuration(0) // 0 = AI decides
-                        setShowSpecificDates(false)
-                      }}
-                      className={`w-full mb-3 py-2 rounded-lg text-sm font-medium transition border ${
-                        timeframe === 'anytime' && tripDuration === 0 && !showSpecificDates
-                          ? 'bg-sky-50 border-sky-200 text-sky-700'
-                          : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                      }`}
-                    >
-                      Fully flexible -- AI picks the best dates & trip length for my budget
-                    </button>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* Timeframe / date display */}
-                      {!showSpecificDates ? (
-                        <select
-                          value={timeframe}
-                          onChange={(e) => setTimeframe(e.target.value)}
-                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:outline-none transition text-slate-900 bg-white text-sm"
+                    {/* Date mode tabs — replaces 5 nested controls */}
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {([
+                        { value: 'anytime', label: 'Flexible' },
+                        { value: 'this-month', label: 'This Month' },
+                        { value: 'next-month', label: 'Next Month' },
+                        { value: 'next-3-months', label: '3 Months' },
+                        { value: 'next-6-months', label: '6 Months' },
+                        { value: 'exact', label: 'Pick Date' },
+                      ] as { value: typeof dateMode; label: string }[]).map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setDateMode(opt.value)}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                            dateMode === opt.value
+                              ? 'bg-sky-500 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
                         >
-                          {timeframeOptions.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
-                      ) : (
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Exact date input — only visible when Pick Date is selected */}
+                    {dateMode === 'exact' && (
+                      <div className="mb-3 space-y-2">
                         <input
                           type="date"
                           value={departDate}
@@ -947,60 +943,36 @@ function MysteryPageContent() {
                           min={new Date().toISOString().split('T')[0]}
                           className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:outline-none transition text-slate-900 text-sm"
                         />
-                      )}
-                      {/* Duration dropdown */}
-                      <select
-                        value={tripDuration}
-                        onChange={(e) => setTripDuration(parseInt(e.target.value))}
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:outline-none transition text-slate-900 bg-white text-sm"
-                      >
-                        <option value={0}>Best for my budget</option>
-                        {durationOptions.map(d => (
-                          <option key={d} value={d}>{d} {d === 1 ? 'day' : 'days'}</option>
-                        ))}
-                      </select>
-                    </div>
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={flexibleDates}
+                            onChange={(e) => setFlexibleDates(e.target.checked)}
+                            className="w-4 h-4 text-sky-400 border-gray-300 rounded focus:ring-sky-400"
+                          />
+                          <span className="ml-2 text-sm text-gray-600">Flexible &plusmn;3 days</span>
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Duration */}
+                    <select
+                      value={tripDuration}
+                      onChange={(e) => setTripDuration(parseInt(e.target.value))}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:outline-none transition text-slate-900 bg-white text-sm"
+                    >
+                      <option value={0}>Best duration for my budget</option>
+                      {durationOptions.map(d => (
+                        <option key={d} value={d}>{d} {d === 1 ? 'day' : 'days'}</option>
+                      ))}
+                    </select>
                     {tripDuration === 0 && (
                       <p className="text-xs text-sky-600/80 mt-1.5">
-                        Trip length scales with your budget: $100-200 = weekend, $400+ = 4-5 days, $700+ = up to a week
+                        Trip length scales with budget: $100-200 = weekend, $400+ = 4-5 days, $700+ = up to a week
                       </p>
                     )}
 
-                    {/* Toggle specific dates / flexible */}
-                    {!showSpecificDates ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowSpecificDates(true)}
-                        className="mt-1.5 text-xs text-gray-400 hover:text-gray-600 transition flex items-center gap-1"
-                      >
-                        <span>&#x25B8;</span> Pick specific dates
-                      </button>
-                    ) : (
-                      <>
-                        <div className="mt-2 flex items-center gap-3">
-                          <label className="flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={flexibleDates}
-                              onChange={(e) => setFlexibleDates(e.target.checked)}
-                              className="w-4 h-4 text-sky-400 border-gray-300 rounded focus:ring-sky-400"
-                            />
-                            <span className="ml-2 text-sm text-gray-600">
-                              Flexible &plusmn;3 days
-                            </span>
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => setShowSpecificDates(false)}
-                            className="text-xs text-gray-400 hover:text-gray-600 transition"
-                          >
-                            Use flexible timeframe instead
-                          </button>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Preferred departure day & time */}
+                    {/* Preferred departure day & time (power user, collapsed) */}
                     <div className="mt-2">
                       <button
                         type="button"
@@ -1218,24 +1190,7 @@ function MysteryPageContent() {
                 </fieldset>
               )}
             </form>
-          </div>
 
-          {/* ── Live Preview Card (sidebar on desktop, below on mobile) ── */}
-          <div className="lg:w-64 lg:flex-shrink-0 order-first lg:order-last">
-            <div className="lg:sticky lg:top-24">
-              <LivePreviewCard
-                tripDuration={tripDuration}
-                originDisplay={origin || originInputText || ''}
-                budget={budget}
-                currencySymbol={currency.symbol}
-                selectedVibes={selectedVibes}
-                travelStyle={travelStyle}
-                knowDestination={knowDestination}
-                chosenDestination={chosenDestination}
-                numCities={numCities}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Active search indicator for single-city */}
