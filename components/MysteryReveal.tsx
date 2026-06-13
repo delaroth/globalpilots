@@ -926,7 +926,7 @@ export default function MysteryReveal({
                         <>Search Hotels</>
                       )}
                       <span className="block text-sm font-normal mt-1 opacity-90">
-                        {formatDate(effectiveDepartDate)} &ndash; {formatDate(effectiveReturnDate)} &middot; Booking.com
+                        {formatDate(effectiveDepartDate)} &ndash; {formatDate(effectiveReturnDate)} &middot; Agoda
                       </span>
                     </BookingTracker>
                     <BookingTracker
