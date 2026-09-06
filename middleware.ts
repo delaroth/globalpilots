@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest, NextFetchEvent } from 'next/server'
 
-// AI crawler user-agent fragments → readable bot name.
-// Logged to user_events so the admin dashboard can show which assistants
-// are reading the site (leading indicator of LLM citations/referrals).
+// Known crawler user-agent fragments -> readable bot name.
+// Logged server-side because most crawlers never run browser analytics scripts.
 const AI_BOTS: [string, string][] = [
   ['oai-searchbot', 'OpenAI SearchBot'],
   ['chatgpt-user', 'ChatGPT (live browse)'],
@@ -25,12 +24,40 @@ const AI_BOTS: [string, string][] = [
   ['cohere', 'Cohere'],
 ]
 
-function detectAIBot(ua: string): string | null {
-  const lower = ua.toLowerCase()
-  for (const [fragment, name] of AI_BOTS) {
-    if (lower.includes(fragment)) return name
+const SEARCH_BOTS: [string, string][] = [
+  ['googlebot', 'Googlebot'],
+  ['bingbot', 'Bingbot'],
+  ['duckduckbot', 'DuckDuckBot'],
+  ['yandexbot', 'YandexBot'],
+  ['baiduspider', 'Baiduspider'],
+  ['applebot', 'Applebot'],
+]
+
+const OTHER_BOTS: [string, string][] = [
+  ['ahrefsbot', 'AhrefsBot'],
+  ['semrushbot', 'SemrushBot'],
+  ['mj12bot', 'MJ12bot'],
+  ['petalbot', 'PetalBot'],
+  ['dotbot', 'DotBot'],
+  ['siteauditbot', 'SiteAuditBot'],
+]
+
+type CrawlerCategory = 'ai' | 'search' | 'seo'
+
+function findBot(ua: string, bots: [string, string][], category: CrawlerCategory) {
+  for (const [fragment, name] of bots) {
+    if (ua.includes(fragment)) return { name, category }
   }
   return null
+}
+
+function detectCrawler(ua: string): { name: string; category: CrawlerCategory } | null {
+  const lower = ua.toLowerCase()
+  return (
+    findBot(lower, AI_BOTS, 'ai') ||
+    findBot(lower, SEARCH_BOTS, 'search') ||
+    findBot(lower, OTHER_BOTS, 'seo')
+  )
 }
 
 export function middleware(request: NextRequest, event: NextFetchEvent) {
@@ -42,15 +69,15 @@ export function middleware(request: NextRequest, event: NextFetchEvent) {
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' https: data:; connect-src 'self' https:; frame-ancestors 'none'")
+  response.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.posthog.com; img-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' https: data:; connect-src 'self' https:; worker-src 'self' blob: data:; frame-ancestors 'none'")
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
 
-  // Log AI crawler visits (fire-and-forget via waitUntil — zero latency cost).
+  // Log recognized crawler visits (fire-and-forget via waitUntil — zero latency cost).
   // Page routes only; API/static noise excluded by matcher + this check.
   const path = request.nextUrl.pathname
   if (!path.startsWith('/api/')) {
     const ua = request.headers.get('user-agent') || ''
-    const bot = detectAIBot(ua)
+    const bot = detectCrawler(ua)
     if (bot) {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -65,8 +92,8 @@ export function middleware(request: NextRequest, event: NextFetchEvent) {
               Prefer: 'return=minimal',
             },
             body: JSON.stringify({
-              event_type: 'ai_crawler',
-              event_data: { bot, ua: ua.slice(0, 200) },
+              event_type: bot.category === 'ai' ? 'ai_crawler' : 'crawler_visit',
+              event_data: { bot: bot.name, category: bot.category },
               page_url: path,
             }),
           }).catch(() => {})

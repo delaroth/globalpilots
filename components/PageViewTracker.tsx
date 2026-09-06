@@ -1,8 +1,13 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { isInternalUser } from '@/lib/track-client'
+import {
+  ANALYTICS_CONSENT_EVENT,
+  type AnalyticsConsent,
+  getAnalyticsConsent,
+} from '@/lib/analytics-consent'
 
 // Referrer host → AI assistant label (tracks LLM-driven visits)
 const AI_REFERRERS: [string, string][] = [
@@ -32,10 +37,20 @@ function classifyAIReferrer(host: string): string | null {
  */
 export default function PageViewTracker() {
   const pathname = usePathname()
+  const [consent, setConsent] = useState<AnalyticsConsent | null>(null)
   const lastTracked = useRef<{ path: string; at: number }>({ path: '', at: 0 })
 
   useEffect(() => {
-    if (!pathname) return
+    setConsent(getAnalyticsConsent())
+    const onConsentChange = (event: Event) => {
+      setConsent((event as CustomEvent<AnalyticsConsent>).detail)
+    }
+    window.addEventListener(ANALYTICS_CONSENT_EVENT, onConsentChange)
+    return () => window.removeEventListener(ANALYTICS_CONSENT_EVENT, onConsentChange)
+  }, [])
+
+  useEffect(() => {
+    if (!pathname || consent !== 'analytics') return
 
     const now = Date.now()
     // Debounce: skip if same page tracked within 5 seconds
@@ -98,7 +113,7 @@ export default function PageViewTracker() {
     }).catch(() => {
       // silently ignore
     })
-  }, [pathname])
+  }, [pathname, consent])
 
   return null
 }

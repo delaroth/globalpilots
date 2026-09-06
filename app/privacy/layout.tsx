@@ -3,11 +3,11 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Privacy Policy | GlobePilot',
   description:
-    'Learn how GlobePilot handles your data. We use localStorage only, no cookies, and partner with trusted third-party services to deliver travel planning tools.',
+    'Learn how GlobePilot handles account, product, analytics, and browser data and how to control optional analytics.',
   openGraph: {
     title: 'Privacy Policy | GlobePilot',
     description:
-      'Learn how GlobePilot handles your data. We use localStorage only, no cookies, and partner with trusted third-party services.',
+      'Learn how GlobePilot handles account, product, analytics, and browser data and how to control optional analytics.',
     type: 'website',
   },
 }

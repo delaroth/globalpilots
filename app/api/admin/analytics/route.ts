@@ -485,26 +485,34 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
     let aiVisibility: {
       crawlers: { bot: string; hits: number }[]
+      allCrawlers: { bot: string; category: string; hits: number }[]
       referrals: { source: string; visits: number }[]
       topCrawledPages: { page: string; hits: number }[]
-    } = { crawlers: [], referrals: [], topCrawledPages: [] }
+    } = { crawlers: [], allCrawlers: [], referrals: [], topCrawledPages: [] }
     try {
       const { data: crawlerRaw } = await (supabase
         .from('user_events_public') as any)
         .select('event_data, page_url')
-        .eq('event_type', 'ai_crawler')
+        .in('event_type', ['ai_crawler', 'crawler_visit'])
         .gte('created_at', thirtyDaysAgo)
       if (crawlerRaw) {
         const botCounts: Record<string, number> = {}
+        const allBotCounts: Record<string, { bot: string; category: string; hits: number }> = {}
         const pageCounts: Record<string, number> = {}
         for (const row of crawlerRaw as any[]) {
           const bot = row.event_data?.bot || 'unknown'
-          botCounts[bot] = (botCounts[bot] || 0) + 1
+          const category = row.event_data?.category || 'ai'
+          const key = `${category}:${bot}`
+          if (!allBotCounts[key]) allBotCounts[key] = { bot, category, hits: 0 }
+          allBotCounts[key].hits++
+          if (category === 'ai') botCounts[bot] = (botCounts[bot] || 0) + 1
           const page = row.page_url || 'unknown'
           pageCounts[page] = (pageCounts[page] || 0) + 1
         }
         aiVisibility.crawlers = Object.entries(botCounts)
           .map(([bot, hits]) => ({ bot, hits }))
+          .sort((a, b) => b.hits - a.hits)
+        aiVisibility.allCrawlers = Object.values(allBotCounts)
           .sort((a, b) => b.hits - a.hits)
         aiVisibility.topCrawledPages = Object.entries(pageCounts)
           .map(([page, hits]) => ({ page, hits }))

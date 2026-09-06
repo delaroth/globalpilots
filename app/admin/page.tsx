@@ -22,6 +22,7 @@ interface AnalyticsData {
   alerts: { active: number; inactive: number; total: number }
   aiVisibility?: {
     crawlers: { bot: string; hits: number }[]
+    allCrawlers: { bot: string; category: string; hits: number }[]
     referrals: { source: string; visits: number }[]
     topCrawledPages: { page: string; hits: number }[]
   }
@@ -514,7 +515,21 @@ export default function AdminDashboard() {
         </div>
 
         {/* AI Visibility: crawler hits + assistant referrals (30d) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+          <Card title="Known Crawlers (30d)">
+            {!data.aiVisibility?.allCrawlers?.length ? (
+              <div className="text-gray-500 text-sm py-4">No recognized crawler visits logged yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {data.aiVisibility.allCrawlers.map((c) => (
+                  <div key={`${c.category}:${c.bot}`} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-200 truncate">{c.bot} <span className="text-gray-600">({c.category})</span></span>
+                    <span className="text-gray-400 ml-2 shrink-0">{c.hits}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
           <Card title="AI Crawlers (30d)">
             {!data.aiVisibility?.crawlers?.length ? (
               <div className="text-gray-500 text-sm py-4">No AI crawler visits logged yet.</div>

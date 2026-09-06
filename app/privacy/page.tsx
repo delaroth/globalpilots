@@ -1,5 +1,6 @@
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
+import CookieSettingsButton from '@/components/CookieSettingsButton'
 
 export default function PrivacyPage() {
   return (
@@ -12,7 +13,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="text-sky-300 mb-12">
-            Last updated: March 16, 2026
+              Last updated: September 5, 2026
           </p>
 
           <div className="space-y-10 text-sky-300/90 leading-relaxed">
@@ -98,6 +99,9 @@ export default function PrivacyPage() {
                   <span className="font-semibold text-white">Google OAuth</span> &mdash; Powers &ldquo;Sign in with Google&rdquo; authentication. We receive your name, email address, and profile picture from Google. We do not access your Google contacts, calendar, or any other Google data.
                 </li>
                 <li className="pl-4 border-l-2 border-sky-500/30">
+                  <span className="font-semibold text-white">PostHog</span> &mdash; Provides optional product analytics and session replay after you choose &ldquo;Allow analytics.&rdquo; Form inputs and all rendered text are masked in replays, and URL query strings are removed before capture. We use a random anonymous identifier unless you sign in, when your internal account ID connects sessions. We do not send your email address or name to PostHog.
+                </li>
+                <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">Frankfurter API</span> &mdash; Provides currency exchange rates (free, open-source). No user data is sent &mdash; only currency codes.
                 </li>
                 <li className="pl-4 border-l-2 border-sky-500/30">
@@ -127,9 +131,10 @@ export default function PrivacyPage() {
                 <li><span className="font-semibold text-white">Essential cookies</span> &mdash; Used for authentication sessions when you sign in to your account.</li>
                 <li><span className="font-semibold text-white">Affiliate cookies</span> &mdash; Third-party booking partners (e.g., TravelPayouts) may set cookies when you click affiliate links.</li>
                 <li><span className="font-semibold text-white">localStorage</span> &mdash; We store your preferred currency, default origin airport, and trip history in your browser&apos;s localStorage. This data never leaves your device and can be cleared at any time via your browser settings.</li>
+                <li><span className="font-semibold text-white">Optional analytics</span> &mdash; PostHog analytics and privacy-masked session replay load only after you allow analytics. You can decline them and still use GlobePilot.</li>
               </ul>
               <p className="mt-4">
-                We do not use cookies for advertising or behavioral tracking purposes.
+                We do not use analytics for advertising or build advertising profiles.
               </p>
             </div>
 
@@ -162,8 +167,9 @@ export default function PrivacyPage() {
                 Analytics
               </h2>
               <p>
-                We may use privacy-friendly analytics to understand how our tools are used and to improve the user experience. We do not use invasive tracking tools, and we do not build advertising profiles based on your browsing behavior.
+                Vercel Web Analytics provides aggregate, cookie-free traffic measurement. If you allow optional analytics, our first-party Supabase event store and PostHog record page views and feature interactions; PostHog also provides device and referral breakdowns and privacy-masked session replays so we can find usability problems. Inputs and page text are masked and URL query strings are stripped before replay data is sent. You can change your preference at any time.
               </p>
+              <CookieSettingsButton />
             </div>
 
             {/* Data Security */}
