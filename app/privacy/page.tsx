@@ -13,7 +13,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="text-sky-300 mb-12">
-              Last updated: September 5, 2026
+              Last updated: September 6, 2026
           </p>
 
           <div className="space-y-10 text-sky-300/90 leading-relaxed">
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
                   <span className="font-semibold text-white">DeepSeek AI</span> &mdash; Generates mystery destination itineraries, hotel recommendations, and local tips. We send destination names, budget tier, and travel preferences. No personal data (name, email, account info) is sent to DeepSeek.
                 </li>
                 <li className="pl-4 border-l-2 border-sky-500/30">
-                  <span className="font-semibold text-white">Supabase</span> &mdash; Our database and infrastructure provider (PostgreSQL). Stores user accounts, saved trips, and activity feed data. All data is encrypted at rest and in transit.
+                  <span className="font-semibold text-white">Supabase</span> &mdash; Our database and infrastructure provider (PostgreSQL). Stores user accounts, saved trips, and activity feed data in the EU (Frankfurt). All data is encrypted at rest and in transit.
                 </li>
                 <li className="pl-4 border-l-2 border-sky-500/30">
                   <span className="font-semibold text-white">Google OAuth</span> &mdash; Powers &ldquo;Sign in with Google&rdquo; authentication. We receive your name, email address, and profile picture from Google. We do not access your Google contacts, calendar, or any other Google data.
@@ -178,7 +178,7 @@ export default function PrivacyPage() {
                 Data Security
               </h2>
               <p>
-                We take reasonable measures to protect your information. Browser-stored data remains on your device. Server-side data (account information, saved trips) is protected through industry-standard encryption and security practices provided by Supabase. Passwords are hashed using bcrypt and are never stored in plain text.
+                We take reasonable measures to protect your information. Browser-stored data remains on your device. Server-side personal data (account information, saved trips) is stored in the European Union (Frankfurt) and protected through industry-standard encryption and security practices provided by Supabase. Passwords are hashed using bcrypt and are never stored in plain text.
               </p>
             </div>
 
