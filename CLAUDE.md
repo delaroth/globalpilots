@@ -68,6 +68,9 @@ Solo founder project. Prefer the shortest fix that holds up long-term over cleve
   URLs inside components.
 - When compacting, always preserve: the list of modified files, the build/typecheck
   commands, and any flight-API constraint mentioned above.
+- Never grep or read `.env`, `.env.local`, `.env.example` secrets, or similar
+  env files to inspect values. Load names into the process environment and use
+  the variables. Confirm presence/length only — do not print secret values.
 
 ## Deeper docs (read only when relevant)
 
