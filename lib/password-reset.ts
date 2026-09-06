@@ -1,10 +1,11 @@
 import crypto from 'crypto'
 import { supabase } from './supabase'
 import { findUserByEmail, hashPassword } from './auth'
+import { TRANSACTIONAL_FROM } from './email-addresses'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://globepilots.com'
 const RESEND_API_URL = 'https://api.resend.com/emails'
-const FROM_EMAIL = 'GlobePilot <alerts@globepilots.com>'
+const FROM_EMAIL = TRANSACTIONAL_FROM
 
 // ── helpers ──────────────────────────────────────────
 

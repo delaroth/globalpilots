@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { CONTACT_FROM, PUBLIC_CONTACT_EMAIL } from '@/lib/email-addresses'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +24,7 @@ function checkRateLimit(ip: string): boolean {
 }
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
-const FROM_EMAIL = 'GlobePilot Contact <contact@globepilots.com>'
+const FROM_EMAIL = CONTACT_FROM
 
 const SUBJECT_LABELS: Record<string, string> = {
   general: 'General Inquiry',
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const contactEmail = process.env.CONTACT_EMAIL || 'hello@globepilots.com'
+    const contactEmail = process.env.CONTACT_EMAIL || PUBLIC_CONTACT_EMAIL
     const subjectLabel = SUBJECT_LABELS[subject] || subject
     const apiKey = process.env.RESEND_API_KEY
 

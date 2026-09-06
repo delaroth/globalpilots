@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(
       renderHtml(
         'Invalid Link',
-        'This unsubscribe link is invalid or has expired. If you need help, contact us at support@globepilots.com.',
+        'This unsubscribe link is invalid or has expired. If you need help, contact us at hello@globepilots.com.',
         false
       ),
       { status: 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(
         renderHtml(
           'Error',
-          'Something went wrong while processing your request. Please try again or contact support@globepilots.com.',
+          'Something went wrong while processing your request. Please try again or contact hello@globepilots.com.',
           false
         ),
         { status: 500, headers: { 'Content-Type': 'text/html; charset=utf-8' } }

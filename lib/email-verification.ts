@@ -1,7 +1,8 @@
 import { supabase } from './supabase'
+import { TRANSACTIONAL_FROM } from './email-addresses'
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
-const FROM_EMAIL = 'GlobePilot <alerts@globepilots.com>'
+const FROM_EMAIL = TRANSACTIONAL_FROM
 
 /**
  * Create a verification token for a user.

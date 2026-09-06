@@ -4,6 +4,8 @@
  * Gracefully falls back (logs warning) if API key is not set
  */
 
+import { TRANSACTIONAL_FROM } from './email-addresses'
+
 export interface Deal {
   origin: string
   destination: string
@@ -16,7 +18,7 @@ export interface Deal {
 }
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
-const FROM_EMAIL = 'GlobePilot <alerts@globepilots.com>'
+const FROM_EMAIL = TRANSACTIONAL_FROM
 
 function getApiKey(): string | null {
   const key = process.env.RESEND_API_KEY

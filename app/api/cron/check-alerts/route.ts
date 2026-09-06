@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { Resend } from 'resend'
 import { calculatePriceStatus } from '@/lib/price-analysis'
 import { trackActivity } from '@/lib/activity-feed'
+import { TRANSACTIONAL_FROM } from '@/lib/email-addresses'
 
 export const dynamic = 'force-dynamic'
 
@@ -157,7 +158,7 @@ export async function GET(request: NextRequest) {
 
         const resend = getResend()
         await resend.emails.send({
-          from: 'GlobePilot <alerts@globepilots.com>',
+          from: TRANSACTIONAL_FROM,
           to: alert.email,
           subject: `✈️ Price Drop Alert: ${alert.origin} → ${alert.destination} now $${currentPrice}!`,
           html: emailHtml,
