@@ -51,6 +51,7 @@ export async function trackActivity(
     const { error } = await (supabase as any)
       .from('activity_feed')
       .insert({
+        type: activityType, // live table's NOT NULL column (activity_type is the older name)
         activity_type: activityType,
         data,
         is_public: true,
