@@ -1,41 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createResetToken } from '@/lib/password-reset'
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
-// Simple in-memory rate limiter: max 3 requests per email per hour
-const rateLimitMap = new Map<string, number[]>()
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
-const RATE_LIMIT_MAX = 3
-
-function isRateLimited(email: string): boolean {
-  const key = email.toLowerCase()
-  const now = Date.now()
-  const timestamps = rateLimitMap.get(key) || []
-
-  // Remove timestamps outside the window
-  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
-
-  if (recent.length >= RATE_LIMIT_MAX) {
-    return true
-  }
-
-  recent.push(now)
-  rateLimitMap.set(key, recent)
-  return false
-}
-
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json()
+    const { email } = await request.json().catch(() => ({}))
 
     if (!email || typeof email !== 'string') {
       // Still return success to prevent enumeration
       return NextResponse.json({ success: true })
     }
 
-    // Rate limit per email
-    if (isRateLimited(email)) {
+    // Rate limit per IP and per email (createResetToken also enforces a
+    // DB-backed per-account cap, which survives cold starts)
+    const ipLimit = await rateLimitAsync(`forgot-ip:${getClientIp(request)}`, 10, 60 * 60 * 1000)
+    const emailLimit = await rateLimitAsync(`forgot-email:${email.trim().toLowerCase()}`, 3, 60 * 60 * 1000)
+    if (!ipLimit.success || !emailLimit.success) {
       // Return success even if rate-limited (anti-enumeration)
       return NextResponse.json({ success: true })
     }

@@ -1,40 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { z } from 'zod'
+import { verifyAlertToken } from '@/lib/alert-tokens'
+import { deleteAlert } from '@/lib/price-tracker'
 
 export const dynamic = 'force-dynamic'
 
+const deleteSchema = z.object({
+  id: z.string().uuid(),
+  token: z.string().max(512),
+})
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { id } = body
-
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Missing required field: id' },
-        { status: 400 }
-      )
+    const parsed = deleteSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Missing required fields: id, token' }, { status: 400 })
     }
 
-    console.log('[Alerts Delete] Deleting alert:', id)
-
-    const { error } = await (supabase as any)
-      .from('price_alerts')
-      .delete()
-      .eq('id', id)
-
-    if (error) {
-      console.error('[Alerts Delete] Supabase error:', error)
-      throw new Error('Failed to delete alert')
+    const email = verifyAlertToken(parsed.data.token)
+    if (!email) {
+      return NextResponse.json({ error: 'Invalid alert link.' }, { status: 401 })
     }
 
-    console.log('[Alerts Delete] ✅ Alert deleted successfully')
-
+    await deleteAlert(parsed.data.id, email)
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('[Alerts Delete] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete alert. Please try again.' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to delete alert. Please try again.' }, { status: 500 })
   }
 }

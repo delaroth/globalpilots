@@ -19,6 +19,7 @@ export default function PriceTrackButton({
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleTrack = async () => {
@@ -47,6 +48,7 @@ export default function PriceTrackButton({
       }
 
       setSuccess(true)
+      setPending(Boolean(data.pending))
       // Save email for future use
       if (typeof window !== 'undefined') {
         localStorage.setItem('gp_track_email', email.trim())
@@ -74,7 +76,9 @@ export default function PriceTrackButton({
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
-        <span>Tracking {origin}-{destination}!</span>
+        <span>
+          {pending ? `Check your inbox to confirm tracking ${origin}-${destination}` : `Tracking ${origin}-${destination}!`}
+        </span>
       </div>
     )
   }

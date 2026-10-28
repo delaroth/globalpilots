@@ -52,10 +52,13 @@ export function getSupabaseAdmin() {
   return supabaseAdminClient
 }
 
-// For backward compatibility
+// Default server client. SECURITY: every table has RLS on with no anon
+// policies (supabase-security-lockdown.sql), so all DB access goes through the
+// service role on the server; authorization is enforced in our API routes.
+// The service key is not NEXT_PUBLIC, so this is never usable from a browser.
 export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
   get: (_, prop) => {
-    const client = getSupabase()
+    const client = getSupabaseAdmin()
     return (client as any)[prop]
   }
 })

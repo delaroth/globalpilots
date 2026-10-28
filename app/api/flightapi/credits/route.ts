@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import { getCreditStatus, setCredits } from '@/lib/flightapi'
 
 export const dynamic = 'force-dynamic'
@@ -7,11 +8,10 @@ export const dynamic = 'force-dynamic'
  * GET: Check FlightAPI.io credit balance and status.
  * POST: Update credits (e.g. after purchasing more).
  *
- * Protected by CRON_SECRET to prevent public access.
+ * Protected by CRON_SECRET (Authorization: Bearer <secret>) to prevent public access.
  */
 export async function GET(request: NextRequest) {
-  const secret = request.nextUrl.searchParams.get('secret')
-  if (secret !== process.env.CRON_SECRET) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -19,8 +19,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const secret = request.nextUrl.searchParams.get('secret')
-  if (secret !== process.env.CRON_SECRET) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -1,53 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { z } from 'zod'
+import { verifyAlertToken } from '@/lib/alert-tokens'
+import { setAlertActive } from '@/lib/price-tracker'
 
 export const dynamic = 'force-dynamic'
 
-interface UpdateAlertRequest {
-  id: string
-  isActive: boolean
-}
+const updateSchema = z.object({
+  id: z.string().uuid(),
+  isActive: z.boolean(),
+  token: z.string().max(512),
+})
 
 export async function POST(request: NextRequest) {
   try {
-    const body: UpdateAlertRequest = await request.json()
-    const { id, isActive } = body
+    const parsed = updateSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Missing required fields: id, isActive, token' }, { status: 400 })
+    }
+    const { id, isActive, token } = parsed.data
 
-    if (!id || isActive === undefined) {
-      return NextResponse.json(
-        { error: 'Missing required fields: id, isActive' },
-        { status: 400 }
-      )
+    const email = verifyAlertToken(token)
+    if (!email) {
+      return NextResponse.json({ error: 'Invalid alert link.' }, { status: 401 })
     }
 
-    console.log('[Alerts Update] Updating alert:', id, 'to', isActive ? 'active' : 'inactive')
-
-    const { data, error } = await (supabase as any)
-      .from('price_alerts')
-      .update({ is_active: isActive })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      console.error('[Alerts Update] Supabase error:', error)
-      throw new Error('Failed to update alert')
+    const alert = await setAlertActive(id, email, isActive)
+    if (!alert) {
+      return NextResponse.json({ error: 'Alert not found.' }, { status: 404 })
     }
 
-    console.log('[Alerts Update] ✅ Alert updated successfully')
-
-    return NextResponse.json({
-      success: true,
-      alert: {
-        id: data.id,
-        isActive: data.is_active,
-      }
-    })
+    return NextResponse.json({ success: true, alert: { id: alert.id, isActive: alert.is_active } })
   } catch (error) {
     console.error('[Alerts Update] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to update alert. Please try again.' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to update alert. Please try again.' }, { status: 500 })
   }
 }

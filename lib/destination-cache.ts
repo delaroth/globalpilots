@@ -6,7 +6,7 @@
  * doesn't exist, all functions return null / no-op.
  */
 
-import { getSupabase } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 import { getDestinationCost } from '@/lib/destination-costs'
 import { getClimateData } from '@/lib/enrichment/climate'
 import { getTimezone } from '@/data/airport-coordinates'
@@ -53,7 +53,7 @@ export interface CachedDestination {
 /** Get cached destination (returns null if not cached). */
 export async function getCachedDestination(iata: string): Promise<CachedDestination | null> {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const { data, error } = await (supabase.from('destination_cache') as any)
       .select('*')
       .eq('iata', iata.toUpperCase())
@@ -78,7 +78,7 @@ export async function getCachedDestination(iata: string): Promise<CachedDestinat
 /** Save/update destination cache. */
 export async function cacheDestination(dest: CachedDestination): Promise<void> {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     await (supabase.from('destination_cache') as any).upsert(
       {
         iata: dest.iata.toUpperCase(),
@@ -100,14 +100,14 @@ export async function cacheDestination(dest: CachedDestination): Promise<void> {
 /** Increment reveal count for a destination. */
 export async function incrementRevealCount(iata: string): Promise<void> {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     await (supabase.rpc as any)('increment_reveal_count', {
       dest_iata: iata.toUpperCase(),
     })
   } catch {
     // Fallback: try a manual update if the RPC doesn't exist
     try {
-      const supabase = getSupabase()
+      const supabase = getSupabaseAdmin()
       const { data } = await (supabase.from('destination_cache') as any)
         .select('reveal_count')
         .eq('iata', iata.toUpperCase())
@@ -147,7 +147,7 @@ export async function ensureGenericCached(
   country: string,
 ): Promise<CachedGenericData | null> {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const { data, error } = await (supabase.from('destination_cache') as any)
       .select('ai_content, updated_at')
       .eq('iata', iata.toUpperCase())
@@ -185,7 +185,7 @@ export async function ensureGenericCached(
 /** Get top N most revealed destinations. */
 export async function getTopDestinations(limit: number): Promise<CachedDestination[]> {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const { data, error } = await (supabase.from('destination_cache') as any)
       .select('*')
       .order('reveal_count', { ascending: false })

@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs'
-import { supabase } from './supabase'
+import { supabase, getSupabaseAdmin } from './supabase'
 
 export interface User {
   id: string
@@ -128,12 +128,20 @@ export async function createOrUpdateOAuthUser(
   const existingUser = await findUserByEmail(email)
 
   if (existingUser) {
+    // Google has verified the real owner. If the row was an unverified
+    // email/password signup, it may have been created by someone else ahead
+    // of them — drop that password so it can't be used to get in.
+    const takeoverGuard = existingUser.email_verified
+      ? {}
+      : { email_verified: true, password_hash: null }
+
     // Update avatar and last login
     const { data } = await (supabase as any)
       .from('users')
       .update({
         avatar_url: avatarUrl || existingUser.avatar_url,
         last_login: new Date().toISOString(),
+        ...takeoverGuard,
       })
       .eq('id', existingUser.id)
       .select()
@@ -181,7 +189,7 @@ export async function createOrUpdateOAuthUser(
  * Link existing anonymous alerts to user account
  */
 export async function linkAlertsToUser(email: string, userId: string) {
-  const { error } = await (supabase as any)
+  const { error } = await (getSupabaseAdmin() as any)
     .from('price_alerts')
     .update({ user_id: userId })
     .eq('email', email)

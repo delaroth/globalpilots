@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 import { trackFeatureUse } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
         : null,
     }
 
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: dbError } = await (supabase.from('feedback') as any).insert([row])
 

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdminAuthorized } from '@/lib/cron-auth'
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { getSerpApiUsage } from '@/lib/flight-providers/serpapi'
 import { getCacheStats } from '@/lib/cache'
@@ -14,10 +16,13 @@ function maskEmail(email: string): string {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const secret = searchParams.get('secret')
+  // Slow down guessing; legit use is one dashboard polling
+  const rl = await rateLimitAsync(`admin:${getClientIp(request)}`, 30, 60_000)
+  if (!rl.success) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
 
-  if (!secret || secret !== process.env.CRON_SECRET) {
+  if (!isAdminAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

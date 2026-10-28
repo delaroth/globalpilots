@@ -54,7 +54,6 @@ export default function NearbyAirportPrices({
     setFetched(true)
 
     const fetchPrices = async () => {
-      const token = process.env.NEXT_PUBLIC_TRAVELPAYOUTS_TOKEN || ''
       const updated = await Promise.all(
         results.map(async (airport) => {
           try {

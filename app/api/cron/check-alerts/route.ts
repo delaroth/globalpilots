@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { isCronAuthorized } from '@/lib/cron-auth'
+import { getSupabaseAdmin } from '@/lib/supabase'
 import { Resend } from 'resend'
 import { calculatePriceStatus } from '@/lib/price-analysis'
 import { trackActivity } from '@/lib/activity-feed'
 import { TRANSACTIONAL_FROM } from '@/lib/email-addresses'
+import { signAlertToken, alertManageUrl, alertUnsubscribeUrl, listUnsubscribeHeaders } from '@/lib/alert-tokens'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,13 +23,13 @@ function getResend() {
 
 export async function GET(request: NextRequest) {
   // Verify cron secret to prevent unauthorized access
-  const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
     console.log('[Cron] Starting price alert check...')
+    const supabase = getSupabaseAdmin()
 
     // Fetch all active alerts
     const { data: alerts, error: fetchError } = await (supabase as any)
@@ -132,6 +134,9 @@ export async function GET(request: NextRequest) {
           ? `<li><strong>Date Flexibility:</strong> ±${alert.date_range_days} days</li>`
           : ''
 
+        const alertToken = signAlertToken(alert.email)
+        const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://globepilots.com'
+
         const emailHtml = `
           <h1>🎉 Price Alert: Your flight price dropped!</h1>
           <p>Great news! The flight you're tracking has dropped below your target price.</p>
@@ -146,13 +151,16 @@ export async function GET(request: NextRequest) {
           </ul>
 
           <p>
-            <a href="https://globepilots.vercel.app" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">
+            <a href="${siteUrl}" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">
               Book Now
             </a>
           </p>
 
           <p style="color: #666; font-size: 14px; margin-top: 24px;">
             This is an automated price alert from GlobePilot. You're receiving this because you set up a price alert for this route.
+            <br/>
+            <a href="${alertManageUrl(alertToken)}" style="color: #666;">Manage your alerts</a> ·
+            <a href="${alertUnsubscribeUrl(alertToken)}" style="color: #666;">Unsubscribe</a>
           </p>
         `
 
@@ -162,6 +170,7 @@ export async function GET(request: NextRequest) {
           to: alert.email,
           subject: `✈️ Price Drop Alert: ${alert.origin} → ${alert.destination} now $${currentPrice}!`,
           html: emailHtml,
+          headers: listUnsubscribeHeaders(alertToken),
         })
 
         // Update last_notified_at

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +12,7 @@ const FALLBACK_RESPONSE = {
 
 export async function GET() {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
 
     // Count reveals in the last 7 days
     const sevenDaysAgo = new Date(

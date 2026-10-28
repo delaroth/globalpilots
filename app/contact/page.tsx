@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, useRef, FormEvent } from 'react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 
@@ -19,6 +19,12 @@ export default function ContactPage() {
   const [message, setMessage] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
+  // Bot traps checked by /api/contact: a field humans never see, and when the form was loaded
+  const [website, setWebsite] = useState('')
+  const startedAt = useRef(0)
+  useEffect(() => {
+    startedAt.current = Date.now()
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -42,7 +48,14 @@ export default function ContactPage() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), subject, message: message.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          subject,
+          message: message.trim(),
+          website,
+          startedAt: startedAt.current,
+        }),
       })
 
       const data = await res.json()
@@ -157,6 +170,20 @@ export default function ContactPage() {
                       {errorMessage}
                     </div>
                   )}
+
+                  {/* Honeypot — hidden from humans and screen readers, bots fill it */}
+                  <div aria-hidden="true" className="absolute -left-[10000px] w-px h-px overflow-hidden">
+                    <label htmlFor="website">Website</label>
+                    <input
+                      id="website"
+                      name="website"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                    />
+                  </div>
 
                   {/* Name */}
                   <div>

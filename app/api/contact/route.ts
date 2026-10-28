@@ -1,27 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { CONTACT_FROM, PUBLIC_CONTACT_EMAIL } from '@/lib/email-addresses'
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
-
-// In-memory rate limiter (resets on server restart)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60 * 1000 }) // 1 minute window
-    return true
-  }
-
-  if (entry.count >= 5) {
-    return false
-  }
-
-  entry.count++
-  return true
-}
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
 const FROM_EMAIL = CONTACT_FROM
@@ -33,57 +15,57 @@ const SUBJECT_LABELS: Record<string, string> = {
   feature: 'Feature Request',
 }
 
+const contactSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  email: z.string().trim().email().max(254),
+  subject: z.enum(['general', 'bug', 'partnership', 'feature']),
+  message: z.string().trim().min(1).max(5000, 'Message is too long. Please keep it under 5000 characters.'),
+  // Bot traps — see app/contact/page.tsx
+  website: z.string().optional(),
+  startedAt: z.number().optional(),
+})
+
+// Humans take longer than this to fill in four fields.
+const MIN_FILL_MS = 3000
+
+// Returns why a submission looks automated, or null if it looks human.
+function botReason({ website, startedAt, message }: z.infer<typeof contactSchema>): string | null {
+  if (website) return 'honeypot'
+  if (!startedAt) return 'no-form-timestamp' // POSTed directly, never loaded the form
+  const elapsed = Date.now() - startedAt
+  if (elapsed < MIN_FILL_MS || elapsed > 24 * 60 * 60 * 1000) return 'fill-time'
+  if (!/\p{L}/u.test(message)) return 'no-letters' // e.g. a bare phone number
+  return null
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // Get IP for rate limiting
-    const ip =
-      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      request.headers.get('x-real-ip') ||
-      'unknown'
-
-    if (!checkRateLimit(ip)) {
+    const rl = await rateLimitAsync(`contact:${getClientIp(request)}`, 3, 10 * 60 * 1000)
+    if (!rl.success) {
       return NextResponse.json(
-        { error: 'Too many requests. Please try again in a minute.' },
+        { error: 'Too many messages. Please try again later.' },
         { status: 429 }
       )
     }
 
-    const body = await request.json()
-    const { name, email, subject, message } = body
-
-    // Validate required fields
-    if (!name?.trim() || !email?.trim() || !subject?.trim() || !message?.trim()) {
+    const parsed = contactSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'All fields are required.' },
+        { error: parsed.error.issues[0]?.message || 'All fields are required.' },
         { status: 400 }
       )
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email address.' },
-        { status: 400 }
-      )
+    // Bots get a fake success so they don't learn what tripped them.
+    const reason = botReason(parsed.data)
+    if (reason) {
+      console.warn('[Contact] Dropped likely bot submission:', reason, request.headers.get('user-agent')?.slice(0, 120))
+      return NextResponse.json({ success: true })
     }
 
-    // Validate subject
-    const validSubjects = ['general', 'bug', 'partnership', 'feature']
-    if (!validSubjects.includes(subject)) {
-      return NextResponse.json(
-        { error: 'Invalid subject.' },
-        { status: 400 }
-      )
-    }
-
-    // Validate message length
-    if (message.trim().length > 5000) {
-      return NextResponse.json(
-        { error: 'Message is too long. Please keep it under 5000 characters.' },
-        { status: 400 }
-      )
-    }
+    const { email, subject, message } = parsed.data
+    // No newlines in the email subject line
+    const name = parsed.data.name.replace(/[\r\n]+/g, ' ')
 
     const contactEmail = process.env.CONTACT_EMAIL || PUBLIC_CONTACT_EMAIL
     const subjectLabel = SUBJECT_LABELS[subject] || subject

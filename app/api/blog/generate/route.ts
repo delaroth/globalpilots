@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { getCached, setCache } from '@/lib/cache'
 import { supabase } from '@/lib/supabase'
 import { BlogContentSchema } from '@/lib/ai-schemas'
 
 export const dynamic = 'force-dynamic'
-
-interface GenerateBlogRequest {
-  destinationCode: string // IATA code
-  destinationName: string // City name
-  country: string
-}
 
 interface BlogContent {
   seo_title: string
@@ -27,17 +23,28 @@ interface BlogContent {
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const body: GenerateBlogRequest = await request.json()
-    const { destinationCode, destinationName, country } = body
+const generateBlogSchema = z.object({
+  destinationCode: z.string().regex(/^[A-Z]{3}$/),
+  destinationName: z.string().trim().min(1).max(80),
+  country: z.string().trim().min(1).max(80),
+})
 
-    if (!destinationCode || !destinationName || !country) {
+export async function POST(request: NextRequest) {
+  // Publishes AI output on the public blog — internal callers only
+  // (cron/generate-blog-posts, ai-mystery), which send the cron secret.
+  if (!isCronAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const parsed = generateBlogSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'Missing required fields: destinationCode, destinationName, country' },
         { status: 400 }
       )
     }
+    const { destinationCode, destinationName, country } = parsed.data
 
     console.log('[Blog Generate] Generating blog for:', { destinationCode, destinationName, country })
 

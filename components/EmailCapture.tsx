@@ -39,10 +39,7 @@ export default function EmailCapture({ context = 'inline' }: EmailCaptureProps) 
       }
 
       setStatus('success')
-      setMessage(data.emailSent
-        ? 'Subscribed! Check your inbox for a welcome email.'
-        : 'Subscribed! You\'ll receive deal alerts soon.'
-      )
+      setMessage('Almost there! Check your inbox and click the link to confirm.')
       setEmail('')
       setOrigin('')
       setMaxPrice('')

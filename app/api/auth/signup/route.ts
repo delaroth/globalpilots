@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createUser, findUserByEmail, linkAlertsToUser } from '@/lib/auth'
+import { createUser, findUserByEmail } from '@/lib/auth'
 import { createVerificationToken, sendVerificationEmail } from '@/lib/email-verification'
 import { trackConversion } from '@/lib/analytics'
 import { z } from 'zod'
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit'
 
 const signupSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  name: z.string().min(1, 'Name is required').optional(),
+  email: z.string().trim().toLowerCase().email('Invalid email address').max(254),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(200),
+  name: z.string().trim().min(1, 'Name is required').max(100).optional(),
 })
 
 export async function POST(request: NextRequest) {
+  const rl = await rateLimitAsync(`signup:${getClientIp(request)}`, 5, 60 * 60 * 1000)
+  if (!rl.success) {
+    return NextResponse.json({ error: 'Too many sign-up attempts. Please try again later.' }, { status: 429 })
+  }
+
   try {
     const body = await request.json()
 
@@ -37,8 +43,8 @@ export async function POST(request: NextRequest) {
     // Create user
     const user = await createUser(email, password, name)
 
-    // Link any anonymous alerts to this user
-    await linkAlertsToUser(email, user.id)
+    // Anonymous alerts are linked once the email is verified (lib/email-verification.ts),
+    // not here — anyone can sign up with someone else's address.
 
     // Fire-and-forget conversion tracking
     trackConversion('account_created', { auth_provider: 'email' })

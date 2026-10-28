@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
   const period = searchParams.get('period') || 'week'
 
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     const since = getPeriodFilter(period)
 
     const { data, error } = await supabase

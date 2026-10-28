@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit'
 import { searchFlights, isKiwiAvailable } from '@/lib/kiwi'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  // Paid upstream API — cap per IP
+  const rl = await rateLimitAsync(`kiwi:${getClientIp(request)}`, 20, 60_000)
+  if (!rl.success) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 })
+  }
+
   if (!isKiwiAvailable()) {
     return NextResponse.json(
       { error: 'Flight search service not available' },
@@ -45,7 +52,7 @@ export async function GET(request: NextRequest) {
       destination,
       departDate: departureDate,
       returnDate: returnDate || undefined,
-      maxResults: max ? parseInt(max) : 10,
+      maxResults: Math.min(Math.max(parseInt(max || '10') || 10, 1), 50),
     })
 
     return NextResponse.json({

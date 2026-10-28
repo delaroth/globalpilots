@@ -1,3 +1,6 @@
+-- SECURITY: after creating these tables, run supabase-security-lockdown.sql —
+-- it enables RLS (no anon policies) on every table. The app only uses the service role.
+
 -- =====================================================
 -- GlobePilots User Accounts + Social Proof + Flexible Dates Schema
 -- Run this in Supabase SQL Editor after supabase-schema-enhancements.sql

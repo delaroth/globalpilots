@@ -51,8 +51,10 @@ export const authOptions: NextAuthOptions = {
         // Update last login
         await updateLastLogin(user.id)
 
-        // Link any anonymous alerts to this user
-        await linkAlertsToUser(user.email, user.id)
+        // Link any anonymous alerts to this user — only once they've proven
+        // they own the address, or anyone could sign up as someone else and
+        // see that person's alerts on their dashboard.
+        if (user.email_verified) await linkAlertsToUser(user.email, user.id)
 
         return {
           id: user.id,

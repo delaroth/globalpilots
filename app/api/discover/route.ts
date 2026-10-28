@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit'
 import { majorAirports } from '@/lib/geolocation'
 import { searchCheapestDestinations, isKiwiAvailable } from '@/lib/kiwi'
 import { findCheapestDestinations, dateToMonth } from '@/lib/flight-providers/serpapi-explore'
@@ -15,10 +16,16 @@ function getCityName(code: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  // Paid upstream API — cap per IP
+  const rl = await rateLimitAsync(`discover:${getClientIp(request)}`, 20, 60_000)
+  if (!rl.success) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 })
+  }
+
   const params = request.nextUrl.searchParams
   const origin = params.get('origin')
   const departDate = params.get('depart_date') // YYYY-MM-DD or YYYY-MM
-  const limit = parseInt(params.get('limit') || '5')
+  const limit = Math.min(Math.max(parseInt(params.get('limit') || '5') || 5, 1), 50)
 
   if (!origin) {
     return NextResponse.json({ error: 'Missing required parameter: origin' }, { status: 400 })

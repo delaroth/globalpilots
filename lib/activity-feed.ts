@@ -37,6 +37,17 @@ export async function trackActivity(
   data: ActivityData[typeof activityType]
 ) {
   try {
+    // In the browser, go through the validated + rate-limited API route —
+    // the database is not writable with the public key.
+    if (typeof window !== 'undefined') {
+      await fetch('/api/activity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activityType, data }),
+      })
+      return
+    }
+
     const { error } = await (supabase as any)
       .from('activity_feed')
       .insert({

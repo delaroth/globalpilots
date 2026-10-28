@@ -5,7 +5,7 @@
  * If Supabase is not configured, events are silently dropped.
  */
 
-import { getSupabase } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 
 // ---------------------------------------------------------------------------
 // Core tracker
@@ -21,7 +21,7 @@ export function trackEvent(
   opts?: { pageUrl?: string; userId?: string; sessionId?: string },
 ) {
   try {
-    const supabase = getSupabase()
+    const supabase = getSupabaseAdmin()
     ;(supabase.from('user_events') as any)
       .insert([
         {

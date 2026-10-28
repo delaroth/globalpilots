@@ -18,6 +18,13 @@ function getResendApiKey(): string | null {
   return key
 }
 
+// Only a SHA-256 of the token is stored, so a database leak doesn't hand out
+// working reset links. (Tokens issued before this change stop working — they
+// expire within an hour anyway.)
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex')
+}
+
 async function sendResetEmail(to: string, token: string): Promise<boolean> {
   const apiKey = getResendApiKey()
   if (!apiKey) return false
@@ -116,6 +123,17 @@ export async function createResetToken(email: string): Promise<{ success: boolea
       return { success: true }
     }
 
+    // At most 3 reset emails per account per hour, counted in the DB
+    const { count: recentCount } = await (supabase as any)
+      .from('password_reset_tokens')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+    if ((recentCount ?? 0) >= 3) {
+      console.warn('[PasswordReset] Per-account reset cap reached')
+      return { success: true }
+    }
+
     // Generate a cryptographically-secure random token
     const token = crypto.randomBytes(32).toString('hex')
 
@@ -134,7 +152,7 @@ export async function createResetToken(email: string): Promise<{ success: boolea
       .from('password_reset_tokens')
       .insert({
         user_id: user.id,
-        token,
+        token: hashToken(token),
         expires_at: expiresAt,
         used: false,
       })
@@ -161,7 +179,7 @@ export async function validateResetToken(
   const { data, error } = await (supabase as any)
     .from('password_reset_tokens')
     .select('*')
-    .eq('token', token)
+    .eq('token', hashToken(token))
     .eq('used', false)
     .single()
 
@@ -211,7 +229,7 @@ export async function resetPassword(
     await (supabase as any)
       .from('password_reset_tokens')
       .update({ used: true })
-      .eq('token', token)
+      .eq('token', hashToken(token))
 
     return { success: true }
   } catch (err) {

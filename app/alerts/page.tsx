@@ -19,7 +19,11 @@ interface PriceAlert {
   targetPrice: number
   createdAt: string
   isActive: boolean
+  pending?: boolean
 }
+
+// Signed manage token — only ever delivered by email (confirmation / alert emails)
+const TOKEN_KEY = 'globepilot_alert_token'
 
 export default function AlertsPage() {
   const [origin, setOrigin] = useState('')
@@ -28,6 +32,8 @@ export default function AlertsPage() {
   const [email, setEmail] = useState('')
   const [alerts, setAlerts] = useState<PriceAlert[]>([])
   const [showSuccess, setShowSuccess] = useState(false)
+  const [pendingConfirmation, setPendingConfirmation] = useState(false)
+  const [alertToken, setAlertToken] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoadingAlerts, setIsLoadingAlerts] = useState(false)
@@ -41,12 +47,25 @@ export default function AlertsPage() {
   const [flexibleDates, setFlexibleDates] = useState(false)
   const [dateRangeDays, setDateRangeDays] = useState(3)
 
-  // Load user's email from localStorage and fetch their alerts
+  // Pick up the manage token from an email link (?token=…) or a previous visit
   useEffect(() => {
     const savedEmail = localStorage.getItem('globepilot_user_email')
-    if (savedEmail) {
-      setEmail(savedEmail)
-      fetchAlerts(savedEmail)
+    if (savedEmail) setEmail(savedEmail)
+
+    const params = new URLSearchParams(window.location.search)
+    const urlToken = params.get('token')
+    if (urlToken) {
+      localStorage.setItem(TOKEN_KEY, urlToken)
+      // Keep the token out of the address bar, history and analytics
+      params.delete('token')
+      const query = params.toString()
+      window.history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : ''))
+    }
+
+    const token = urlToken || localStorage.getItem(TOKEN_KEY)
+    if (token) {
+      setAlertToken(token)
+      fetchAlerts(token)
     }
   }, [])
 
@@ -115,16 +134,20 @@ export default function AlertsPage() {
     fetchPriceData()
   }, [origin, destination])
 
-  const fetchAlerts = async (userEmail: string) => {
-    if (!userEmail) return
-
+  const fetchAlerts = async (token: string) => {
     setIsLoadingAlerts(true)
     try {
-      const response = await fetch(`/api/alerts/list?email=${encodeURIComponent(userEmail)}`)
+      const response = await fetch(`/api/alerts/list?token=${encodeURIComponent(token)}`)
+      if (response.status === 401) {
+        localStorage.removeItem(TOKEN_KEY)
+        setAlertToken(null)
+        return
+      }
       if (!response.ok) throw new Error('Failed to fetch alerts')
 
       const data = await response.json()
       setAlerts(data.alerts || [])
+      if (data.email) setEmail(data.email)
     } catch (err) {
       console.error('Error fetching alerts:', err)
     } finally {
@@ -136,6 +159,7 @@ export default function AlertsPage() {
     e.preventDefault()
     setError('')
     setShowSuccess(false)
+    setPendingConfirmation(false)
     setIsSubmitting(true)
 
     try {
@@ -171,6 +195,7 @@ export default function AlertsPage() {
           targetPrice: parseFloat(targetPrice),
           flexibleDates,
           dateRangeDays: flexibleDates ? dateRangeDays : 0,
+          ...(alertToken ? { token: alertToken } : {}),
         }),
       })
 
@@ -185,8 +210,12 @@ export default function AlertsPage() {
       // Save email to localStorage for next visit
       localStorage.setItem('globepilot_user_email', email)
 
-      // Refresh alerts list
-      await fetchAlerts(email)
+      // Pending alerts go live once the confirmation email is clicked
+      if (data.pending) {
+        setPendingConfirmation(true)
+      } else if (alertToken) {
+        await fetchAlerts(alertToken)
+      }
 
       setShowSuccess(true)
 
@@ -211,7 +240,7 @@ export default function AlertsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, token: alertToken }),
       })
 
       if (!response.ok) throw new Error('Failed to delete alert')
@@ -231,7 +260,7 @@ export default function AlertsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id, isActive: !isActive }),
+        body: JSON.stringify({ id, isActive: !isActive, token: alertToken }),
       })
 
       if (!response.ok) throw new Error('Failed to update alert')
@@ -413,7 +442,11 @@ export default function AlertsPage() {
                 {/* Success Message */}
                 {showSuccess && (
                   <div className="mb-4 bg-green-50 border-2 border-green-500 rounded-lg p-4">
-                    <p className="text-green-700 font-semibold">✅ Alert created! We'll email you when prices drop below ${targetPrice || 'your target'}.</p>
+                    <p className="text-green-700 font-semibold">
+                      {pendingConfirmation
+                        ? '📬 Almost done! Check your inbox and click the confirmation link to turn this alert on.'
+                        : `✅ Alert created! We'll email you when prices drop below ${targetPrice || 'your target'}.`}
+                    </p>
                   </div>
                 )}
 
@@ -469,9 +502,11 @@ export default function AlertsPage() {
               ) : alerts.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">🔔</div>
-                  <p className="text-gray-600">No alerts yet</p>
+                  <p className="text-gray-600">{alertToken ? 'No alerts yet' : 'No alerts to show'}</p>
                   <p className="text-sm text-gray-500 mt-2">
-                    Create your first alert to start tracking prices
+                    {alertToken
+                      ? 'Create your first alert to start tracking prices'
+                      : 'Already have alerts? Open the "Manage your alerts" link in any GlobePilot alert email.'}
                   </p>
                 </div>
               ) : (
@@ -493,16 +528,22 @@ export default function AlertsPage() {
                           <p className="text-sm text-gray-600">{alert.email}</p>
                         </div>
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => handleToggle(alert.id, alert.isActive)}
-                            className={`px-3 py-1 rounded text-sm font-medium transition ${
-                              alert.isActive
-                                ? 'bg-green-500 text-white hover:bg-green-600'
-                                : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
-                            }`}
-                          >
-                            {alert.isActive ? 'Active' : 'Paused'}
-                          </button>
+                          {alert.pending ? (
+                            <span className="px-3 py-1 rounded text-sm font-medium bg-amber-100 text-amber-700">
+                              Awaiting confirmation
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleToggle(alert.id, alert.isActive)}
+                              className={`px-3 py-1 rounded text-sm font-medium transition ${
+                                alert.isActive
+                                  ? 'bg-green-500 text-white hover:bg-green-600'
+                                  : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                              }`}
+                            >
+                              {alert.isActive ? 'Active' : 'Paused'}
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(alert.id)}
                             className="px-3 py-1 bg-red-500 text-white rounded text-sm font-medium hover:bg-red-600 transition"

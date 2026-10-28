@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,13 +12,19 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const origin = searchParams.get('origin')
     const destination = searchParams.get('destination')
-    const months = parseInt(searchParams.get('months') || '3')
+    // Each month is one upstream call, and results are stored in price_history
+    const months = Math.min(Math.max(parseInt(searchParams.get('months') || '3') || 3, 1), 12)
 
-    if (!origin || !destination) {
+    if (!origin || !destination || !/^[A-Z]{3}$/.test(origin) || !/^[A-Z]{3}$/.test(destination)) {
       return NextResponse.json(
-        { error: 'Missing required parameters: origin, destination' },
+        { error: 'origin and destination must be 3-letter IATA codes' },
         { status: 400 }
       )
+    }
+
+    const rl = await rateLimitAsync(`price-history:${getClientIp(request)}`, 20, 60_000)
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 })
     }
 
     console.log('[Price History] Fetching history for:', { origin, destination, months })

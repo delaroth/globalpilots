@@ -1,121 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { z } from 'zod'
 import { authOptions } from '@/lib/auth-config'
-import { supabase } from '@/lib/supabase'
 import { trackActivity } from '@/lib/activity-feed'
+import { trackRoute, AlertError } from '@/lib/price-tracker'
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
-interface CreateAlertRequest {
-  email: string
-  origin: string
-  destination: string
-  targetPrice: number
-  flexibleDates?: boolean
-  dateRangeDays?: number
-}
+const createAlertSchema = z.object({
+  email: z.string().trim().email().max(254),
+  origin: z.string().regex(/^[A-Z]{3}$/, 'origin must be a 3-letter IATA airport code (e.g., BKK, JFK, LAX)'),
+  destination: z.string().regex(/^[A-Z]{3}$/, 'destination must be a 3-letter IATA airport code (e.g., BKK, JFK, LAX)'),
+  targetPrice: z.number().positive('Target price must be greater than 0').max(100000),
+  flexibleDates: z.boolean().optional(),
+  dateRangeDays: z.number().int().min(0).max(14).optional(),
+  token: z.string().max(512).optional(),
+})
 
 export async function POST(request: NextRequest) {
+  const rl = await rateLimitAsync(`alerts-create:${getClientIp(request)}`, 5, 60_000)
+  if (!rl.success) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 })
+  }
+
   try {
+    const parsed = createAlertSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid request' }, { status: 400 })
+    }
+    const { email, origin, destination, targetPrice, flexibleDates, dateRangeDays, token } = parsed.data
+
     const session = await getServerSession(authOptions)
-    const body: CreateAlertRequest = await request.json()
-    const { email, origin, destination, targetPrice, flexibleDates, dateRangeDays } = body
-
-    // Validate required fields
-    if (!email || !origin || !destination || !targetPrice) {
-      return NextResponse.json(
-        { error: 'Missing required fields: email, origin, destination, targetPrice' },
-        { status: 400 }
-      )
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email address' },
-        { status: 400 }
-      )
-    }
-
-    // Validate IATA codes
-    if (!/^[A-Z]{3}$/.test(origin)) {
-      return NextResponse.json(
-        { error: 'origin must be a 3-letter IATA airport code (e.g., BKK, JFK, LAX)' },
-        { status: 400 }
-      )
-    }
-
-    if (!/^[A-Z]{3}$/.test(destination)) {
-      return NextResponse.json(
-        { error: 'destination must be a 3-letter IATA airport code (e.g., BKK, JFK, LAX)' },
-        { status: 400 }
-      )
-    }
-
-    // Validate target price
-    if (targetPrice <= 0) {
-      return NextResponse.json(
-        { error: 'Target price must be greater than 0' },
-        { status: 400 }
-      )
-    }
-
-    console.log('[Alerts Create] Creating alert:', { email, origin, destination, targetPrice, flexibleDates })
-
-    // Insert into Supabase
-    const { data, error} = await (supabase as any)
-      .from('price_alerts')
-      .insert([
-        {
-          email,
-          origin,
-          destination,
-          target_price: targetPrice,
-          is_active: true,
-          user_id: session?.user?.id || null,
-          flexible_dates: flexibleDates || false,
-          date_range_days: flexibleDates ? (dateRangeDays || 3) : 0,
-        }
-      ])
-      .select()
-      .single()
-
-    if (error) {
-      console.error('[Alerts Create] Supabase error:', error)
-      throw new Error('Failed to create alert in database')
-    }
-
-    console.log('[Alerts Create] ✅ Alert created successfully:', data.id)
+    const { route, pending } = await trackRoute({
+      email,
+      origin,
+      destination,
+      targetPrice,
+      flexibleDates,
+      dateRangeDays,
+      userId: session?.user?.id || null,
+      token,
+    })
 
     // Track activity (anonymized)
-    const userCity = 'Unknown' // Could geocode IP in future
-    const userFirstName = session?.user?.name?.split(' ')[0] || 'Someone'
     await trackActivity('alert_created', {
       route: `${origin}-${destination}`,
-      user_city: userCity,
-      user_first_name: userFirstName,
+      user_city: 'Unknown',
+      user_first_name: session?.user?.name?.split(' ')[0] || 'Someone',
     })
 
     return NextResponse.json({
       success: true,
+      pending,
       alert: {
-        id: data.id,
-        email: data.email,
-        origin: data.origin,
-        destination: data.destination,
-        targetPrice: data.target_price,
-        flexibleDates: data.flexible_dates,
-        dateRangeDays: data.date_range_days,
-        createdAt: data.created_at,
-        isActive: data.is_active,
-      }
+        id: route.id,
+        email: route.email,
+        origin: route.origin,
+        destination: route.destination,
+        targetPrice: route.target_price,
+        flexibleDates: route.flexible_dates,
+        dateRangeDays: route.date_range_days,
+        createdAt: route.created_at,
+        isActive: route.is_active,
+      },
     })
   } catch (error) {
+    if (error instanceof AlertError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
     console.error('[Alerts Create] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to create alert. Please try again.' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create alert. Please try again.' }, { status: 500 })
   }
 }

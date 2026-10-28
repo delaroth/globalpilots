@@ -168,7 +168,7 @@ export default function AdminDashboard() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`/api/admin/analytics?secret=${encodeURIComponent(secret)}`)
+      const res = await fetch('/api/admin/analytics', { headers: { Authorization: `Bearer ${secret}` } })
       if (res.status === 401) {
         setError('Invalid secret. Access denied.')
         setSecret('')

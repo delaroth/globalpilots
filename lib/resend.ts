@@ -64,11 +64,17 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
   }
 }
 
-export async function sendWelcomeEmail(
+/**
+ * Double opt-in confirmation for deal alerts / newsletters (lib/newsletter.ts).
+ * Nothing else is sent to the address until the confirm link is clicked.
+ */
+export async function sendSubscribeConfirmationEmail(
   to: string,
   unsubscribeToken: string
 ): Promise<boolean> {
-  const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://globepilots.com'}/api/email/unsubscribe?token=${unsubscribeToken}`
+  const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://globepilots.com'
+  const confirmUrl = `${siteUrl}/api/email/confirm?token=${unsubscribeToken}`
+  const unsubscribeUrl = `${siteUrl}/api/email/unsubscribe?token=${unsubscribeToken}`
 
   const html = `
 <!DOCTYPE html>
@@ -84,20 +90,28 @@ export async function sendWelcomeEmail(
       <div style="display:inline-block;width:48px;height:48px;background-color:#87CEEB;border-radius:50%;line-height:48px;text-align:center;">
         <span style="color:#0A1F44;font-size:24px;font-weight:bold;">G</span>
       </div>
-      <h1 style="color:#FFFFFF;font-size:28px;margin:16px 0 0;">Welcome to GlobePilot!</h1>
+      <h1 style="color:#FFFFFF;font-size:28px;margin:16px 0 0;">Confirm your subscription</h1>
     </div>
 
     <!-- Body -->
     <div style="background-color:#FFFFFF;border-radius:16px;padding:32px;margin-bottom:24px;">
-      <h2 style="color:#0A1F44;font-size:22px;margin:0 0 16px;">You're all set for deal alerts</h2>
+      <h2 style="color:#0A1F44;font-size:22px;margin:0 0 16px;">One click to start getting deals</h2>
       <p style="color:#333;font-size:16px;line-height:1.6;margin:0 0 16px;">
-        Thanks for subscribing! Here's what you can expect:
+        Someone (hopefully you) signed this address up for GlobePilot deal emails. Confirm and here's what you'll get:
       </p>
       <ul style="color:#333;font-size:15px;line-height:1.8;padding-left:20px;margin:0 0 24px;">
         <li><strong>Price drop alerts</strong> — We'll notify you when flights on your tracked routes fall below your target price</li>
         <li><strong>Weekly deal roundups</strong> — The best budget flight deals from your preferred airports</li>
         <li><strong>Mistake fares &amp; flash sales</strong> — Time-sensitive deals that can save you hundreds</li>
       </ul>
+      <div style="text-align:center;margin:0 0 24px;">
+        <a href="${confirmUrl}" style="display:inline-block;padding:14px 40px;background-color:#87CEEB;color:#0A1F44;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px;">
+          Confirm subscription
+        </a>
+      </div>
+      <p style="color:#666;font-size:14px;line-height:1.6;margin:0 0 16px;">
+        Didn't sign up? Ignore this email and you won't hear from us again.
+      </p>
       <p style="color:#666;font-size:14px;line-height:1.6;margin:0;">
         Pro tip: Visit the <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://globepilots.com'}/alerts" style="color:#5FB3D9;">Price Alerts</a> page to set up specific route tracking with custom price targets.
       </p>
@@ -116,7 +130,7 @@ export async function sendWelcomeEmail(
 </body>
 </html>`
 
-  return sendEmail(to, 'Welcome to GlobePilot — Deal Alerts Activated!', html)
+  return sendEmail(to, 'Confirm your GlobePilot deal alerts', html)
 }
 
 export async function sendPriceAlert(

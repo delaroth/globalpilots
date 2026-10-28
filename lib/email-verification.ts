@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { linkAlertsToUser } from './auth'
 import { TRANSACTIONAL_FROM } from './email-addresses'
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
@@ -61,15 +62,20 @@ export async function verifyToken(token: string): Promise<{ success: boolean; er
   }
 
   // Mark user as email_verified
-  const { error: updateError } = await (supabase as any)
+  const { data: verifiedUser, error: updateError } = await (supabase as any)
     .from('users')
     .update({ email_verified: true })
     .eq('id', tokenRecord.user_id)
+    .select('email')
+    .maybeSingle()
 
   if (updateError) {
     console.error('[EmailVerification] Failed to update user:', updateError)
     return { success: false, error: 'Failed to verify email. Please try again.' }
   }
+
+  // Now that they've proven they own the address, link their anonymous alerts
+  if (verifiedUser?.email) await linkAlertsToUser(verifiedUser.email, tokenRecord.user_id)
 
   // Delete the used token
   await (supabase as any)

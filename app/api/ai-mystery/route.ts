@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cronAuthHeaders } from '@/lib/cron-auth'
+import { subscribeToNewsletter } from '@/lib/newsletter'
 import { callAI, parseAIJSON } from '@/lib/ai'
 import { MysteryResponseSchema } from '@/lib/ai-schemas'
 import { getCached, setCache } from '@/lib/cache'
 import { calculateBudgetAllocation, PackageComponents, formatAllocationForAI, getBudgetTier } from '@/lib/budget-allocation'
-import { supabase } from '@/lib/supabase'
 import { AFFILIATE_FLAGS } from '@/lib/affiliate'
 import { searchKiwiInspiration } from '@/lib/kiwi'
 import { findCheapestDestinations, vibeToInterest, daysToTravelDuration, dateToMonth } from '@/lib/flight-providers/serpapi-explore'
@@ -588,19 +589,13 @@ Pick ONE destination matching vibes. Explain WHY it matches (not just "affordabl
   }
 }
 
+// Goes through the same double opt-in as the newsletter form: at most one
+// confirmation email per hour, nothing more until the owner confirms.
 async function captureEmail(email: string, source: string): Promise<void> {
   try {
-    const { error } = await (supabase as any)
-      .from('email_subscribers')
-      .upsert({
-        email,
-        source,
-        last_active_at: new Date().toISOString()
-      }, {
-        onConflict: 'email'
-      })
-    if (error) console.error('[AI-Mystery] Email capture error:', error)
-    else console.log('[AI-Mystery] Email captured:', email)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return
+    await subscribeToNewsletter({ email })
+    console.log('[AI-Mystery] Email capture requested from', source)
   } catch (err) {
     console.error('[AI-Mystery] Email capture exception:', err)
   }
@@ -610,7 +605,7 @@ async function generateBlogPost(destinationCode: string, destinationName: string
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/blog/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...cronAuthHeaders() },
       body: JSON.stringify({ destinationCode, destinationName, country })
     })
     if (response.ok) {

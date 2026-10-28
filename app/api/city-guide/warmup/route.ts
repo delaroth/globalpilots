@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import { callAI, parseAIJSON } from '@/lib/ai'
 // CityGuideSchema skipped — CityGuideData has complex fields not AI-generated
 import { getCached, setCache } from '@/lib/cache'
@@ -71,7 +72,12 @@ Include exactly 4 top_activities and 3 food_picks. Be practical and specific —
   return parseAIJSON<CityGuideData>(aiResponse.content)
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  // 13 AI calls per run — cron/admin only
+  if (!isCronAuthorized(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const results: { city: string; status: 'cached' | 'generated' | 'error'; error?: string }[] = []
 
   for (const { city, hub_code } of HUB_CITIES) {

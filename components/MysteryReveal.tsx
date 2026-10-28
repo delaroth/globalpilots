@@ -315,15 +315,16 @@ export default function MysteryReveal({
     if (!captureEmail) return
     setEmailError('')
     try {
-      const res = await fetch('/api/price-track', {
+      // Route alerts need one origin airport; otherwise fall back to deal emails for this destination
+      const hasOrigin = /^[A-Z]{3}$/.test(origin)
+      const res = await fetch(hasOrigin ? '/api/price-track' : '/api/email/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: captureEmail,
-          origin: origin || 'ANY',
-          destination: iata,
-          targetPrice: flightPrice || 500,
-        }),
+        body: JSON.stringify(
+          hasOrigin
+            ? { email: captureEmail, origin, destination: iata, targetPrice: Math.ceil(flightPrice || 500) }
+            : { email: captureEmail, destinations: /^[A-Z]{3}$/.test(iata) ? [iata] : undefined }
+        ),
       })
       if (!res.ok) throw new Error()
       setEmailCaptured(true)
@@ -1383,7 +1384,7 @@ export default function MysteryReveal({
                         Track Price
                       </button>
                     </form>
-                    {emailCaptured && <p className="text-emerald-400 text-sm mt-2">We&apos;ll let you know when prices drop!</p>}
+                    {emailCaptured && <p className="text-emerald-400 text-sm mt-2">Check your inbox and click the link to confirm — then we&apos;ll let you know when prices drop!</p>}
                     {emailError && <p className="text-red-400 text-sm mt-2">{emailError}</p>}
                   </div>
                 </motion.div>

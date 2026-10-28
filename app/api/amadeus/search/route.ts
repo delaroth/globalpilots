@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimitAsync, getClientIp } from '@/lib/rate-limit'
 import { searchFlights, isAmadeusAvailable } from '@/lib/amadeus'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  // Paid upstream API — cap per IP
+  const rl = await rateLimitAsync(`amadeus:${getClientIp(request)}`, 20, 60_000)
+  if (!rl.success) {
+    return NextResponse.json({ error: 'Too many requests. Please wait a moment.' }, { status: 429 })
+  }
+
   const params = request.nextUrl.searchParams
   const origin = params.get('origin')
   const destination = params.get('destination')
   const departureDate = params.get('departure_date')
   const returnDate = params.get('return_date')
-  const adults = parseInt(params.get('adults') || '1')
-  const max = parseInt(params.get('max') || '5')
+  const adults = Math.min(Math.max(parseInt(params.get('adults') || '1') || 1, 1), 9)
+  const max = Math.min(Math.max(parseInt(params.get('max') || '5') || 5, 1), 50)
 
   if (!origin || !destination || !departureDate) {
     return NextResponse.json(

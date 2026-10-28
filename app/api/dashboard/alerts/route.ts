@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-config'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch user's alerts
-    const { data: alerts, error } = await (supabase as any)
+    const { data: alerts, error } = await (getSupabaseAdmin() as any)
       .from('price_alerts')
       .select('*')
       .eq('user_id', session.user.id)

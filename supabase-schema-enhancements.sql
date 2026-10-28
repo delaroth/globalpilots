@@ -24,16 +24,9 @@ CREATE INDEX IF NOT EXISTS idx_price_history_route_date ON price_history(origin,
 
 -- Enable RLS
 ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
+-- No anon policies: server uses the service role (see supabase-security-lockdown.sql)
 
--- Allow public reads (anyone can see historical prices)
-CREATE POLICY "Allow public reads" ON price_history
-  FOR SELECT TO anon
-  USING (true);
 
--- Only backend can insert (via API with service key or cron job)
-CREATE POLICY "Backend inserts only" ON price_history
-  FOR INSERT TO anon
-  WITH CHECK (true);
 
 -- =====================================================
 -- 2. BLOG POSTS TABLE
@@ -62,21 +55,10 @@ CREATE INDEX IF NOT EXISTS idx_blog_posts_created ON blog_posts(created_at DESC)
 
 -- Enable RLS
 ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+-- No anon policies: server uses the service role (see supabase-security-lockdown.sql)
 
--- Allow public reads
-CREATE POLICY "Allow public reads" ON blog_posts
-  FOR SELECT TO anon
-  USING (true);
 
--- Allow public inserts (blog generation API will create posts)
-CREATE POLICY "Allow public inserts" ON blog_posts
-  FOR INSERT TO anon
-  WITH CHECK (true);
 
--- Allow public updates (for view count increment)
-CREATE POLICY "Allow public updates" ON blog_posts
-  FOR UPDATE TO anon
-  USING (true);
 
 -- =====================================================
 -- 3. EMAIL SUBSCRIBERS TABLE
@@ -99,21 +81,10 @@ CREATE INDEX IF NOT EXISTS idx_email_subscribers_newsletters ON email_subscriber
 
 -- Enable RLS
 ALTER TABLE email_subscribers ENABLE ROW LEVEL SECURITY;
+-- No anon policies: server uses the service role (see supabase-security-lockdown.sql)
 
--- Allow public inserts (email capture)
-CREATE POLICY "Allow public inserts" ON email_subscribers
-  FOR INSERT TO anon
-  WITH CHECK (true);
 
--- Allow public reads of own email only
-CREATE POLICY "Users can read own email" ON email_subscribers
-  FOR SELECT TO anon
-  USING (true);
 
--- Allow public updates (for last_active_at)
-CREATE POLICY "Allow public updates" ON email_subscribers
-  FOR UPDATE TO anon
-  USING (true);
 
 -- =====================================================
 -- 4. ENHANCE PRICE_ALERTS TABLE

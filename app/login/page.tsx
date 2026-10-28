@@ -8,7 +8,9 @@ import { signIn } from 'next-auth/react'
 function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+  // Same-site paths only — never redirect to another origin after login
+  const rawCallback = searchParams.get('callbackUrl') || ''
+  const callbackUrl = /^\/(?![\/\\])/.test(rawCallback) ? rawCallback : '/dashboard'
   const verified = searchParams.get('verified') === 'true'
   const resetSuccess = searchParams.get('reset') === 'true'
   const tokenError = searchParams.get('error') === 'invalid-token'

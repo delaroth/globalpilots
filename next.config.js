@@ -65,6 +65,18 @@ const nextConfig = {
           },
         ],
       },
+      {
+        // SECURITY: per-user, token or secret-gated responses must never hit
+        // the shared CDN cache (it ignores cookies — one user's data would be
+        // served to the next). Later rules override earlier ones for the same key.
+        source: '/api/:group(auth|dashboard|alerts|admin|email|migrate|trips|cron|flightapi|price-track|contact|activity)/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'private, no-store',
+          },
+        ],
+      },
     ]
   },
 }
