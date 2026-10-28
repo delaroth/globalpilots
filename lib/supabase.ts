@@ -10,6 +10,15 @@ export interface PriceAlert {
   is_active: boolean
 }
 
+// Next.js caches fetch() in route handlers, and supabase-js uses fetch — so
+// without this, DB reads can come back stale (e.g. an alert still listed after
+// it was deleted). Database queries must always hit the database.
+const clientOptions = {
+  global: {
+    fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, { ...init, cache: 'no-store' }),
+  },
+}
+
 // Lazy initialization to avoid build-time errors
 let supabaseClient: ReturnType<typeof createClient> | null = null
 
@@ -25,7 +34,7 @@ export function getSupabase() {
     throw new Error('Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY')
   }
 
-  supabaseClient = createClient(supabaseUrl, supabaseKey)
+  supabaseClient = createClient(supabaseUrl, supabaseKey, clientOptions)
   return supabaseClient
 }
 
@@ -48,7 +57,7 @@ export function getSupabaseAdmin() {
     return getSupabase()
   }
 
-  supabaseAdminClient = createClient(supabaseUrl, serviceRoleKey)
+  supabaseAdminClient = createClient(supabaseUrl, serviceRoleKey, clientOptions)
   return supabaseAdminClient
 }
 
